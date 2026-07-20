@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useSearchParams, useRouter } from 'next/navigation'
-import { format, eachDayOfInterval, startOfMonth, endOfMonth, getDay } from 'date-fns'
+import { format, getDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Loader2, Calendar, Check, ArrowLeft } from 'lucide-react'
+import { Loader2, Calendar, ArrowLeft, X, Plus } from 'lucide-react'
 import Link from 'next/link'
 
 interface Member {
@@ -19,12 +19,6 @@ interface Member {
   instrument: string | null
 }
 
-interface ScaleType {
-  id: string
-  name: string
-  type: 'normal' | 'strong_brothers' | 'empoderadas'
-}
-
 interface Block {
   member_id: string
   blocked_date: string
@@ -33,7 +27,7 @@ interface Block {
 interface SelectedDay {
   date: string
   dayOfWeek: string
-  scaleTypeId: string
+  scaleName: string
 }
 
 const dayNames: Record<number, string> = {
@@ -54,11 +48,12 @@ export default function GerarEscalaPage() {
   const preSelectedDates = searchParams.get('dates')
 
   const [members, setMembers] = useState<Member[]>([])
-  const [scaleTypes, setScaleTypes] = useState<ScaleType[]>([])
   const [blocks, setBlocks] = useState<Block[]>([])
   const [selectedDays, setSelectedDays] = useState<SelectedDay[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [quickNames, setQuickNames] = useState<string[]>([])
+  const [newQuickName, setNewQuickName] = useState('')
   const supabase = createClient()
 
   useEffect(() => {
@@ -66,54 +61,53 @@ export default function GerarEscalaPage() {
   }, [])
 
   async function loadData() {
-    const [membersRes, scaleTypesRes, blocksRes] = await Promise.all([
+    const [membersRes, blocksRes, scaleTypesRes] = await Promise.all([
       supabase.from('members').select('*').eq('is_blocked', false).order('name'),
-      supabase.from('scale_types').select('*').order('name'),
       supabase.from('member_blocks').select('member_id, blocked_date'),
+      supabase.from('scale_types').select('name').order('name'),
     ])
     setMembers(membersRes.data || [])
-    setScaleTypes(scaleTypesRes.data || [])
     setBlocks(blocksRes.data || [])
 
-    // Initialize pre-selected dates from URL
+    // Load existing scale type names as quick-select options
+    const existingNames = (scaleTypesRes.data || []).map(st => st.name)
+    setQuickNames(existingNames)
+
+    // Initialize days from URL params
     if (preSelectedDates) {
       const dates = preSelectedDates.split(',')
       const days: SelectedDay[] = dates.map((dateStr) => {
         const dateObj = new Date(dateStr + 'T12:00:00')
         const dayOfWeek = dayNames[getDay(dateObj)] || ''
-        return {
-          date: dateStr,
-          dayOfWeek,
-          scaleTypeId: scaleTypesRes.data?.[0]?.id || '',
-        }
+        return { date: dateStr, dayOfWeek, scaleName: '' }
       })
-      setSelectedDays(days)
+      setSelectedDays(days.sort((a, b) => a.date.localeCompare(b.date)))
     }
 
     setLoading(false)
   }
 
-  // Generate calendar days for the month (Fri, Sat, Sun only)
-  const monthStart = startOfMonth(new Date(year, month - 1))
-  const monthEnd = endOfMonth(monthStart)
-  const allDays = eachDayOfInterval({ start: monthStart, end: monthEnd })
-  const celebrationDays = allDays.filter(d => {
-    const day = getDay(d)
-    return day === 5 || day === 6 || day === 0
-  })
-
-  function toggleDay(dateStr: string, dayOfWeek: string) {
-    setSelectedDays(prev => {
-      const exists = prev.find(d => d.date === dateStr)
-      if (exists) return prev.filter(d => d.date !== dateStr)
-      return [...prev, { date: dateStr, dayOfWeek, scaleTypeId: scaleTypes[0]?.id || '' }]
-    })
+  function setDayScaleName(dateStr: string, scaleName: string) {
+    setSelectedDays(prev =>
+      prev.map(d => d.date === dateStr ? { ...d, scaleName } : d)
+    )
   }
 
-  function setDayScaleType(dateStr: string, scaleTypeId: string) {
-    setSelectedDays(prev =>
-      prev.map(d => d.date === dateStr ? { ...d, scaleTypeId } : d)
-    )
+  function applyNameToAll(name: string) {
+    setSelectedDays(prev => prev.map(d => ({ ...d, scaleName: name })))
+  }
+
+  function removeDay(dateStr: string) {
+    setSelectedDays(prev => prev.filter(d => d.date !== dateStr))
+  }
+
+  function addQuickName() {
+    if (newQuickName.trim() && !quickNames.includes(newQuickName.trim())) {
+      setQuickNames(prev => [...prev, newQuickName.trim()])
+      // Also save to database
+      supabase.from('scale_types').insert({ name: newQuickName.trim(), type: 'normal' })
+      setNewQuickName('')
+    }
   }
 
   async function generateSchedule() {
@@ -142,26 +136,49 @@ export default function GerarEscalaPage() {
       scheduleId = newSchedule!.id
     }
 
-    // Separate members by gender and role
+    // Get or create scale types for each unique name
+    const uniqueNames = [...new Set(selectedDays.map(d => d.scaleName).filter(Boolean))]
+    const scaleTypeMap: Record<string, string> = {}
+
+    for (const name of uniqueNames) {
+      const { data: existing } = await supabase
+        .from('scale_types')
+        .select('id')
+        .eq('name', name)
+        .single()
+
+      if (existing) {
+        scaleTypeMap[name] = existing.id
+      } else {
+        const { data: created } = await supabase
+          .from('scale_types')
+          .insert({ name, type: 'normal' })
+          .select('id')
+          .single()
+        if (created) scaleTypeMap[name] = created.id
+      }
+    }
+
+    // Separate members by role
     const maleLeaders = members.filter(m => m.gender === 'male' && m.is_leader)
     const femaleLeaders = members.filter(m => m.gender === 'female' && m.is_leader)
-    const maleMembers = members.filter(m => m.gender === 'male' && !m.is_leader && !m.is_musician)
     const femaleMembers = members.filter(m => m.gender === 'female' && !m.is_leader && !m.is_musician)
+    const maleMembers = members.filter(m => m.gender === 'male' && !m.is_leader && !m.is_musician)
     const guitarists = members.filter(m => m.is_musician && m.instrument === 'guitarra')
     const bassists = members.filter(m => m.is_musician && m.instrument === 'baixo')
     const drummers = members.filter(m => m.is_musician && m.instrument === 'bateria')
+    const keyboardists = members.filter(m => m.is_musician && m.instrument === 'teclado')
 
     let maleLeaderIdx = 0
-    let femaleLeaderIdx = 0
     let femaleIdx = 0
     let guitarIdx = 0
     let bassIdx = 0
     let drumIdx = 0
+    let keyboardIdx = 0
 
     const sortedDays = [...selectedDays].sort((a, b) => a.date.localeCompare(b.date))
 
     for (const day of sortedDays) {
-      const scaleType = scaleTypes.find(st => st.id === day.scaleTypeId)
       const dateObj = new Date(day.date + 'T12:00:00')
       const weekNum = Math.ceil(dateObj.getDate() / 7)
 
@@ -180,6 +197,8 @@ export default function GerarEscalaPage() {
         return { member, newIdx: idx + 1 }
       }
 
+      const scaleTypeId = day.scaleName ? scaleTypeMap[day.scaleName] || null : null
+
       const { data: event } = await supabase
         .from('schedule_events')
         .insert({
@@ -187,7 +206,7 @@ export default function GerarEscalaPage() {
           event_date: day.date,
           day_of_week: day.dayOfWeek,
           week_number: weekNum,
-          scale_type_id: day.scaleTypeId || null,
+          scale_type_id: scaleTypeId,
         })
         .select('id')
         .single()
@@ -196,35 +215,21 @@ export default function GerarEscalaPage() {
 
       const assignments: { event_id: string; member_id: string; role: string }[] = []
 
-      if (scaleType?.type === 'strong_brothers') {
-        const avMales = getAvailable([...maleLeaders, ...maleMembers])
-        for (let i = 0; i < 3 && i < avMales.length; i++) {
-          const idx = (maleLeaderIdx + i) % avMales.length
-          assignments.push({ event_id: event.id, member_id: avMales[idx].id, role: `vocal_${i + 1}` })
-        }
-        maleLeaderIdx += 3
-      } else if (scaleType?.type === 'empoderadas') {
-        const avFemales = getAvailable([...femaleLeaders, ...femaleMembers])
-        for (let i = 0; i < 3 && i < avFemales.length; i++) {
-          const idx = (femaleLeaderIdx + i) % avFemales.length
-          assignments.push({ event_id: event.id, member_id: avFemales[idx].id, role: `vocal_${i + 1}` })
-        }
-        femaleLeaderIdx += 3
-      } else {
-        const ml = getNext(maleLeaders, maleLeaderIdx)
-        if (ml.member) {
-          assignments.push({ event_id: event.id, member_id: ml.member.id, role: 'vocal_1' })
-          maleLeaderIdx = ml.newIdx
-        }
-
-        const avFemales = getAvailable([...femaleLeaders, ...femaleMembers])
-        for (let i = 0; i < 2 && i < avFemales.length; i++) {
-          const idx = (femaleIdx + i) % avFemales.length
-          assignments.push({ event_id: event.id, member_id: avFemales[idx].id, role: `vocal_${i + 2}` })
-        }
-        femaleIdx += 2
+      // Normal: 1 male leader + 2 females
+      const ml = getNext(maleLeaders, maleLeaderIdx)
+      if (ml.member) {
+        assignments.push({ event_id: event.id, member_id: ml.member.id, role: 'vocal_1' })
+        maleLeaderIdx = ml.newIdx
       }
 
+      const avFemales = getAvailable([...femaleLeaders, ...femaleMembers])
+      for (let i = 0; i < 2 && i < avFemales.length; i++) {
+        const idx = (femaleIdx + i) % avFemales.length
+        assignments.push({ event_id: event.id, member_id: avFemales[idx].id, role: `vocal_${i + 2}` })
+      }
+      femaleIdx += 2
+
+      // Musicians
       const gtr = getNext(guitarists, guitarIdx)
       if (gtr.member) {
         assignments.push({ event_id: event.id, member_id: gtr.member.id, role: 'guitarra' })
@@ -241,6 +246,12 @@ export default function GerarEscalaPage() {
       if (drm.member) {
         assignments.push({ event_id: event.id, member_id: drm.member.id, role: 'bateria' })
         drumIdx = drm.newIdx
+      }
+
+      const kbd = getNext(keyboardists, keyboardIdx)
+      if (kbd.member) {
+        assignments.push({ event_id: event.id, member_id: kbd.member.id, role: 'teclado' })
+        keyboardIdx = kbd.newIdx
       }
 
       if (assignments.length > 0) {
@@ -260,6 +271,27 @@ export default function GerarEscalaPage() {
     )
   }
 
+  if (selectedDays.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto space-y-4">
+        <div className="flex items-center gap-3">
+          <Link href="/admin" className="p-1.5 rounded-lg bg-[var(--accent)] hover:bg-[var(--border)]">
+            <ArrowLeft className="w-4 h-4" />
+          </Link>
+          <h2 className="text-lg font-bold">Gerar Escala</h2>
+        </div>
+        <div className="card text-center py-8">
+          <p className="text-sm text-[var(--muted-foreground)]">
+            Nenhum dia selecionado. Volte ao calendário e selecione os dias desejados.
+          </p>
+          <Link href="/admin" className="inline-block mt-3 text-sm bg-white text-black font-medium px-4 py-2 rounded-lg">
+            Voltar ao Calendário
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-4">
       <div className="flex items-center gap-3">
@@ -269,60 +301,90 @@ export default function GerarEscalaPage() {
         <div>
           <h2 className="text-lg font-bold">Gerar Escala</h2>
           <p className="text-xs text-[var(--muted-foreground)]">
-            {format(monthStart, "MMMM 'de' yyyy", { locale: ptBR })} — Selecione os dias e o tipo de cada escala.
+            Defina o nome da escala para cada dia selecionado.
           </p>
         </div>
       </div>
 
-      {scaleTypes.length === 0 && (
-        <div className="card border-yellow-500/30 bg-yellow-500/10">
-          <p className="text-xs text-yellow-400">
-            ⚠️ Cadastre tipos de escala em Configurações antes de gerar.
-          </p>
+      {/* Quick name creation */}
+      <div className="card space-y-2">
+        <label className="text-xs text-[var(--muted-foreground)] block">Nomes de escala disponíveis</label>
+        <div className="flex flex-wrap gap-1.5">
+          {quickNames.map((name) => (
+            <button
+              key={name}
+              onClick={() => applyNameToAll(name)}
+              className="px-2.5 py-1 text-xs rounded-full bg-[var(--accent)] hover:bg-[var(--border)] transition-colors"
+              title="Clique para aplicar a todos"
+            >
+              {name}
+            </button>
+          ))}
         </div>
-      )}
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder="Novo nome (ex: ALIVE, Celebração...)"
+            value={newQuickName}
+            onChange={(e) => setNewQuickName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addQuickName())}
+            className="flex-1"
+          />
+          <button
+            onClick={addQuickName}
+            disabled={!newQuickName.trim()}
+            className="px-3 py-1.5 bg-white text-black rounded-lg text-xs font-medium disabled:opacity-40"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
 
-      {/* Day selection */}
+      {/* Selected days with name input */}
       <div className="space-y-1.5">
-        {celebrationDays.map((d) => {
-          const dateStr = format(d, 'yyyy-MM-dd')
-          const dayOfWeek = dayNames[getDay(d)]
-          const isSelected = selectedDays.some(sd => sd.date === dateStr)
-
+        {selectedDays.map((day) => {
+          const dateObj = new Date(day.date + 'T12:00:00')
           return (
-            <div key={dateStr} className={`card py-2.5 px-3 ${isSelected ? 'border-white/30' : ''}`}>
+            <div key={day.date} className="card py-2.5 px-3">
               <div className="flex items-center gap-3">
-                <button
-                  onClick={() => toggleDay(dateStr, dayOfWeek)}
-                  className={`w-5 h-5 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                    isSelected ? 'bg-white border-white' : 'border-[var(--border)]'
-                  }`}
-                >
-                  {isSelected && <Check className="w-3 h-3 text-black" />}
-                </button>
-                <div className="flex-1 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1.5">
                     <span className="text-sm font-medium">
-                      {format(d, 'dd/MM')}
+                      {format(dateObj, 'dd/MM')}
                     </span>
                     <span className="text-xs text-[var(--muted-foreground)]">
-                      {dayOfWeek}
+                      {day.dayOfWeek}
                     </span>
                   </div>
-                  {isSelected && scaleTypes.length > 0 && (
-                    <select
-                      value={selectedDays.find(sd => sd.date === dateStr)?.scaleTypeId || ''}
-                      onChange={(e) => setDayScaleType(dateStr, e.target.value)}
-                      className="!w-auto text-xs py-1 px-2"
-                    >
-                      <option value="">Tipo</option>
-                      {scaleTypes.map(st => (
-                        <option key={st.id} value={st.id}>{st.name}</option>
-                      ))}
-                    </select>
-                  )}
+                  <input
+                    type="text"
+                    placeholder="Nome da escala..."
+                    value={day.scaleName}
+                    onChange={(e) => setDayScaleName(day.date, e.target.value)}
+                    className="!py-1.5 text-xs"
+                  />
                 </div>
+                <button
+                  onClick={() => removeDay(day.date)}
+                  className="p-1 rounded hover:bg-[var(--accent)] text-[var(--muted-foreground)]"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
+              {/* Quick apply buttons */}
+              {quickNames.length > 0 && !day.scaleName && (
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {quickNames.map((name) => (
+                    <button
+                      key={name}
+                      onClick={() => setDayScaleName(day.date, name)}
+                      className="px-2 py-0.5 text-[10px] rounded bg-[var(--accent)] text-[var(--muted-foreground)] hover:text-white"
+                    >
+                      {name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )
         })}
