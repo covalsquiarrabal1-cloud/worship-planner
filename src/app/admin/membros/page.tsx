@@ -44,12 +44,12 @@ export default function MembrosPage() {
   })
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">Membros</h2>
+        <h2 className="text-xl font-bold">Membros</h2>
         <button
           onClick={() => { setEditingMember(null); setShowForm(true) }}
-          className="flex items-center gap-1.5 bg-white text-black font-semibold px-4 py-2 rounded-lg text-sm"
+          className="flex items-center gap-2 bg-white text-black font-semibold px-5 py-2.5 rounded-lg text-sm hover:bg-gray-100"
         >
           <Plus className="w-4 h-4" />
           Novo
@@ -58,7 +58,7 @@ export default function MembrosPage() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
         <input
           type="text"
           placeholder="Buscar membro..."
@@ -69,7 +69,7 @@ export default function MembrosPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2 overflow-x-auto">
+      <div className="flex gap-2 overflow-x-auto pb-1">
         {[
           { key: 'all', label: 'Todos' },
           { key: 'male', label: 'Homens' },
@@ -79,10 +79,10 @@ export default function MembrosPage() {
           <button
             key={f.key}
             onClick={() => setFilter(f.key as typeof filter)}
-            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${
+            className={`px-5 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${
               filter === f.key
                 ? 'bg-white text-black font-medium'
-                : 'bg-[var(--accent)] text-[var(--muted-foreground)]'
+                : 'bg-[var(--accent)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
             }`}
           >
             {f.label}
@@ -92,11 +92,11 @@ export default function MembrosPage() {
 
       {/* Members list */}
       {loading ? (
-        <div className="flex justify-center py-8">
+        <div className="flex justify-center py-12">
           <Loader2 className="w-6 h-6 animate-spin" />
         </div>
       ) : filteredMembers.length === 0 ? (
-        <p className="text-center text-sm text-[var(--muted-foreground)] py-8">
+        <p className="text-center text-sm text-[var(--muted-foreground)] py-12">
           Nenhum membro encontrado.
         </p>
       ) : (
@@ -105,23 +105,23 @@ export default function MembrosPage() {
             <button
               key={member.id}
               onClick={() => { setEditingMember(member); setShowForm(true) }}
-              className="card w-full text-left flex items-center gap-4 py-3 px-4"
+              className="card w-full text-left flex items-center gap-4 hover:border-[#444] transition-colors"
             >
-              <UserCircle className={`w-8 h-8 shrink-0 ${member.gender === 'male' ? 'text-blue-400' : 'text-pink-400'}`} />
+              <UserCircle className={`w-9 h-9 shrink-0 ${member.gender === 'male' ? 'text-blue-400' : 'text-pink-400'}`} />
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm truncate">{member.name}</span>
-                  {member.is_leader && <Crown className="w-3.5 h-3.5 text-yellow-400 shrink-0" />}
-                  {member.is_blocked && <Ban className="w-3.5 h-3.5 text-red-400 shrink-0" />}
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="font-medium truncate">{member.name}</span>
+                  {member.is_leader && <Crown className="w-4 h-4 text-yellow-400 shrink-0" />}
+                  {member.is_blocked && <Ban className="w-4 h-4 text-red-400 shrink-0" />}
                 </div>
-                <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)] mt-0.5">
+                <div className="flex items-center gap-3 text-xs text-[var(--muted-foreground)]">
                   {member.is_musician && (
                     <span className="flex items-center gap-1">
-                      <Guitar className="w-3 h-3" />
+                      <Guitar className="w-3.5 h-3.5" />
                       {member.instrument}
                     </span>
                   )}
-                  {member.is_back && <span className="bg-[var(--accent)] px-2 py-0.5 rounded">Back</span>}
+                  {member.is_back && <span className="bg-[var(--accent)] px-2 py-0.5 rounded text-xs">Back</span>}
                 </div>
               </div>
             </button>
@@ -214,24 +214,27 @@ function MemberForm({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-[var(--card)] w-full max-w-md rounded-xl max-h-[85vh] overflow-y-auto border border-[var(--border)]">
-        <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
-          <h3 className="font-semibold text-base">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+      <div className="bg-[var(--card)] w-full max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto border border-[var(--border)] shadow-2xl">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border)]">
+          <h3 className="font-bold text-lg">
             {member ? 'Editar Membro' : 'Novo Membro'}
           </h3>
-          <button onClick={onClose} className="p-1.5 rounded hover:bg-[var(--accent)]">
-            <X className="w-4 h-4" />
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-[var(--accent)] transition-colors">
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-5">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
           {error && (
-            <p className="text-sm text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">{error}</p>
+            <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 px-4 py-3 rounded-lg">{error}</p>
           )}
 
-          <div>
-            <label className="text-sm text-[var(--muted-foreground)] mb-1.5 block">Nome</label>
+          {/* Nome */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[var(--muted-foreground)]">Nome</label>
             <input
               type="text"
               value={form.name}
@@ -241,8 +244,9 @@ function MemberForm({
             />
           </div>
 
-          <div>
-            <label className="text-sm text-[var(--muted-foreground)] mb-1.5 block">E-mail (login)</label>
+          {/* Email */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[var(--muted-foreground)]">E-mail (login)</label>
             <input
               type="email"
               value={form.email}
@@ -251,14 +255,17 @@ function MemberForm({
             />
           </div>
 
-          <div>
-            <label className="text-sm text-[var(--muted-foreground)] mb-2 block">Gênero</label>
-            <div className="flex gap-2">
+          {/* Gênero */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-[var(--muted-foreground)]">Gênero</label>
+            <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setForm({ ...form, gender: 'male' })}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  form.gender === 'male' ? 'bg-blue-500 text-white' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'
+                className={`py-3 rounded-lg text-sm font-medium transition-all ${
+                  form.gender === 'male'
+                    ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
+                    : 'bg-[var(--accent)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
                 }`}
               >
                 Masculino
@@ -266,8 +273,10 @@ function MemberForm({
               <button
                 type="button"
                 onClick={() => setForm({ ...form, gender: 'female' })}
-                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                  form.gender === 'female' ? 'bg-pink-500 text-white' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'
+                className={`py-3 rounded-lg text-sm font-medium transition-all ${
+                  form.gender === 'female'
+                    ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/20'
+                    : 'bg-[var(--accent)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
                 }`}
               >
                 Feminino
@@ -275,47 +284,52 @@ function MemberForm({
             </div>
           </div>
 
-          <div className="space-y-3">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.is_leader}
-                onChange={(e) => setForm({ ...form, is_leader: e.target.checked })}
-              />
-              <span className="text-sm">Líder de equipe</span>
-            </label>
+          {/* Opções */}
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-[var(--muted-foreground)] mb-3 block">Funções</label>
+            <div className="space-y-0">
+              <label className="flex items-center gap-4 cursor-pointer py-3 px-1 rounded-lg hover:bg-[var(--accent)]/50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={form.is_leader}
+                  onChange={(e) => setForm({ ...form, is_leader: e.target.checked })}
+                />
+                <span className="text-sm">Líder de equipe</span>
+              </label>
 
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.is_back}
-                onChange={(e) => setForm({ ...form, is_back: e.target.checked })}
-              />
-              <span className="text-sm">Back vocal</span>
-            </label>
+              <label className="flex items-center gap-4 cursor-pointer py-3 px-1 rounded-lg hover:bg-[var(--accent)]/50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={form.is_back}
+                  onChange={(e) => setForm({ ...form, is_back: e.target.checked })}
+                />
+                <span className="text-sm">Back vocal</span>
+              </label>
 
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.is_blocked}
-                onChange={(e) => setForm({ ...form, is_blocked: e.target.checked })}
-              />
-              <span className="text-sm text-red-400">Bloqueado (não escalar)</span>
-            </label>
+              <label className="flex items-center gap-4 cursor-pointer py-3 px-1 rounded-lg hover:bg-[var(--accent)]/50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={form.is_blocked}
+                  onChange={(e) => setForm({ ...form, is_blocked: e.target.checked })}
+                />
+                <span className="text-sm text-red-400">Bloqueado (não escalar)</span>
+              </label>
 
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.is_musician}
-                onChange={(e) => setForm({ ...form, is_musician: e.target.checked })}
-              />
-              <span className="text-sm">Músico</span>
-            </label>
+              <label className="flex items-center gap-4 cursor-pointer py-3 px-1 rounded-lg hover:bg-[var(--accent)]/50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={form.is_musician}
+                  onChange={(e) => setForm({ ...form, is_musician: e.target.checked })}
+                />
+                <span className="text-sm">Músico</span>
+              </label>
+            </div>
           </div>
 
+          {/* Instrumento */}
           {form.is_musician && (
-            <div>
-              <label className="text-sm text-[var(--muted-foreground)] mb-1.5 block">Instrumento</label>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-[var(--muted-foreground)]">Instrumento</label>
               <select
                 value={form.instrument}
                 onChange={(e) => setForm({ ...form, instrument: e.target.value })}
@@ -330,12 +344,13 @@ function MemberForm({
             </div>
           )}
 
-          <div className="flex gap-3 pt-3 border-t border-[var(--border)]">
+          {/* Actions */}
+          <div className="flex gap-3 pt-4 border-t border-[var(--border)]">
             {member && (
               <button
                 type="button"
                 onClick={handleDelete}
-                className="px-4 py-2.5 rounded-lg bg-red-500/20 text-red-400 font-medium text-sm hover:bg-red-500/30"
+                className="px-5 py-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 font-medium text-sm hover:bg-red-500/20 transition-colors"
               >
                 Excluir
               </button>
@@ -343,7 +358,7 @@ function MemberForm({
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-white text-black font-semibold py-2.5 rounded-lg disabled:opacity-50 flex items-center justify-center text-sm"
+              className="flex-1 bg-white text-black font-semibold py-3 rounded-lg disabled:opacity-50 flex items-center justify-center text-sm hover:bg-gray-100 transition-colors"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
             </button>

@@ -21,20 +21,22 @@ export function AdminBottomNav() {
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[var(--card)] border-t border-[var(--border)] z-50">
-      <div className="flex items-center justify-around py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
+    <nav className="fixed bottom-0 left-0 right-0 bg-[var(--card)]/80 backdrop-blur-md border-t border-[var(--border)] z-50">
+      <div className="max-w-5xl mx-auto flex items-center justify-around py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
         {items.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+          const isActive = pathname === item.href || 
+            (item.href !== '/admin' && pathname.startsWith(item.href + '/')) ||
+            (item.href === '/admin' && pathname === '/admin')
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${
-                isActive ? 'text-white' : 'text-[var(--muted-foreground)]'
+              className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-lg transition-colors ${
+                isActive ? 'text-white' : 'text-[var(--muted-foreground)] hover:text-white/70'
               }`}
             >
               {item.icon}
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <span className="text-[11px] font-medium">{item.label}</span>
             </Link>
           )
         })}
@@ -53,20 +55,20 @@ export function MemberBottomNav() {
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[var(--card)] border-t border-[var(--border)] z-50">
-      <div className="flex items-center justify-around py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
+    <nav className="fixed bottom-0 left-0 right-0 bg-[var(--card)]/80 backdrop-blur-md border-t border-[var(--border)] z-50">
+      <div className="max-w-5xl mx-auto flex items-center justify-around py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
         {items.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-colors ${
-                isActive ? 'text-white' : 'text-[var(--muted-foreground)]'
+              className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-lg transition-colors ${
+                isActive ? 'text-white' : 'text-[var(--muted-foreground)] hover:text-white/70'
               }`}
             >
               {item.icon}
-              <span className="text-[10px] font-medium">{item.label}</span>
+              <span className="text-[11px] font-medium">{item.label}</span>
             </Link>
           )
         })}

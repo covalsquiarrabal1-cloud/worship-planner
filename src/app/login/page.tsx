@@ -34,21 +34,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-white mb-4">
-            <Music className="w-7 h-7 text-black" />
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white mb-5">
+            <Music className="w-8 h-8 text-black" />
           </div>
           <h1 className="text-2xl font-bold">Worship Planner</h1>
-          <p className="text-[var(--muted-foreground)] text-sm mt-1">Faça login para continuar</p>
+          <p className="text-[var(--muted-foreground)] text-sm mt-2">Faça login para continuar</p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleLogin} className="space-y-3">
+        <form onSubmit={handleLogin} className="space-y-4">
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
+            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[var(--muted-foreground)]" />
             <input
               type="email"
               placeholder="E-mail"
@@ -61,7 +61,7 @@ export default function LoginPage() {
           </div>
 
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
+            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[var(--muted-foreground)]" />
             <input
               type="password"
               placeholder="Senha"
@@ -74,13 +74,13 @@ export default function LoginPage() {
           </div>
 
           {error && (
-            <p className="text-[var(--destructive)] text-sm text-center">{error}</p>
+            <p className="text-[var(--destructive)] text-sm text-center bg-red-500/10 border border-red-500/20 px-4 py-3 rounded-lg">{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-white text-black font-semibold py-2.5 rounded-xl hover:bg-gray-200 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
+            className="w-full bg-white text-black font-semibold py-3 rounded-xl hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center gap-2 text-sm mt-2 transition-colors"
           >
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
