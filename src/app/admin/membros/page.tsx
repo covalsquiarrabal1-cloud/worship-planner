@@ -236,14 +236,14 @@ function MemberForm({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
+        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-7">
           {error && (
             <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 px-4 py-3 rounded-lg">{error}</p>
           )}
 
           {/* Nome */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-[var(--muted-foreground)]">Nome</label>
+          <div>
+            <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Nome</label>
             <input
               type="text"
               value={form.name}
@@ -254,8 +254,8 @@ function MemberForm({
           </div>
 
           {/* Email */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-[var(--muted-foreground)]">E-mail (login)</label>
+          <div>
+            <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">E-mail (login)</label>
             <input
               type="email"
               value={form.email}
@@ -265,8 +265,8 @@ function MemberForm({
           </div>
 
           {/* Gênero */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-[var(--muted-foreground)]">Gênero</label>
+          <div>
+            <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-3">Gênero</label>
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
@@ -294,10 +294,10 @@ function MemberForm({
           </div>
 
           {/* Opções */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-[var(--muted-foreground)] mb-3 block">Funções</label>
-            <div className="space-y-0">
-              <label className="flex items-center gap-4 cursor-pointer py-3 px-1 rounded-lg hover:bg-[var(--accent)]/50 transition-colors">
+          <div>
+            <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-3">Funções</label>
+            <div className="bg-[var(--accent)] rounded-lg divide-y divide-[var(--border)]">
+              <label className="flex items-center gap-4 cursor-pointer px-4 py-3.5">
                 <input
                   type="checkbox"
                   checked={form.is_leader}
@@ -306,7 +306,7 @@ function MemberForm({
                 <span className="text-sm">Líder de equipe</span>
               </label>
 
-              <label className="flex items-center gap-4 cursor-pointer py-3 px-1 rounded-lg hover:bg-[var(--accent)]/50 transition-colors">
+              <label className="flex items-center gap-4 cursor-pointer px-4 py-3.5">
                 <input
                   type="checkbox"
                   checked={form.is_back}
@@ -315,7 +315,7 @@ function MemberForm({
                 <span className="text-sm">Back vocal</span>
               </label>
 
-              <label className="flex items-center gap-4 cursor-pointer py-3 px-1 rounded-lg hover:bg-[var(--accent)]/50 transition-colors">
+              <label className="flex items-center gap-4 cursor-pointer px-4 py-3.5">
                 <input
                   type="checkbox"
                   checked={form.is_blocked}
@@ -324,7 +324,7 @@ function MemberForm({
                 <span className="text-sm text-red-400">Bloqueado (não escalar)</span>
               </label>
 
-              <label className="flex items-center gap-4 cursor-pointer py-3 px-1 rounded-lg hover:bg-[var(--accent)]/50 transition-colors">
+              <label className="flex items-center gap-4 cursor-pointer px-4 py-3.5">
                 <input
                   type="checkbox"
                   checked={form.is_musician}
@@ -337,8 +337,8 @@ function MemberForm({
 
           {/* Instrumento */}
           {form.is_musician && (
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-[var(--muted-foreground)]">Instrumento</label>
+            <div>
+              <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Instrumento</label>
               <select
                 value={form.instrument}
                 onChange={(e) => setForm({ ...form, instrument: e.target.value })}
