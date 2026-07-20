@@ -152,6 +152,7 @@ function MemberForm({
 }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [instruments, setInstruments] = useState<{ id: string; name: string }[]>([])
   const [form, setForm] = useState({
     name: member?.name || '',
     gender: member?.gender || 'male',
@@ -162,6 +163,14 @@ function MemberForm({
     instrument: member?.instrument || '',
     email: member?.email || '',
   })
+
+  useEffect(() => {
+    fetch('/api/instruments')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setInstruments(data)
+      })
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -335,11 +344,9 @@ function MemberForm({
                 onChange={(e) => setForm({ ...form, instrument: e.target.value })}
               >
                 <option value="">Selecione</option>
-                <option value="guitarra">Guitarra</option>
-                <option value="baixo">Baixo</option>
-                <option value="bateria">Bateria</option>
-                <option value="teclado">Teclado</option>
-                <option value="violao">Violão</option>
+                {instruments.map((instr) => (
+                  <option key={instr.id} value={instr.name.toLowerCase()}>{instr.name}</option>
+                ))}
               </select>
             </div>
           )}
