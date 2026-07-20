@@ -24,7 +24,7 @@ export default async function AdminLayout({
   if (profile?.role !== 'admin') redirect('/membro')
 
   return (
-    <div>
+    <div style={{ overflowX: 'hidden', width: '100%', maxWidth: '100vw', position: 'relative' }}>
       <header className="sticky top-0 z-40 bg-[var(--background)] border-b border-[var(--border)] px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="w-8" />
@@ -34,9 +34,9 @@ export default async function AdminLayout({
       </header>
       <main className="px-6 py-6 max-w-5xl mx-auto">
         {children}
+        {/* Spacer for bottom nav */}
+        <div style={{ height: '80px' }} aria-hidden="true" />
       </main>
-      {/* Spacer to prevent bottom nav from covering content */}
-      <div style={{ height: '100px' }} aria-hidden="true" />
       <AdminBottomNav />
     </div>
   )

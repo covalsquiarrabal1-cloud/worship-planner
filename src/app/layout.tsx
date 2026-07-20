@@ -20,8 +20,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" style={{ overflowY: 'scroll' }}>
-      <body className="antialiased" style={{ minHeight: '100vh' }}>
+    <html lang="pt-BR">
+      <body className="antialiased" style={{ overflowX: 'hidden', overflowY: 'auto', width: '100%', maxWidth: '100vw' }}>
         {children}
       </body>
     </html>
