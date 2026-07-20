@@ -39,7 +39,7 @@ export default function GerarEscalaPage() {
   const [selectedDays, setSelectedDays] = useState<SelectedDay[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
-  const [quickNames, setQuickNames] = useState<string[]>([])
+  const [scaleNames, setScaleNames] = useState<string[]>([])
   const [newQuickName, setNewQuickName] = useState('')
   const supabase = createClient()
 
@@ -48,13 +48,20 @@ export default function GerarEscalaPage() {
   }, [])
 
   async function loadData() {
+    // Load scale types and day defaults in parallel
     const [scaleTypesRes, dayDefaultsRes] = await Promise.all([
-      supabase.from('scale_types').select('id, name').order('name'),
+      fetch('/api/scale-types'),
       fetch('/api/day-defaults'),
     ])
 
-    const existingNames = (scaleTypesRes.data || []).map((st: ScaleType) => st.name)
-    setQuickNames(existingNames)
+    let existingNames: string[] = []
+    if (scaleTypesRes.ok) {
+      const stData = await scaleTypesRes.json()
+      if (Array.isArray(stData)) {
+        existingNames = stData.map((st: ScaleType) => st.name)
+      }
+    }
+    setScaleNames(existingNames)
 
     // Load day defaults
     let dayDefaultsData: { day_of_week: number; scale_name: string; is_variable: boolean }[] = []
@@ -63,28 +70,30 @@ export default function GerarEscalaPage() {
       if (Array.isArray(dd)) dayDefaultsData = dd
     }
 
-    // Initialize days from URL params with defaults applied
+    // Initialize days from URL params
     if (preSelectedDates) {
       const dates = preSelectedDates.split(',')
       const days: SelectedDay[] = dates.map((dateStr) => {
         const dateObj = new Date(dateStr + 'T12:00:00')
         const dow = getDay(dateObj)
         const dayOfWeek = dayNames[dow] || ''
-        
-        // Auto-fill scale name from defaults
+
+        // Auto-fill from day defaults
         const defaultForDay = dayDefaultsData.find(d => d.day_of_week === dow)
-        const autoName = (defaultForDay && !defaultForDay.is_variable) ? (defaultForDay.scale_name || '') : ''
-        
+        let autoName = ''
+        if (defaultForDay && !defaultForDay.is_variable && defaultForDay.scale_name) {
+          autoName = defaultForDay.scale_name
+        }
+
         return { date: dateStr, dayOfWeek, scaleName: autoName }
       })
 
-      // Check if we have saved names from last time for these dates
+      // Override with localStorage saved names if they match
       try {
         const saved = localStorage.getItem('lastScaleConfig')
         if (saved) {
           const config = JSON.parse(saved)
-          if (config.selectedDays && Array.isArray(config.selectedDays)) {
-            // Apply previously saved names where dates match
+          if (config.selectedDays && Array.isArray(config.selectedDays) && config.month === month && config.year === year) {
             days.forEach((day) => {
               const savedDay = config.selectedDays.find((sd: SelectedDay) => sd.date === day.date)
               if (savedDay && savedDay.scaleName) {
@@ -107,17 +116,13 @@ export default function GerarEscalaPage() {
     )
   }
 
-  function applyNameToAll(name: string) {
-    setSelectedDays(prev => prev.map(d => ({ ...d, scaleName: name })))
-  }
-
   function removeDay(dateStr: string) {
     setSelectedDays(prev => prev.filter(d => d.date !== dateStr))
   }
 
   function addQuickName() {
-    if (newQuickName.trim() && !quickNames.includes(newQuickName.trim())) {
-      setQuickNames(prev => [...prev, newQuickName.trim()])
+    if (newQuickName.trim() && !scaleNames.includes(newQuickName.trim())) {
+      setScaleNames(prev => [...prev, newQuickName.trim()])
       fetch('/api/scale-types', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -131,11 +136,10 @@ export default function GerarEscalaPage() {
     if (selectedDays.length === 0) return
     setGenerating(true)
 
-    // Save preferences for next time
+    // Save config for next time
     try {
       localStorage.setItem('lastScaleConfig', JSON.stringify({
         selectedDays,
-        quickNames,
         month,
         year,
       }))
@@ -192,7 +196,7 @@ export default function GerarEscalaPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <div className="max-w-2xl mx-auto space-y-5 pb-8">
       <div className="flex items-center gap-3">
         <Link href="/admin" className="p-2 rounded-lg bg-[var(--accent)] hover:bg-[var(--border)]">
           <ArrowLeft className="w-4 h-4" />
@@ -205,23 +209,9 @@ export default function GerarEscalaPage() {
         </div>
       </div>
 
-      {/* Quick name creation */}
+      {/* Add new scale name */}
       <div className="card space-y-3">
-        <label className="text-sm font-medium text-[var(--muted-foreground)] block">Nomes de escala</label>
-        {quickNames.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {quickNames.map((name) => (
-              <button
-                key={name}
-                onClick={() => applyNameToAll(name)}
-                className="px-3 py-1.5 text-xs rounded-lg bg-[var(--accent)] hover:bg-[var(--border)] transition-colors"
-                title="Aplicar a todos"
-              >
-                {name}
-              </button>
-            ))}
-          </div>
-        )}
+        <label className="text-sm font-medium text-[var(--muted-foreground)] block">Adicionar novo tipo</label>
         <div className="flex gap-2">
           <input
             type="text"
@@ -234,14 +224,14 @@ export default function GerarEscalaPage() {
           <button
             onClick={addQuickName}
             disabled={!newQuickName.trim()}
-            className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium disabled:opacity-40 hover:bg-gray-100"
+            className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium disabled:opacity-40 hover:bg-gray-100 shrink-0"
           >
             <Plus className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Selected days */}
+      {/* Selected days with scale name SELECT */}
       <div className="space-y-2">
         {selectedDays.map((day) => {
           const dateObj = new Date(day.date + 'T12:00:00')
@@ -257,26 +247,15 @@ export default function GerarEscalaPage() {
                       {day.dayOfWeek}
                     </span>
                   </div>
-                  <input
-                    type="text"
-                    placeholder="Nome da escala..."
+                  <select
                     value={day.scaleName}
                     onChange={(e) => setDayScaleName(day.date, e.target.value)}
-                  />
-                  {/* Quick apply */}
-                  {quickNames.length > 0 && !day.scaleName && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {quickNames.map((name) => (
-                        <button
-                          key={name}
-                          onClick={() => setDayScaleName(day.date, name)}
-                          className="px-2.5 py-1 text-xs rounded bg-[var(--accent)] text-[var(--muted-foreground)] hover:text-white transition-colors"
-                        >
-                          {name}
-                        </button>
-                      ))}
-                    </div>
-                  )}
+                  >
+                    <option value="">— Selecione o tipo —</option>
+                    {scaleNames.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
                 </div>
                 <button
                   onClick={() => removeDay(day.date)}
@@ -290,8 +269,8 @@ export default function GerarEscalaPage() {
         })}
       </div>
 
-      {/* Generate button */}
-      <div className="sticky bottom-16 pt-4">
+      {/* Generate button - NOT sticky */}
+      <div className="pt-4">
         <button
           onClick={generateSchedule}
           disabled={generating || selectedDays.length === 0}
