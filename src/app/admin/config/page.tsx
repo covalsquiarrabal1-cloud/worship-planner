@@ -600,46 +600,50 @@ function ScaleTypeEditForm({
   }
 
   return (
-    <div className="card border-white/20 space-y-4">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-bold">Editar: {scaleType.name}</h4>
-        <button onClick={onClose} className="p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--accent)] rounded">
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-
-      <p className="text-xs text-[var(--muted-foreground)]">Defina quantos vocais masculinos e femininos para esta escala.</p>
-
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Vocais Masculinos</label>
-          <input
-            type="number"
-            min={0}
-            max={5}
-            value={maleVocals}
-            onChange={(e) => setMaleVocals(parseInt(e.target.value) || 0)}
-          />
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+      <div className="bg-[var(--card)] w-full max-w-sm rounded-2xl border border-[var(--border)] shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border)]">
+          <h4 className="font-bold">Editar: {scaleType.name}</h4>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-[var(--accent)]">
+            <X className="w-4 h-4" />
+          </button>
         </div>
-        <div>
-          <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Vocais Femininos</label>
-          <input
-            type="number"
-            min={0}
-            max={5}
-            value={femaleVocals}
-            onChange={(e) => setFemaleVocals(parseInt(e.target.value) || 0)}
-          />
+
+        <div className="px-6 py-6 space-y-5">
+          <p className="text-sm text-[var(--muted-foreground)]">Defina quantos vocais masculinos e femininos.</p>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Homens</label>
+              <input
+                type="number"
+                min={0}
+                max={5}
+                value={maleVocals}
+                onChange={(e) => setMaleVocals(parseInt(e.target.value) || 0)}
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Mulheres</label>
+              <input
+                type="number"
+                min={0}
+                max={5}
+                value={femaleVocals}
+                onChange={(e) => setFemaleVocals(parseInt(e.target.value) || 0)}
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full bg-white text-black font-semibold py-3 rounded-lg text-sm disabled:opacity-40 hover:bg-gray-100"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Salvar'}
+          </button>
         </div>
       </div>
-
-      <button
-        onClick={handleSave}
-        disabled={saving}
-        className="w-full bg-white text-black font-semibold py-2.5 rounded-lg text-sm disabled:opacity-40 hover:bg-gray-100"
-      >
-        {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Salvar'}
-      </button>
     </div>
   )
 }
