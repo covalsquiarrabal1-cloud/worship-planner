@@ -75,10 +75,9 @@ export async function POST(request: Request) {
     scheduleId = newSchedule.id
   }
 
-  // Get or create scale types
+  // Scale type map
   const uniqueNames = [...new Set(selectedDays.map(d => d.scaleName).filter(Boolean))]
   const scaleTypeMap: Record<string, string> = {}
-
   for (const name of uniqueNames) {
     const existing = scaleTypes.find((st: any) => st.name === name)
     if (existing) {
@@ -101,7 +100,6 @@ export async function POST(request: Request) {
   // === MEMBER POOLS ===
   const maleLeaders = members.filter(m => m.gender === 'male' && m.is_leader)
   const femaleLeaders = members.filter(m => m.gender === 'female' && m.is_leader)
-  const backs = members.filter(m => m.is_back)
   const maleVocals = members.filter(m => m.gender === 'male' && !m.is_musician)
   const femaleVocals = members.filter(m => m.gender === 'female' && !m.is_musician)
 
@@ -115,62 +113,154 @@ export async function POST(request: Request) {
     }
   })
 
-  // === ROUND-ROBIN TRACKING ===
-  // Track usage count to ensure fair distribution
-  const usageCount: Record<string, number> = {}
-  members.forEach(m => { usageCount[m.id] = 0 })
-
-  // Track saturday/sunday assignments for the rule:
-  // "Each member needs at least 1 Saturday and 1 Sunday"
-  const saturdayAssigned = new Set<string>()
-  const sundayAssigned = new Set<string>()
-
-  // Round-robin indexes per pool
-  const rrIndex: Record<string, number> = {
-    maleLeader: 0,
-    femaleLeader: 0,
-    back: 0,
-    maleVocal: 0,
-    femaleVocal: 0,
+  // === TRACKING per day-of-week (for round-robin per day type) ===
+  // Track which leaders have been used on each day type (5=friday, 6=saturday, 0=sunday)
+  const leaderUsedOnDayType: Record<string, string[]> = {
+    'male_5': [], // male leaders used on fridays
+    'male_6': [], // male leaders used on saturdays
+    'male_0': [], // male leaders used on sundays
+    'female_5': [],
+    'female_6': [],
+    'female_0': [],
   }
+
+  // Track which members were assigned on which date (to prevent same person on sat+sun of same week)
+  const memberAssignedDates: Record<string, string[]> = {}
+  members.forEach(m => { memberAssignedDates[m.id] = [] })
+
+  // Instrument round-robin counters
   const instrumentRR: Record<string, number> = {}
   Object.keys(instrumentPools).forEach(k => { instrumentRR[k] = 0 })
 
-  // Helper: get next available from pool (round-robin, no repeat until exhausted)
-  function getNext(pool: any[], rrKey: string, blocked: Set<string>, assigned: Set<string>): any | null {
-    const available = pool.filter(m => !blocked.has(m.id) && !assigned.has(m.id))
-    if (available.length === 0) return null
+  // Sort days chronologically
+  const sortedDays = [...selectedDays].sort((a, b) => a.date.localeCompare(b.date))
 
-    // Sort by usage count to distribute evenly
-    available.sort((a, b) => (usageCount[a.id] || 0) - (usageCount[b.id] || 0))
-
-    const idx = (rrIndex[rrKey] || 0) % available.length
-    rrIndex[rrKey] = (rrIndex[rrKey] || 0) + 1
-    return available[idx]
+  // Group events by week for the sat/sun rule
+  function getWeekOfDate(dateStr: string): number {
+    const d = new Date(dateStr + 'T12:00:00')
+    return Math.ceil(d.getDate() / 7)
   }
 
-  function getNextInstrument(instrumentName: string, blocked: Set<string>, assigned: Set<string>): any | null {
-    const key = instrumentName.toLowerCase()
-    const pool = instrumentPools[key] || []
-    const available = pool.filter(m => !blocked.has(m.id) && !assigned.has(m.id))
+  // Helper: check if member was already assigned in the same week on sat or sun
+  function wasAssignedSameWeekend(memberId: string, currentDate: string, currentDow: number): boolean {
+    if (currentDow !== 0 && currentDow !== 6) return false // Only applies to sat/sun
+
+    const currentWeek = getWeekOfDate(currentDate)
+    const assignedDates = memberAssignedDates[memberId] || []
+
+    for (const dateStr of assignedDates) {
+      const d = new Date(dateStr + 'T12:00:00')
+      const dow = d.getDay()
+      const week = getWeekOfDate(dateStr)
+
+      if (week === currentWeek) {
+        // If current is sunday(0), check if was on saturday(6) of same week
+        if (currentDow === 0 && dow === 6) return true
+        // If current is saturday(6), check if was on sunday(0) of same week
+        if (currentDow === 6 && dow === 0) return true
+      }
+    }
+    return false
+  }
+
+  // Helper: get next leader ensuring round-robin per day type
+  function getNextLeader(
+    pool: any[],
+    genderKey: string,
+    dayOfWeekNum: number,
+    blockedSet: Set<string>,
+    assignedThisEvent: Set<string>,
+    currentDate: string
+  ): any | null {
+    const dayTypeKey = `${genderKey}_${dayOfWeekNum}`
+    const usedOnThisDay = leaderUsedOnDayType[dayTypeKey] || []
+
+    // Filter available
+    let available = pool.filter(m =>
+      !blockedSet.has(m.id) &&
+      !assignedThisEvent.has(m.id) &&
+      !wasAssignedSameWeekend(m.id, currentDate, dayOfWeekNum)
+    )
+
+    if (available.length === 0) {
+      // Fallback: allow same weekend if no other option
+      available = pool.filter(m =>
+        !blockedSet.has(m.id) &&
+        !assignedThisEvent.has(m.id)
+      )
+    }
+
     if (available.length === 0) return null
 
-    available.sort((a, b) => (usageCount[a.id] || 0) - (usageCount[b.id] || 0))
+    // Prefer leaders who haven't been on this day type yet
+    const notYetUsed = available.filter(m => !usedOnThisDay.includes(m.id))
 
+    let chosen: any
+    if (notYetUsed.length > 0) {
+      chosen = notYetUsed[0]
+    } else {
+      // All have been used - reset and start over
+      leaderUsedOnDayType[dayTypeKey] = []
+      chosen = available[0]
+    }
+
+    // Track usage
+    if (!leaderUsedOnDayType[dayTypeKey]) leaderUsedOnDayType[dayTypeKey] = []
+    leaderUsedOnDayType[dayTypeKey].push(chosen.id)
+
+    return chosen
+  }
+
+  // Helper: get next female vocal with same rules
+  function getNextFemaleVocal(
+    blockedSet: Set<string>,
+    assignedThisEvent: Set<string>,
+    currentDate: string,
+    dayOfWeekNum: number,
+    preferBack: boolean
+  ): any | null {
+    const pool = [...femaleLeaders, ...femaleVocals]
+
+    let available = pool.filter(m =>
+      !blockedSet.has(m.id) &&
+      !assignedThisEvent.has(m.id) &&
+      !wasAssignedSameWeekend(m.id, currentDate, dayOfWeekNum)
+    )
+
+    if (available.length === 0) {
+      available = pool.filter(m =>
+        !blockedSet.has(m.id) &&
+        !assignedThisEvent.has(m.id)
+      )
+    }
+
+    if (available.length === 0) return null
+
+    // If preferBack, try to pick a back member first
+    if (preferBack) {
+      const backs = available.filter(m => m.is_back)
+      if (backs.length > 0) return backs[0]
+    }
+
+    return available[0]
+  }
+
+  function getNextInstrument(instrumentName: string, blockedSet: Set<string>, assignedThisEvent: Set<string>): any | null {
+    const key = instrumentName.toLowerCase()
+    const pool = instrumentPools[key] || []
+    const available = pool.filter((m: any) => !blockedSet.has(m.id) && !assignedThisEvent.has(m.id))
+    if (available.length === 0) return null
     const idx = (instrumentRR[key] || 0) % available.length
     instrumentRR[key] = (instrumentRR[key] || 0) + 1
     return available[idx]
   }
 
-  // === GENERATE EVENTS ===
-  const sortedDays = [...selectedDays].sort((a, b) => a.date.localeCompare(b.date))
-
+  // === GENERATE ===
   for (const day of sortedDays) {
     const dateObj = new Date(day.date + 'T12:00:00')
     const weekNum = Math.ceil(dateObj.getDate() / 7)
     const dayOfWeekNum = dateObj.getDay()
 
-    // Get blocked members for this specific date + day of week
     const blockedByDate = blocks.filter(b => b.blocked_date === day.date).map(b => b.member_id)
     const blockedByDay = dayBlocks.filter(b => b.day_of_week === dayOfWeekNum).map(b => b.member_id)
     const blockedSet = new Set([...blockedByDate, ...blockedByDay])
@@ -196,78 +286,72 @@ export async function POST(request: Request) {
     const assignments: { event_id: string; member_id: string; role: string }[] = []
     const assignedThisEvent = new Set<string>()
 
-    // --- RULE: 1 Líder Masculino (Vocal 1) ---
-    // --- RULE: 1 Líder Feminino ---
-    // --- RULE: Vocals based on scale type ---
-
+    // === VOCALS ===
     if (scaleKind === 'strong_brothers') {
-      // 3 male vocals (leaders first)
+      // 3 male vocals
       const malePool = [...maleLeaders, ...maleVocals]
       for (let i = 0; i < 3; i++) {
-        const member = getNext(malePool, 'maleVocal', blockedSet, assignedThisEvent)
-        if (member) {
+        let available = malePool.filter(m =>
+          !blockedSet.has(m.id) &&
+          !assignedThisEvent.has(m.id) &&
+          !wasAssignedSameWeekend(m.id, day.date, dayOfWeekNum)
+        )
+        if (available.length === 0) {
+          available = malePool.filter(m => !blockedSet.has(m.id) && !assignedThisEvent.has(m.id))
+        }
+        if (available.length > 0) {
+          const member = available[0]
           assignments.push({ event_id: event.id, member_id: member.id, role: `vocal_${i + 1}` })
           assignedThisEvent.add(member.id)
-          usageCount[member.id]++
+          memberAssignedDates[member.id].push(day.date)
         }
       }
     } else if (scaleKind === 'empoderadas') {
-      // 3 female vocals (leaders first)
+      // 3 female vocals
       const femalePool = [...femaleLeaders, ...femaleVocals]
       for (let i = 0; i < 3; i++) {
-        const member = getNext(femalePool, 'femaleVocal', blockedSet, assignedThisEvent)
-        if (member) {
+        let available = femalePool.filter(m =>
+          !blockedSet.has(m.id) &&
+          !assignedThisEvent.has(m.id) &&
+          !wasAssignedSameWeekend(m.id, day.date, dayOfWeekNum)
+        )
+        if (available.length === 0) {
+          available = femalePool.filter(m => !blockedSet.has(m.id) && !assignedThisEvent.has(m.id))
+        }
+        if (available.length > 0) {
+          const member = available[0]
           assignments.push({ event_id: event.id, member_id: member.id, role: `vocal_${i + 1}` })
           assignedThisEvent.add(member.id)
-          usageCount[member.id]++
+          memberAssignedDates[member.id].push(day.date)
         }
       }
     } else {
-      // NORMAL: 1 male leader (Vocal 1) + 2 female vocals (at least one should be is_back)
-      const ml = getNext(maleLeaders, 'maleLeader', blockedSet, assignedThisEvent)
-      if (ml) {
-        assignments.push({ event_id: event.id, member_id: ml.id, role: 'vocal_1' })
-        assignedThisEvent.add(ml.id)
-        usageCount[ml.id]++
+      // NORMAL: 1 male leader + 2 female (one should be back)
+      const maleLeader = getNextLeader(maleLeaders, 'male', dayOfWeekNum, blockedSet, assignedThisEvent, day.date)
+      if (maleLeader) {
+        assignments.push({ event_id: event.id, member_id: maleLeader.id, role: 'vocal_1' })
+        assignedThisEvent.add(maleLeader.id)
+        memberAssignedDates[maleLeader.id].push(day.date)
       }
 
-      // First female vocal: prefer a back member
-      const femalePool = [...femaleLeaders, ...femaleVocals]
-      const femaleBacks = femalePool.filter(m => m.is_back && !blockedSet.has(m.id) && !assignedThisEvent.has(m.id))
-      const femaleNonBacks = femalePool.filter(m => !m.is_back && !blockedSet.has(m.id) && !assignedThisEvent.has(m.id))
-
-      // Vocal 2: back member (if available)
-      let vocal2: any = null
-      if (femaleBacks.length > 0) {
-        femaleBacks.sort((a, b) => (usageCount[a.id] || 0) - (usageCount[b.id] || 0))
-        const idx = (rrIndex.femaleVocal || 0) % femaleBacks.length
-        vocal2 = femaleBacks[idx]
-        rrIndex.femaleVocal = (rrIndex.femaleVocal || 0) + 1
-      } else {
-        vocal2 = getNext(femalePool, 'femaleVocal', blockedSet, assignedThisEvent)
-      }
-
+      // Vocal 2: prefer back member
+      const vocal2 = getNextFemaleVocal(blockedSet, assignedThisEvent, day.date, dayOfWeekNum, true)
       if (vocal2) {
         assignments.push({ event_id: event.id, member_id: vocal2.id, role: 'vocal_2' })
         assignedThisEvent.add(vocal2.id)
-        usageCount[vocal2.id]++
+        memberAssignedDates[vocal2.id].push(day.date)
       }
 
-      // Vocal 3: any remaining female
-      const vocal3 = getNext(femalePool, 'femaleVocal', blockedSet, assignedThisEvent)
+      // Vocal 3: any female
+      const vocal3 = getNextFemaleVocal(blockedSet, assignedThisEvent, day.date, dayOfWeekNum, false)
       if (vocal3) {
         assignments.push({ event_id: event.id, member_id: vocal3.id, role: 'vocal_3' })
         assignedThisEvent.add(vocal3.id)
-        usageCount[vocal3.id]++
+        memberAssignedDates[vocal3.id].push(day.date)
       }
     }
 
-    // --- RULE: 1 Back vocal ---
-    // Back is one of the 3 vocals, not a separate person
-    // Already handled: one of the vocal slots should be filled by an is_back member
-    // The round-robin naturally includes backs in the vocal pools since they're not musicians
-
-    // --- INSTRUMENTS from band_pattern or fallback ---
+    // === INSTRUMENTS ===
     const instrumentPatterns = bandPattern.filter((bp: any) => !bp.is_vocal && bp.instrument)
 
     if (instrumentPatterns.length > 0) {
@@ -278,27 +362,19 @@ export async function POST(request: Request) {
           if (member) {
             assignments.push({ event_id: event.id, member_id: member.id, role: instrName })
             assignedThisEvent.add(member.id)
-            usageCount[member.id]++
+            memberAssignedDates[member.id].push(day.date)
           }
         }
       }
     } else {
-      // Fallback instruments
       for (const instr of ['guitarra', 'violao', 'baixo', 'bateria', 'teclado']) {
         const member = getNextInstrument(instr, blockedSet, assignedThisEvent)
         if (member) {
           assignments.push({ event_id: event.id, member_id: member.id, role: instr })
           assignedThisEvent.add(member.id)
-          usageCount[member.id]++
+          memberAssignedDates[member.id].push(day.date)
         }
       }
-    }
-
-    // Track saturday/sunday for fair distribution rule
-    if (dayOfWeekNum === 6) { // Saturday
-      assignedThisEvent.forEach(id => saturdayAssigned.add(id))
-    } else if (dayOfWeekNum === 0) { // Sunday
-      assignedThisEvent.forEach(id => sundayAssigned.add(id))
     }
 
     // Insert assignments
