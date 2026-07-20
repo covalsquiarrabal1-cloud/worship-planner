@@ -48,6 +48,8 @@ export default function AdminPage() {
   const [events, setEvents] = useState<ScheduleEvent[]>([])
   const [selectedDates, setSelectedDates] = useState<Date[]>([])
   const [loading, setLoading] = useState(true)
+  const [view, setView] = useState<'mensal' | 'semanal'>('mensal')
+  const [currentWeek, setCurrentWeek] = useState(1)
   const supabase = createClient()
   const router = useRouter()
 
@@ -219,6 +221,33 @@ export default function AdminPage() {
         </div>
       </div>
 
+      {/* === VIEW TOGGLE === */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setView('mensal')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${view === 'mensal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+        >
+          Visão Mensal
+        </button>
+        <button
+          onClick={() => setView('semanal')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${view === 'semanal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+        >
+          Visão Semanal
+        </button>
+        {view === 'semanal' && (
+          <div className="flex items-center gap-2 ml-4">
+            <button onClick={() => setCurrentWeek(w => Math.max(1, w - 1))} className="p-1 rounded bg-[var(--accent)]">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-sm font-medium">Semana {currentWeek}</span>
+            <button onClick={() => setCurrentWeek(w => w + 1)} className="p-1 rounded bg-[var(--accent)]">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* === ESCALA TABLE === */}
       {loading ? (
         <div className="flex justify-center py-8">
@@ -245,13 +274,12 @@ export default function AdminPage() {
                 <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Guitarra</th>
                 <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Baixo</th>
                 <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Teclado</th>
-                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Back</th>
               </tr>
             </thead>
             <tbody>
-              {events.map((event, idx) => {
-                const prevEvent = idx > 0 ? events[idx - 1] : null
-                const showWeekSeparator = prevEvent && prevEvent.week_number !== event.week_number
+              {(view === 'semanal' ? events.filter(e => e.week_number === currentWeek) : events).map((event, idx, arr) => {
+                const prevEvent = idx > 0 ? arr[idx - 1] : null
+                const showWeekSeparator = view === 'mensal' && prevEvent && prevEvent.week_number !== event.week_number
 
                 return (
                   <tr
@@ -270,10 +298,16 @@ export default function AdminPage() {
                     <td className="px-3 py-2 text-xs">{getAssignment(event, 'guitarra')}</td>
                     <td className="px-3 py-2 text-xs">{getAssignment(event, 'baixo')}</td>
                     <td className="px-3 py-2 text-xs">{getAssignment(event, 'teclado')}</td>
-                    <td className="px-3 py-2 text-xs">{getAssignment(event, 'back')}</td>
                   </tr>
                 )
               })}
+              {view === 'semanal' && events.filter(e => e.week_number === currentWeek).length === 0 && (
+                <tr>
+                  <td colSpan={11} className="px-3 py-6 text-center text-sm text-[var(--muted-foreground)]">
+                    Nenhum evento na semana {currentWeek}.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

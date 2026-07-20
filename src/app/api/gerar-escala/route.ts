@@ -223,7 +223,7 @@ export async function POST(request: Request) {
         }
       }
     } else {
-      // NORMAL: 1 male leader (Vocal 1) + 2 female vocals
+      // NORMAL: 1 male leader (Vocal 1) + 2 female vocals (at least one should be is_back)
       const ml = getNext(maleLeaders, 'maleLeader', blockedSet, assignedThisEvent)
       if (ml) {
         assignments.push({ event_id: event.id, member_id: ml.id, role: 'vocal_1' })
@@ -231,25 +231,41 @@ export async function POST(request: Request) {
         usageCount[ml.id]++
       }
 
-      // 2 female vocals (leaders have priority)
+      // First female vocal: prefer a back member
       const femalePool = [...femaleLeaders, ...femaleVocals]
-      for (let i = 0; i < 2; i++) {
-        const member = getNext(femalePool, 'femaleVocal', blockedSet, assignedThisEvent)
-        if (member) {
-          assignments.push({ event_id: event.id, member_id: member.id, role: `vocal_${i + 2}` })
-          assignedThisEvent.add(member.id)
-          usageCount[member.id]++
-        }
+      const femaleBacks = femalePool.filter(m => m.is_back && !blockedSet.has(m.id) && !assignedThisEvent.has(m.id))
+      const femaleNonBacks = femalePool.filter(m => !m.is_back && !blockedSet.has(m.id) && !assignedThisEvent.has(m.id))
+
+      // Vocal 2: back member (if available)
+      let vocal2: any = null
+      if (femaleBacks.length > 0) {
+        femaleBacks.sort((a, b) => (usageCount[a.id] || 0) - (usageCount[b.id] || 0))
+        const idx = (rrIndex.femaleVocal || 0) % femaleBacks.length
+        vocal2 = femaleBacks[idx]
+        rrIndex.femaleVocal = (rrIndex.femaleVocal || 0) + 1
+      } else {
+        vocal2 = getNext(femalePool, 'femaleVocal', blockedSet, assignedThisEvent)
+      }
+
+      if (vocal2) {
+        assignments.push({ event_id: event.id, member_id: vocal2.id, role: 'vocal_2' })
+        assignedThisEvent.add(vocal2.id)
+        usageCount[vocal2.id]++
+      }
+
+      // Vocal 3: any remaining female
+      const vocal3 = getNext(femalePool, 'femaleVocal', blockedSet, assignedThisEvent)
+      if (vocal3) {
+        assignments.push({ event_id: event.id, member_id: vocal3.id, role: 'vocal_3' })
+        assignedThisEvent.add(vocal3.id)
+        usageCount[vocal3.id]++
       }
     }
 
     // --- RULE: 1 Back vocal ---
-    const back = getNext(backs, 'back', blockedSet, assignedThisEvent)
-    if (back) {
-      assignments.push({ event_id: event.id, member_id: back.id, role: 'back' })
-      assignedThisEvent.add(back.id)
-      usageCount[back.id]++
-    }
+    // Back is one of the 3 vocals, not a separate person
+    // Already handled: one of the vocal slots should be filled by an is_back member
+    // The round-robin naturally includes backs in the vocal pools since they're not musicians
 
     // --- INSTRUMENTS from band_pattern or fallback ---
     const instrumentPatterns = bandPattern.filter((bp: any) => !bp.is_vocal && bp.instrument)
