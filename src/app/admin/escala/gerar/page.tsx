@@ -256,6 +256,20 @@ export default function GerarEscalaPage() {
                       <option key={name} value={name}>{name}</option>
                     ))}
                   </select>
+                  {/* Quick select buttons */}
+                  {!day.scaleName && scaleNames.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {scaleNames.map((name) => (
+                        <button
+                          key={name}
+                          onClick={() => setDayScaleName(day.date, name)}
+                          className="px-3 py-1.5 text-xs rounded-lg bg-[var(--accent)] text-[var(--muted-foreground)] hover:bg-[var(--border)] hover:text-white transition-colors"
+                        >
+                          {name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={() => removeDay(day.date)}
