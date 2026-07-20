@@ -46,6 +46,11 @@ export async function POST(request: Request) {
     .from('member_blocks')
     .select('member_id, blocked_date')
 
+  // Load day-of-week blocks
+  const { data: dayBlocks } = await serviceClient
+    .from('member_day_blocks')
+    .select('member_id, day_of_week')
+
   // Get or create schedule for this month
   const { data: existingSchedule } = await serviceClient
     .from('schedules')
@@ -115,13 +120,22 @@ export async function POST(request: Request) {
   for (const day of sortedDays) {
     const dateObj = new Date(day.date + 'T12:00:00')
     const weekNum = Math.ceil(dateObj.getDate() / 7)
+    const dayOfWeekNum = dateObj.getDay()
 
+    // Members blocked on this specific date
     const blockedOnDate = (blocks || [])
       .filter(b => b.blocked_date === day.date)
       .map(b => b.member_id)
 
+    // Members blocked on this day of week
+    const blockedOnDayOfWeek = (dayBlocks || [])
+      .filter(b => b.day_of_week === dayOfWeekNum)
+      .map(b => b.member_id)
+
+    const allBlocked = [...new Set([...blockedOnDate, ...blockedOnDayOfWeek])]
+
     function getAvailable(list: any[]) {
-      return list.filter((m: any) => !blockedOnDate.includes(m.id))
+      return list.filter((m: any) => !allBlocked.includes(m.id))
     }
 
     function getNext(list: any[], idx: number): { member: any | null; newIdx: number } {

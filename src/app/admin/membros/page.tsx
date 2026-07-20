@@ -153,6 +153,7 @@ function MemberForm({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [instruments, setInstruments] = useState<{ id: string; name: string }[]>([])
+  const [blockedDays, setBlockedDays] = useState<number[]>([])
   const [form, setForm] = useState({
     name: member?.name || '',
     gender: member?.gender || 'male',
@@ -170,6 +171,17 @@ function MemberForm({
       .then(data => {
         if (Array.isArray(data)) setInstruments(data)
       })
+
+    // Load existing day blocks for this member
+    if (member) {
+      fetch(`/api/member-day-blocks?member_id=${member.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setBlockedDays(data.map((d: any) => d.day_of_week))
+          }
+        })
+    }
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -183,6 +195,7 @@ function MemberForm({
     }
 
     let res: Response
+    let savedMemberId: string | null = null
 
     if (member) {
       res = await fetch('/api/members', {
@@ -190,6 +203,7 @@ function MemberForm({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: member.id, ...payload }),
       })
+      savedMemberId = member.id
     } else {
       res = await fetch('/api/members', {
         method: 'POST',
@@ -203,6 +217,21 @@ function MemberForm({
       setError(data.error || 'Erro ao salvar')
       setLoading(false)
       return
+    }
+
+    // Get the new member ID if creating
+    if (!member) {
+      const created = await res.json()
+      savedMemberId = created?.id || null
+    }
+
+    // Save day blocks
+    if (savedMemberId) {
+      await fetch('/api/member-day-blocks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ member_id: savedMemberId, days: blockedDays }),
+      })
     }
 
     setLoading(false)
@@ -350,6 +379,43 @@ function MemberForm({
               </select>
             </div>
           )}
+
+          {/* Bloqueio por dia da semana */}
+          <div>
+            <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-3">Bloqueio por dia da semana</label>
+            <p className="text-xs text-[var(--muted-foreground)] mb-3">Dias em que este membro NÃO pode ser escalado:</p>
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+              {[
+                { day: 0, label: 'Dom' },
+                { day: 1, label: 'Seg' },
+                { day: 2, label: 'Ter' },
+                { day: 3, label: 'Qua' },
+                { day: 4, label: 'Qui' },
+                { day: 5, label: 'Sex' },
+                { day: 6, label: 'Sáb' },
+              ].map(({ day, label }) => {
+                const isBlocked = blockedDays.includes(day)
+                return (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => {
+                      setBlockedDays(prev =>
+                        isBlocked ? prev.filter(d => d !== day) : [...prev, day]
+                      )
+                    }}
+                    className={`py-2.5 rounded-lg text-xs font-medium transition-all ${
+                      isBlocked
+                        ? 'bg-red-500 text-white shadow-lg shadow-red-500/20'
+                        : 'bg-[var(--accent)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
 
           {/* Actions */}
           <div className="flex gap-3 pt-4 border-t border-[var(--border)]">
