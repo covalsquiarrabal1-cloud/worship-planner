@@ -5,8 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { Loader2, ArrowLeft, Edit2, Trash2, Music, Plus, X } from 'lucide-react'
-import Link from 'next/link'
+import { Loader2, ArrowLeft, Trash2, Plus, X, Play, Music2, ExternalLink } from 'lucide-react'
 
 interface Assignment {
   id: string
@@ -21,6 +20,7 @@ interface Song {
   version: string | null
   minister: string | null
   youtube_url: string | null
+  spotify_url: string | null
 }
 
 interface EventDetail {
@@ -59,7 +59,7 @@ export default function EventDetailPage() {
           role,
           member:members(id, name)
         ),
-        songs(id, order_num, title, version, minister, youtube_url)
+        songs(id, order_num, title, version, minister, youtube_url, spotify_url)
       `)
       .eq('id', id)
       .single()
@@ -74,11 +74,18 @@ export default function EventDetailPage() {
     router.push('/admin')
   }
 
+  async function deleteSong(songId: string) {
+    if (!confirm('Excluir este louvor?')) return
+    await supabase.from('songs').delete().eq('id', songId)
+    loadEvent()
+  }
+
   const roleLabels: Record<string, string> = {
-    vocal_1: 'Vocal 1 (Líder)',
+    vocal_1: 'Vocal 1',
     vocal_2: 'Vocal 2',
     vocal_3: 'Vocal 3',
     guitarra: 'Guitarra',
+    violao: 'Violão',
     baixo: 'Baixo',
     bateria: 'Bateria',
     teclado: 'Teclado',
@@ -86,7 +93,7 @@ export default function EventDetailPage() {
   }
 
   if (loading) {
-    return <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin" /></div>
+    return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
   }
 
   if (!event) {
@@ -94,11 +101,11 @@ export default function EventDetailPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-2xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <button onClick={() => router.back()} className="p-2 rounded-lg bg-[var(--accent)]">
-          <ArrowLeft className="w-5 h-5" />
+        <button onClick={() => router.back()} className="p-2 rounded-lg bg-[var(--accent)] hover:bg-[var(--border)]">
+          <ArrowLeft className="w-4 h-4" />
         </button>
         <div className="flex-1">
           <h2 className="font-bold text-lg">{event.scale_type?.name || 'Evento'}</h2>
@@ -106,24 +113,24 @@ export default function EventDetailPage() {
             {event.day_of_week}, {format(new Date(event.event_date + 'T12:00:00'), "dd 'de' MMMM", { locale: ptBR })}
           </p>
         </div>
-        <button onClick={deleteEvent} className="p-2 text-red-400">
+        <button onClick={deleteEvent} className="p-2 text-red-400 hover:bg-red-500/10 rounded-lg">
           <Trash2 className="w-5 h-5" />
         </button>
       </div>
 
       {/* Assignments */}
-      <section className="space-y-2">
+      <section className="space-y-3">
         <h3 className="font-semibold text-sm text-[var(--muted-foreground)] uppercase tracking-wide">Equipe</h3>
         {event.assignments.length === 0 ? (
           <p className="text-sm text-[var(--muted-foreground)]">Nenhum membro atribuído.</p>
         ) : (
-          <div className="space-y-1">
+          <div className="card space-y-0 divide-y divide-[var(--border)] p-0">
             {event.assignments
               .sort((a, b) => a.role.localeCompare(b.role))
               .map((assignment) => (
-                <div key={assignment.id} className="card flex items-center justify-between py-3">
-                  <span className="text-xs text-[var(--muted-foreground)]">{roleLabels[assignment.role] || assignment.role}</span>
-                  <span className="font-medium">{assignment.member?.name || '-'}</span>
+                <div key={assignment.id} className="flex items-center justify-between px-4 py-3">
+                  <span className="text-sm text-[var(--muted-foreground)]">{roleLabels[assignment.role] || assignment.role}</span>
+                  <span className="text-sm font-medium">{assignment.member?.name || '-'}</span>
                 </div>
               ))}
           </div>
@@ -131,14 +138,14 @@ export default function EventDetailPage() {
       </section>
 
       {/* Songs */}
-      <section className="space-y-2">
+      <section className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-sm text-[var(--muted-foreground)] uppercase tracking-wide">Louvores</h3>
           <button
             onClick={() => setShowSongForm(true)}
-            className="flex items-center gap-1 text-sm text-white"
+            className="flex items-center gap-1.5 text-sm bg-white text-black font-medium px-3 py-1.5 rounded-lg hover:bg-gray-100"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-3.5 h-3.5" />
             Adicionar
           </button>
         </div>
@@ -151,24 +158,44 @@ export default function EventDetailPage() {
               .sort((a, b) => a.order_num - b.order_num)
               .map((song) => (
                 <div key={song.id} className="card">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="font-medium">{song.order_num}. {song.title}</p>
-                      <div className="flex gap-2 text-xs text-[var(--muted-foreground)] mt-0.5">
-                        {song.version && <span>{song.version}</span>}
-                        {song.minister && <span>• {song.minister}</span>}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{song.order_num}. {song.title}</p>
+                      <div className="flex flex-wrap gap-2 text-xs text-[var(--muted-foreground)] mt-1">
+                        {song.version && <span className="bg-[var(--accent)] px-2 py-0.5 rounded">{song.version}</span>}
+                        {song.minister && <span>Ministro: {song.minister}</span>}
                       </div>
                     </div>
-                    {song.youtube_url && (
-                      <a
-                        href={song.youtube_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1.5 bg-red-500/20 rounded-lg"
+                    <div className="flex items-center gap-1 shrink-0">
+                      {song.youtube_url && (
+                        <a
+                          href={song.youtube_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 bg-red-500/10 rounded-lg hover:bg-red-500/20"
+                          title="YouTube"
+                        >
+                          <Play className="w-4 h-4 text-red-400" />
+                        </a>
+                      )}
+                      {song.spotify_url && (
+                        <a
+                          href={song.spotify_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-1.5 bg-green-500/10 rounded-lg hover:bg-green-500/20"
+                          title="Spotify"
+                        >
+                          <Music2 className="w-4 h-4 text-green-400" />
+                        </a>
+                      )}
+                      <button
+                        onClick={() => deleteSong(song.id)}
+                        className="p-1.5 text-[var(--muted-foreground)] hover:text-red-400 rounded-lg"
                       >
-                        <Music className="w-4 h-4 text-red-400" />
-                      </a>
-                    )}
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -207,6 +234,7 @@ function SongForm({
     version: '',
     minister: '',
     youtube_url: '',
+    spotify_url: '',
     order_num: nextOrder,
   })
 
@@ -215,76 +243,97 @@ function SongForm({
     setLoading(true)
     await supabase.from('songs').insert({
       event_id: eventId,
-      ...form,
+      order_num: form.order_num,
+      title: form.title,
       version: form.version || null,
       minister: form.minister || null,
       youtube_url: form.youtube_url || null,
+      spotify_url: form.spotify_url || null,
     })
     setLoading(false)
     onSave()
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center">
-      <div className="bg-[var(--card)] w-full max-w-md rounded-t-2xl sm:rounded-2xl">
-        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
-          <h3 className="font-semibold">Adicionar Louvor</h3>
-          <button onClick={onClose} className="p-1"><X className="w-5 h-5" /></button>
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-6">
+      <div className="bg-[var(--card)] w-full max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto border border-[var(--border)] shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-[var(--border)]">
+          <h3 className="font-bold text-lg">Adicionar Louvor</h3>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-[var(--accent)]">
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        <form onSubmit={handleSubmit} className="p-4 space-y-3">
-          <div>
-            <label className="text-sm text-[var(--muted-foreground)] mb-1 block">Ordem</label>
-            <input
-              type="number"
-              value={form.order_num}
-              onChange={(e) => setForm({ ...form, order_num: parseInt(e.target.value) })}
-              min={1}
-              required
-            />
+        <form onSubmit={handleSubmit} className="px-6 py-6 space-y-5">
+          <div className="grid grid-cols-4 gap-3">
+            <div>
+              <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Ordem</label>
+              <input
+                type="number"
+                value={form.order_num}
+                onChange={(e) => setForm({ ...form, order_num: parseInt(e.target.value) })}
+                min={1}
+                required
+              />
+            </div>
+            <div className="col-span-3">
+              <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Título do louvor</label>
+              <input
+                type="text"
+                value={form.title}
+                onChange={(e) => setForm({ ...form, title: e.target.value })}
+                placeholder="Nome do louvor"
+                required
+              />
+            </div>
           </div>
-          <div>
-            <label className="text-sm text-[var(--muted-foreground)] mb-1 block">Título</label>
-            <input
-              type="text"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="Nome do louvor"
-              required
-            />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Versão / Artista</label>
+              <input
+                type="text"
+                value={form.version}
+                onChange={(e) => setForm({ ...form, version: e.target.value })}
+                placeholder="Ex: Hillsong, Bethel..."
+              />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Ministro</label>
+              <input
+                type="text"
+                value={form.minister}
+                onChange={(e) => setForm({ ...form, minister: e.target.value })}
+                placeholder="Quem vai ministrar"
+              />
+            </div>
           </div>
+
           <div>
-            <label className="text-sm text-[var(--muted-foreground)] mb-1 block">Versão / Artista</label>
-            <input
-              type="text"
-              value={form.version}
-              onChange={(e) => setForm({ ...form, version: e.target.value })}
-              placeholder="Ex: Hillsong, Bethel..."
-            />
-          </div>
-          <div>
-            <label className="text-sm text-[var(--muted-foreground)] mb-1 block">Ministro</label>
-            <input
-              type="text"
-              value={form.minister}
-              onChange={(e) => setForm({ ...form, minister: e.target.value })}
-              placeholder="Quem vai ministrar"
-            />
-          </div>
-          <div>
-            <label className="text-sm text-[var(--muted-foreground)] mb-1 block">Link YouTube</label>
+            <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Link YouTube</label>
             <input
               type="url"
               value={form.youtube_url}
               onChange={(e) => setForm({ ...form, youtube_url: e.target.value })}
-              placeholder="https://youtube.com/..."
+              placeholder="https://youtube.com/watch?v=..."
             />
           </div>
+
+          <div>
+            <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Link Spotify</label>
+            <input
+              type="url"
+              value={form.spotify_url}
+              onChange={(e) => setForm({ ...form, spotify_url: e.target.value })}
+              placeholder="https://open.spotify.com/track/..."
+            />
+          </div>
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-white text-black font-semibold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center"
+            className="w-full bg-white text-black font-semibold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center text-sm hover:bg-gray-100"
           >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Salvar'}
+            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar Louvor'}
           </button>
         </form>
       </div>
