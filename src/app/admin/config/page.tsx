@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Trash2, Loader2, X, LogOut, Tag, CalendarOff, Guitar, Users, Calendar } from 'lucide-react'
+import { Plus, Trash2, Loader2, X, LogOut, Tag, CalendarOff, Guitar, Users, Calendar, Edit2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -10,6 +10,8 @@ interface ScaleType {
   id: string
   name: string
   type: string
+  male_vocals: number
+  female_vocals: number
 }
 
 interface Instrument {
@@ -46,6 +48,7 @@ export default function ConfigPage() {
   const [newScaleName, setNewScaleName] = useState('')
   const [newInstrumentName, setNewInstrumentName] = useState('')
   const [savingDefaults, setSavingDefaults] = useState(false)
+  const [editingScaleType, setEditingScaleType] = useState<ScaleType | null>(null)
   const supabase = createClient()
   const router = useRouter()
 
@@ -361,11 +364,30 @@ export default function ConfigPage() {
 
         <div className="space-y-2">
           {scaleTypes.map((st) => (
-            <div key={st.id} className="card flex items-center justify-between">
-              <span className="text-sm font-medium">{st.name}</span>
-              <button onClick={() => deleteScaleType(st.id)} className="p-1.5 text-red-400 hover:bg-red-500/10 rounded">
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
+            <div key={st.id} className="card flex items-center justify-between gap-3">
+              <div className="flex-1">
+                <span className="text-sm font-medium">{st.name}</span>
+                <div className="flex gap-2 mt-1">
+                  <span className="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded">
+                    {st.male_vocals || 1}H
+                  </span>
+                  <span className="text-xs bg-pink-500/10 text-pink-400 px-2 py-0.5 rounded">
+                    {st.female_vocals || 2}M
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setEditingScaleType(st)}
+                  className="p-1.5 text-[var(--muted-foreground)] hover:text-white hover:bg-[var(--accent)] rounded"
+                  title="Editar"
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                </button>
+                <button onClick={() => deleteScaleType(st.id)} className="p-1.5 text-red-400 hover:bg-red-500/10 rounded">
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           ))}
           {scaleTypes.length === 0 && (
@@ -391,6 +413,15 @@ export default function ConfigPage() {
               <X className="w-4 h-4" />
             </button>
           </form>
+        )}
+
+        {/* Edit Scale Type Modal */}
+        {editingScaleType && (
+          <ScaleTypeEditForm
+            scaleType={editingScaleType}
+            onClose={() => setEditingScaleType(null)}
+            onSave={() => { setEditingScaleType(null); loadAll() }}
+          />
         )}
       </section>
 
@@ -540,6 +571,75 @@ function BandPatternForm({
           {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Adicionar ao padrão'}
         </button>
       </form>
+    </div>
+  )
+}
+
+function ScaleTypeEditForm({
+  scaleType,
+  onClose,
+  onSave,
+}: {
+  scaleType: ScaleType
+  onClose: () => void
+  onSave: () => void
+}) {
+  const [maleVocals, setMaleVocals] = useState(scaleType.male_vocals || 1)
+  const [femaleVocals, setFemaleVocals] = useState(scaleType.female_vocals || 2)
+  const [saving, setSaving] = useState(false)
+
+  async function handleSave() {
+    setSaving(true)
+    await fetch('/api/scale-types', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: scaleType.id, male_vocals: maleVocals, female_vocals: femaleVocals }),
+    })
+    setSaving(false)
+    onSave()
+  }
+
+  return (
+    <div className="card border-white/20 space-y-4">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-bold">Editar: {scaleType.name}</h4>
+        <button onClick={onClose} className="p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--accent)] rounded">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      <p className="text-xs text-[var(--muted-foreground)]">Defina quantos vocais masculinos e femininos para esta escala.</p>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Vocais Masculinos</label>
+          <input
+            type="number"
+            min={0}
+            max={5}
+            value={maleVocals}
+            onChange={(e) => setMaleVocals(parseInt(e.target.value) || 0)}
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Vocais Femininos</label>
+          <input
+            type="number"
+            min={0}
+            max={5}
+            value={femaleVocals}
+            onChange={(e) => setFemaleVocals(parseInt(e.target.value) || 0)}
+          />
+        </div>
+      </div>
+
+      <button
+        onClick={handleSave}
+        disabled={saving}
+        className="w-full bg-white text-black font-semibold py-2.5 rounded-lg text-sm disabled:opacity-40 hover:bg-gray-100"
+      >
+        {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Salvar'}
+      </button>
     </div>
   )
 }
