@@ -25,6 +25,7 @@ import {
   FileDown,
   Loader2,
   Plus,
+  Calendar,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -295,6 +296,13 @@ export default function AdminPage() {
           <Plus className="w-4 h-4" />
           Gerar Escala {selectedDates.length > 0 && `(${selectedDates.length} dias)`}
         </button>
+        <Link
+          href="/admin/escala/manual"
+          className="flex items-center justify-center gap-2 bg-[var(--accent)] px-4 py-2.5 rounded-xl text-sm"
+          title="Criar escala manual"
+        >
+          <Calendar className="w-4 h-4" />
+        </Link>
         <Link
           href={`/admin/escala/exportar?month=${month}&year=${year}`}
           className="flex items-center justify-center gap-2 bg-[var(--accent)] px-4 py-2.5 rounded-xl"
