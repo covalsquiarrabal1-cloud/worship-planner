@@ -38,36 +38,36 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-white mb-4">
-            <Music className="w-8 h-8 text-black" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-white mb-4">
+            <Music className="w-7 h-7 text-black" />
           </div>
           <h1 className="text-2xl font-bold">Worship Planner</h1>
-          <p className="text-[var(--muted-foreground)] mt-1">Faça login para continuar</p>
+          <p className="text-[var(--muted-foreground)] text-sm mt-1">Faça login para continuar</p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-3">
           <div className="relative">
-            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted-foreground)]" />
+            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
             <input
               type="email"
               placeholder="E-mail"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="pl-11"
+              className="input-with-icon"
               required
               autoComplete="email"
             />
           </div>
 
           <div className="relative">
-            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--muted-foreground)]" />
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
             <input
               type="password"
               placeholder="Senha"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="pl-11"
+              className="input-with-icon"
               required
               autoComplete="current-password"
             />
@@ -80,10 +80,10 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-white text-black font-semibold py-3 rounded-xl hover:bg-gray-200 disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full bg-white text-black font-semibold py-2.5 rounded-xl hover:bg-gray-200 disabled:opacity-50 flex items-center justify-center gap-2 text-sm"
           >
             {loading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               'Entrar'
             )}

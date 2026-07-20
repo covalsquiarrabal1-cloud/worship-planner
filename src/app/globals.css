@@ -46,21 +46,79 @@ body {
   border-radius: 4px;
 }
 
-/* Mobile-first input styles */
-input, select, textarea {
+/* Input styles */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="url"],
+input[type="number"],
+select,
+textarea {
   background: var(--input);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--foreground);
-  padding: 0.75rem 1rem;
-  font-size: 16px; /* Prevents zoom on iOS */
+  padding: 0.625rem 0.875rem;
+  font-size: 0.875rem;
   width: 100%;
   transition: border-color 0.2s;
+  line-height: 1.5;
 }
 
-input:focus, select:focus, textarea:focus {
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+input[type="url"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
   outline: none;
   border-color: var(--primary);
+}
+
+input::placeholder {
+  color: var(--muted-foreground);
+}
+
+/* Checkbox styles */
+input[type="checkbox"] {
+  appearance: none;
+  width: 1.125rem;
+  height: 1.125rem;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  background: var(--input);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+
+input[type="checkbox"]:checked {
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid var(--primary-foreground);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* Select dropdown arrow */
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23999' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  padding-right: 2rem;
 }
 
 button {
@@ -79,4 +137,9 @@ button {
 /* Bottom nav safe area */
 .pb-safe {
   padding-bottom: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+}
+
+/* Input with icon - ensure proper padding */
+.input-with-icon {
+  padding-left: 2.5rem;
 }

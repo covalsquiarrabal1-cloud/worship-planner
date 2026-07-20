@@ -48,12 +48,12 @@ export default function MembrosPage() {
   })
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-2xl mx-auto space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Membros</h2>
+        <h2 className="text-lg font-bold">Membros</h2>
         <button
           onClick={() => { setEditingMember(null); setShowForm(true) }}
-          className="flex items-center gap-1 bg-white text-black font-semibold px-3 py-2 rounded-lg text-sm"
+          className="flex items-center gap-1 bg-white text-black font-semibold px-3 py-1.5 rounded-lg text-sm"
         >
           <Plus className="w-4 h-4" />
           Novo
@@ -68,7 +68,7 @@ export default function MembrosPage() {
           placeholder="Buscar membro..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-10 py-2 text-sm"
+          className="input-with-icon"
         />
       </div>
 
@@ -83,7 +83,7 @@ export default function MembrosPage() {
           <button
             key={f.key}
             onClick={() => setFilter(f.key as typeof filter)}
-            className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap ${
+            className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap ${
               filter === f.key
                 ? 'bg-white text-black font-medium'
                 : 'bg-[var(--accent)] text-[var(--muted-foreground)]'
@@ -100,17 +100,17 @@ export default function MembrosPage() {
           <Loader2 className="w-6 h-6 animate-spin" />
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {filteredMembers.map((member) => (
             <button
               key={member.id}
               onClick={() => { setEditingMember(member); setShowForm(true) }}
-              className="card w-full text-left flex items-center gap-3"
+              className="card w-full text-left flex items-center gap-3 py-2.5 px-3"
             >
-              <UserCircle className={`w-8 h-8 ${member.gender === 'male' ? 'text-blue-400' : 'text-pink-400'}`} />
+              <UserCircle className={`w-7 h-7 shrink-0 ${member.gender === 'male' ? 'text-blue-400' : 'text-pink-400'}`} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-medium truncate">{member.name}</span>
+                  <span className="font-medium text-sm truncate">{member.name}</span>
                   {member.is_leader && <Crown className="w-3.5 h-3.5 text-yellow-400 shrink-0" />}
                   {member.is_blocked && <Ban className="w-3.5 h-3.5 text-red-400 shrink-0" />}
                 </div>
@@ -126,6 +126,11 @@ export default function MembrosPage() {
               </div>
             </button>
           ))}
+          {filteredMembers.length === 0 && (
+            <p className="text-center text-sm text-[var(--muted-foreground)] py-4">
+              Nenhum membro encontrado.
+            </p>
+          )}
         </div>
       )}
 
@@ -190,20 +195,20 @@ function MemberForm({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center">
-      <div className="bg-[var(--card)] w-full max-w-md rounded-t-2xl sm:rounded-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+      <div className="bg-[var(--card)] w-full max-w-md rounded-xl max-h-[85vh] overflow-y-auto border border-[var(--border)]">
         <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
-          <h3 className="font-semibold text-lg">
+          <h3 className="font-semibold">
             {member ? 'Editar Membro' : 'Novo Membro'}
           </h3>
-          <button onClick={onClose} className="p-1">
-            <X className="w-5 h-5" />
+          <button onClick={onClose} className="p-1 rounded hover:bg-[var(--accent)]">
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div>
-            <label className="text-sm text-[var(--muted-foreground)] mb-1 block">Nome</label>
+            <label className="text-xs text-[var(--muted-foreground)] mb-1 block">Nome</label>
             <input
               type="text"
               value={form.name}
@@ -213,7 +218,7 @@ function MemberForm({
           </div>
 
           <div>
-            <label className="text-sm text-[var(--muted-foreground)] mb-1 block">E-mail (login)</label>
+            <label className="text-xs text-[var(--muted-foreground)] mb-1 block">E-mail (login)</label>
             <input
               type="email"
               value={form.email}
@@ -223,13 +228,13 @@ function MemberForm({
           </div>
 
           <div>
-            <label className="text-sm text-[var(--muted-foreground)] mb-1 block">Gênero</label>
+            <label className="text-xs text-[var(--muted-foreground)] mb-1.5 block">Gênero</label>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setForm({ ...form, gender: 'male' })}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium ${
-                  form.gender === 'male' ? 'bg-blue-500 text-white' : 'bg-[var(--accent)]'
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  form.gender === 'male' ? 'bg-blue-500 text-white' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'
                 }`}
               >
                 Masculino
@@ -237,8 +242,8 @@ function MemberForm({
               <button
                 type="button"
                 onClick={() => setForm({ ...form, gender: 'female' })}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium ${
-                  form.gender === 'female' ? 'bg-pink-500 text-white' : 'bg-[var(--accent)]'
+                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  form.gender === 'female' ? 'bg-pink-500 text-white' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'
                 }`}
               >
                 Feminino
@@ -246,13 +251,12 @@ function MemberForm({
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={form.is_leader}
                 onChange={(e) => setForm({ ...form, is_leader: e.target.checked })}
-                className="w-5 h-5 rounded"
               />
               <span className="text-sm">Líder de equipe</span>
             </label>
@@ -262,7 +266,6 @@ function MemberForm({
                 type="checkbox"
                 checked={form.is_back}
                 onChange={(e) => setForm({ ...form, is_back: e.target.checked })}
-                className="w-5 h-5 rounded"
               />
               <span className="text-sm">Back vocal</span>
             </label>
@@ -272,12 +275,8 @@ function MemberForm({
                 type="checkbox"
                 checked={form.is_blocked}
                 onChange={(e) => setForm({ ...form, is_blocked: e.target.checked })}
-                className="w-5 h-5 rounded"
               />
-              <span className="text-sm flex items-center gap-1">
-                <Ban className="w-4 h-4 text-red-400" />
-                Bloqueado (não escalar)
-              </span>
+              <span className="text-sm text-red-400">Bloqueado (não escalar)</span>
             </label>
 
             <label className="flex items-center gap-3 cursor-pointer">
@@ -285,7 +284,6 @@ function MemberForm({
                 type="checkbox"
                 checked={form.is_musician}
                 onChange={(e) => setForm({ ...form, is_musician: e.target.checked })}
-                className="w-5 h-5 rounded"
               />
               <span className="text-sm">Músico</span>
             </label>
@@ -293,7 +291,7 @@ function MemberForm({
 
           {form.is_musician && (
             <div>
-              <label className="text-sm text-[var(--muted-foreground)] mb-1 block">Instrumento</label>
+              <label className="text-xs text-[var(--muted-foreground)] mb-1 block">Instrumento</label>
               <select
                 value={form.instrument}
                 onChange={(e) => setForm({ ...form, instrument: e.target.value })}
@@ -308,12 +306,12 @@ function MemberForm({
             </div>
           )}
 
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2 pt-2 border-t border-[var(--border)]">
             {member && (
               <button
                 type="button"
                 onClick={handleDelete}
-                className="px-4 py-3 rounded-xl bg-red-500/20 text-red-400 font-medium text-sm"
+                className="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 font-medium text-sm"
               >
                 Excluir
               </button>
@@ -321,9 +319,9 @@ function MemberForm({
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-white text-black font-semibold py-3 rounded-xl disabled:opacity-50 flex items-center justify-center"
+              className="flex-1 bg-white text-black font-semibold py-2 rounded-lg disabled:opacity-50 flex items-center justify-center text-sm"
             >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Salvar'}
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
             </button>
           </div>
         </form>
