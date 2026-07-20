@@ -56,7 +56,6 @@ export default function AdminPage() {
 
   useEffect(() => {
     loadEvents()
-    // Restore previously selected dates for this month from localStorage
     try {
       const saved = localStorage.getItem(`selectedDates_${month}_${year}`)
       if (saved) {
@@ -97,22 +96,17 @@ export default function AdminPage() {
     setLoading(false)
   }
 
-  // Build calendar grid
+  // Calendar grid
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
   const calendarStart = startOfWeek(monthStart, { weekStartsOn: 0 })
   const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: 0 })
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd })
-
-  const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
-
-  function getEventForDate(date: Date): ScheduleEvent | undefined {
-    const dateStr = format(date, 'yyyy-MM-dd')
-    return events.find((e) => e.event_date === dateStr)
-  }
+  const weekDays = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S']
 
   function hasEvent(date: Date): boolean {
-    return !!getEventForDate(date)
+    const dateStr = format(date, 'yyyy-MM-dd')
+    return events.some((e) => e.event_date === dateStr)
   }
 
   function isSelected(date: Date): boolean {
@@ -131,31 +125,20 @@ export default function AdminPage() {
 
   function handleGerarEscala() {
     const dateStrs = selectedDates.map((d) => format(d, 'yyyy-MM-dd'))
-    // Save selection for next time
     try {
       localStorage.setItem(`selectedDates_${month}_${year}`, JSON.stringify(dateStrs))
     } catch {}
     router.push(`/admin/escala/gerar?month=${month}&year=${year}&dates=${dateStrs.join(',')}`)
   }
 
-  // Get details for selected dates that have events
-  const selectedEvents = selectedDates
-    .map((d) => ({ date: d, event: getEventForDate(d) }))
-    .filter((item) => item.event)
-
-  const roleLabels: Record<string, string> = {
-    vocal_1: 'Vocal 1',
-    vocal_2: 'Vocal 2',
-    vocal_3: 'Vocal 3',
-    guitarra: 'Guitarra',
-    baixo: 'Baixo',
-    bateria: 'Bateria',
-    teclado: 'Teclado',
-    back: 'Back',
+  // Helper to get assignment by role
+  function getAssignment(event: ScheduleEvent, role: string): string {
+    const a = event.assignments.find(a => a.role === role)
+    return a?.member?.name || '-'
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-5">
+    <div className="max-w-6xl mx-auto space-y-5">
       {/* Month Navigation */}
       <div className="flex items-center justify-between">
         <button
@@ -175,23 +158,17 @@ export default function AdminPage() {
         </button>
       </div>
 
-      {/* Calendar + Detail side by side on desktop */}
+      {/* Calendar compact + Actions */}
       <div className="flex flex-col lg:flex-row gap-4">
-        {/* Calendar Grid */}
-        <div className="card p-3 lg:flex-1">
-          {/* Week day headers */}
+        {/* Mini Calendar */}
+        <div className="card p-3 lg:w-64 shrink-0">
           <div className="grid grid-cols-7 mb-1">
-            {weekDays.map((day) => (
-              <div
-                key={day}
-                className="text-center text-xs font-medium text-[var(--muted-foreground)] py-1"
-              >
+            {weekDays.map((day, i) => (
+              <div key={i} className="text-center text-[10px] font-medium text-[var(--muted-foreground)] py-0.5">
                 {day}
               </div>
             ))}
           </div>
-
-          {/* Day cells */}
           <div className="grid grid-cols-7 gap-0.5">
             {calendarDays.map((day) => {
               const inMonth = isSameMonth(day, currentDate)
@@ -205,7 +182,7 @@ export default function AdminPage() {
                   onClick={() => toggleDate(day)}
                   disabled={!inMonth}
                   className={`
-                    relative py-2 flex flex-col items-center justify-center rounded-md text-sm transition-all
+                    relative py-1 flex flex-col items-center justify-center rounded text-xs transition-all
                     ${!inMonth ? 'opacity-20 cursor-default' : 'cursor-pointer'}
                     ${selected ? 'bg-white text-black font-bold' : ''}
                     ${!selected && today ? 'ring-1 ring-white/50' : ''}
@@ -214,144 +191,120 @@ export default function AdminPage() {
                   `}
                 >
                   <span>{format(day, 'd')}</span>
-                  {eventOnDay && !selected && (
-                    <div className="absolute bottom-0.5 w-1.5 h-1.5 rounded-full bg-green-400" />
-                  )}
-                  {eventOnDay && selected && (
-                    <div className="absolute bottom-0.5 w-1.5 h-1.5 rounded-full bg-green-700" />
-                  )}
+                  {eventOnDay && <div className="absolute bottom-0 w-1 h-1 rounded-full bg-green-400" />}
                 </button>
               )
             })}
           </div>
-
-          {/* Selection info */}
           {selectedDates.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-[var(--border)] flex items-center justify-between">
-              <span className="text-xs text-[var(--muted-foreground)]">
-                {selectedDates.length} dia{selectedDates.length > 1 ? 's' : ''} selecionado{selectedDates.length > 1 ? 's' : ''}
-              </span>
-              <button
-                onClick={() => setSelectedDates([])}
-                className="text-xs text-red-400 hover:underline"
-              >
-                Limpar
-              </button>
+            <div className="mt-2 pt-2 border-t border-[var(--border)] flex justify-between items-center">
+              <span className="text-[10px] text-[var(--muted-foreground)]">{selectedDates.length} dias</span>
+              <button onClick={() => setSelectedDates([])} className="text-[10px] text-red-400">Limpar</button>
             </div>
           )}
         </div>
 
-        {/* Right panel: selected days detail */}
-        <div className="lg:w-72 space-y-2">
-          {selectedDates.length > 0 ? (
-            <>
-              <div className="space-y-2 max-h-80 overflow-y-auto">
-                {selectedDates.map((date) => {
-                  const event = getEventForDate(date)
-                  return (
-                    <div key={date.toISOString()} className="card py-2 px-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="text-sm font-medium">
-                            {format(date, 'dd/MM')}
-                          </span>
-                          <span className="text-xs text-[var(--muted-foreground)] ml-2 capitalize">
-                            {format(date, 'EEE', { locale: ptBR })}
-                          </span>
-                        </div>
-                        {event && (
-                          <Link
-                            href={`/admin/escala/${event.id}`}
-                            className="text-xs text-green-400 font-medium"
-                          >
-                            {event.scale_type?.name || 'Escala'}
-                          </Link>
-                        )}
-                      </div>
-                      {event && event.assignments.length > 0 && (
-                        <div className="mt-1.5 grid grid-cols-1 gap-0.5 text-xs">
-                          {event.assignments
-                            .sort((a, b) => a.role.localeCompare(b.role))
-                            .slice(0, 3)
-                            .map((a) => (
-                              <div key={a.id} className="flex justify-between text-[var(--muted-foreground)]">
-                                <span>{roleLabels[a.role] || a.role}</span>
-                                <span className="text-[var(--foreground)]">{a.member?.name || '-'}</span>
-                              </div>
-                            ))}
-                          {event.assignments.length > 3 && (
-                            <span className="text-[var(--muted-foreground)]">
-                              +{event.assignments.length - 3} mais
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            </>
-          ) : (
-            <div className="card h-full flex items-center justify-center min-h-[100px]">
-              <p className="text-xs text-[var(--muted-foreground)] text-center">
-                Clique nos dias para selecionar<br />as datas de celebração
-              </p>
-            </div>
-          )}
+        {/* Actions */}
+        <div className="flex flex-col gap-2 lg:w-48">
+          <button
+            onClick={handleGerarEscala}
+            disabled={selectedDates.length === 0}
+            className="flex items-center justify-center gap-2 bg-white text-black font-semibold py-2.5 rounded-xl text-sm disabled:opacity-40"
+          >
+            <Plus className="w-4 h-4" />
+            Gerar Escala
+          </button>
+          <Link
+            href="/admin/escala/manual"
+            className="flex items-center justify-center gap-2 bg-[var(--accent)] py-2.5 rounded-xl text-sm hover:bg-[var(--border)]"
+          >
+            <Calendar className="w-4 h-4" />
+            Escala Manual
+          </Link>
+          <Link
+            href={`/admin/escala/exportar?month=${month}&year=${year}`}
+            className="flex items-center justify-center gap-2 bg-[var(--accent)] py-2.5 rounded-xl text-sm hover:bg-[var(--border)]"
+          >
+            <FileDown className="w-4 h-4" />
+            Exportar
+          </Link>
         </div>
       </div>
 
-      {/* Action buttons */}
-      <div className="flex gap-2">
-        <button
-          onClick={handleGerarEscala}
-          disabled={selectedDates.length === 0}
-          className="flex-1 flex items-center justify-center gap-2 bg-white text-black font-semibold py-2.5 rounded-xl text-sm disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          <Plus className="w-4 h-4" />
-          Gerar Escala {selectedDates.length > 0 && `(${selectedDates.length} dias)`}
-        </button>
-        <Link
-          href="/admin/escala/manual"
-          className="flex items-center justify-center gap-2 bg-[var(--accent)] px-4 py-2.5 rounded-xl text-sm"
-          title="Criar escala manual"
-        >
-          <Calendar className="w-4 h-4" />
-        </Link>
-        <Link
-          href={`/admin/escala/exportar?month=${month}&year=${year}`}
-          className="flex items-center justify-center gap-2 bg-[var(--accent)] px-4 py-2.5 rounded-xl"
-        >
-          <FileDown className="w-4 h-4" />
-        </Link>
-      </div>
+      {/* === ESCALA TABLE === */}
+      {loading ? (
+        <div className="flex justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin" />
+        </div>
+      ) : events.length === 0 ? (
+        <div className="card text-center py-8">
+          <p className="text-sm text-[var(--muted-foreground)]">Nenhuma escala gerada para este mês.</p>
+          <p className="text-xs text-[var(--muted-foreground)] mt-1">Selecione os dias no calendário e clique &quot;Gerar Escala&quot;.</p>
+        </div>
+      ) : (
+        <div className="card p-0 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--border)] bg-[var(--accent)]">
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Sem</th>
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Data</th>
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Dia</th>
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Culto</th>
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Vocal 1</th>
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Vocal 2</th>
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Vocal 3</th>
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Bateria</th>
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Guitarra</th>
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Baixo</th>
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Teclado</th>
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Back</th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.map((event, idx) => {
+                const prevEvent = idx > 0 ? events[idx - 1] : null
+                const showWeekSeparator = prevEvent && prevEvent.week_number !== event.week_number
+
+                return (
+                  <tr
+                    key={event.id}
+                    className={`border-b border-[var(--border)] hover:bg-[var(--accent)]/50 cursor-pointer ${showWeekSeparator ? 'border-t-2 border-t-[var(--muted-foreground)]/30' : ''}`}
+                    onClick={() => router.push(`/admin/escala/${event.id}`)}
+                  >
+                    <td className="px-3 py-2 text-xs text-[var(--muted-foreground)]">{event.week_number}</td>
+                    <td className="px-3 py-2 text-xs font-medium">{format(new Date(event.event_date + 'T12:00:00'), 'dd/MM')}</td>
+                    <td className="px-3 py-2 text-xs capitalize">{event.day_of_week}</td>
+                    <td className="px-3 py-2 text-xs font-semibold text-green-400">{event.scale_type?.name || '-'}</td>
+                    <td className="px-3 py-2 text-xs">{getAssignment(event, 'vocal_1')}</td>
+                    <td className="px-3 py-2 text-xs">{getAssignment(event, 'vocal_2')}</td>
+                    <td className="px-3 py-2 text-xs">{getAssignment(event, 'vocal_3')}</td>
+                    <td className="px-3 py-2 text-xs">{getAssignment(event, 'bateria')}</td>
+                    <td className="px-3 py-2 text-xs">{getAssignment(event, 'guitarra')}</td>
+                    <td className="px-3 py-2 text-xs">{getAssignment(event, 'baixo')}</td>
+                    <td className="px-3 py-2 text-xs">{getAssignment(event, 'teclado')}</td>
+                    <td className="px-3 py-2 text-xs">{getAssignment(event, 'back')}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Quick menu */}
-      <div className="space-y-2">
-        <h3 className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Menu</h3>
-        <div className="grid grid-cols-3 gap-2">
-          <Link
-            href="/admin/membros"
-            className="card flex flex-col items-center gap-1.5 py-3"
-          >
-            <Users className="w-5 h-5" />
-            <span className="text-xs font-medium">Membros</span>
-          </Link>
-          <Link
-            href="/admin/musicas"
-            className="card flex flex-col items-center gap-1.5 py-3"
-          >
-            <Music className="w-5 h-5" />
-            <span className="text-xs font-medium">Músicas</span>
-          </Link>
-          <Link
-            href="/admin/config"
-            className="card flex flex-col items-center gap-1.5 py-3"
-          >
-            <Settings className="w-5 h-5" />
-            <span className="text-xs font-medium">Config</span>
-          </Link>
-        </div>
+      <div className="grid grid-cols-3 gap-2">
+        <Link href="/admin/membros" className="card flex flex-col items-center gap-1.5 py-3 hover:border-[#444]">
+          <Users className="w-5 h-5" />
+          <span className="text-xs font-medium">Membros</span>
+        </Link>
+        <Link href="/admin/musicas" className="card flex flex-col items-center gap-1.5 py-3 hover:border-[#444]">
+          <Music className="w-5 h-5" />
+          <span className="text-xs font-medium">Músicas</span>
+        </Link>
+        <Link href="/admin/config" className="card flex flex-col items-center gap-1.5 py-3 hover:border-[#444]">
+          <Settings className="w-5 h-5" />
+          <span className="text-xs font-medium">Config</span>
+        </Link>
       </div>
     </div>
   )
