@@ -46,25 +46,28 @@ export default function ConfigPage() {
   }, [])
 
   async function loadAll() {
-    const [stRes, instrRes, patternRes] = await Promise.all([
-      fetch('/api/scale-types-list'),
-      fetch('/api/instruments'),
-      fetch('/api/band-pattern'),
-    ])
+    try {
+      const [instrRes, patternRes] = await Promise.all([
+        fetch('/api/instruments'),
+        fetch('/api/band-pattern'),
+      ])
 
-    // Scale types fallback (use supabase directly for now)
+      if (instrRes.ok) {
+        const instrData = await instrRes.json()
+        setInstruments(Array.isArray(instrData) ? instrData : [])
+      }
+
+      if (patternRes.ok) {
+        const patternData = await patternRes.json()
+        setBandPattern(Array.isArray(patternData) ? patternData : [])
+      }
+    } catch (e) {
+      console.error('Error loading config:', e)
+    }
+
+    // Scale types via supabase (these use anon key read which should work)
     const { data: stData } = await supabase.from('scale_types').select('*').order('name')
     setScaleTypes(stData || [])
-
-    if (instrRes.ok) {
-      const instrData = await instrRes.json()
-      setInstruments(Array.isArray(instrData) ? instrData : [])
-    }
-
-    if (patternRes.ok) {
-      const patternData = await patternRes.json()
-      setBandPattern(Array.isArray(patternData) ? patternData : [])
-    }
 
     setLoading(false)
   }
@@ -85,7 +88,7 @@ export default function ConfigPage() {
 
   async function deleteScaleType(id: string) {
     if (!confirm('Excluir este tipo de escala?')) return
-    const serviceClient = await fetch(`/api/scale-types?id=${id}`, { method: 'DELETE' })
+    await fetch(`/api/scale-types?id=${id}`, { method: 'DELETE' })
     loadAll()
   }
 
@@ -130,13 +133,13 @@ export default function ConfigPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-8">
+    <div className="max-w-2xl mx-auto space-y-10 pb-8">
       <h2 className="text-xl font-bold">Configurações</h2>
 
       {/* ========== INSTRUMENTOS ========== */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold flex items-center gap-2">
+          <h3 className="font-semibold flex items-center gap-2 text-base">
             <Guitar className="w-5 h-5" />
             Instrumentos
           </h3>
@@ -151,20 +154,21 @@ export default function ConfigPage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {instruments.map((instr) => (
-            <div key={instr.id} className="card flex items-center justify-between">
+            <div key={instr.id} className="card flex items-center justify-between gap-2">
               <span className="text-sm font-medium">{instr.name}</span>
-              <button onClick={() => deleteInstrument(instr.id)} className="p-1.5 text-red-400 hover:bg-red-500/10 rounded">
+              <button onClick={() => deleteInstrument(instr.id)} className="p-1.5 text-red-400 hover:bg-red-500/10 rounded shrink-0">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
           ))}
-          {instruments.length === 0 && (
-            <p className="text-sm text-[var(--muted-foreground)] col-span-full">Nenhum instrumento cadastrado.</p>
-          )}
         </div>
 
+        {instruments.length === 0 && !showInstrumentForm && (
+          <p className="text-sm text-[var(--muted-foreground)]">Nenhum instrumento cadastrado.</p>
+        )}
+
         {showInstrumentForm && (
-          <form onSubmit={addInstrument} className="card flex gap-2">
+          <form onSubmit={addInstrument} className="card flex gap-3">
             <input
               type="text"
               value={newInstrumentName}
@@ -172,11 +176,12 @@ export default function ConfigPage() {
               placeholder="Nome do instrumento"
               required
               className="flex-1"
+              autoFocus
             />
-            <button type="submit" className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-100">
+            <button type="submit" className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-100 shrink-0">
               Salvar
             </button>
-            <button type="button" onClick={() => setShowInstrumentForm(false)} className="p-2 text-[var(--muted-foreground)]">
+            <button type="button" onClick={() => setShowInstrumentForm(false)} className="p-2 text-[var(--muted-foreground)] shrink-0">
               <X className="w-4 h-4" />
             </button>
           </form>
@@ -186,7 +191,7 @@ export default function ConfigPage() {
       {/* ========== PADRÃO DE BANDA ========== */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold flex items-center gap-2">
+          <h3 className="font-semibold flex items-center gap-2 text-base">
             <Users className="w-5 h-5" />
             Padrão de Banda
           </h3>
@@ -200,30 +205,35 @@ export default function ConfigPage() {
         </div>
 
         <p className="text-sm text-[var(--muted-foreground)]">
-          Defina a formação padrão da banda para geração automática de escalas.
+          Defina a formação padrão para geração automática de escalas.
         </p>
 
         <div className="space-y-2">
           {bandPattern.map((item) => (
-            <div key={item.id} className="card flex items-center justify-between">
-              <div>
-                <span className="text-sm font-medium">{item.quantity}x {item.role_name}</span>
-                {item.instrument && (
-                  <span className="text-xs text-[var(--muted-foreground)] ml-2">({item.instrument.name})</span>
-                )}
+            <div key={item.id} className="card flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <span className="text-sm font-bold text-white bg-[var(--accent)] w-7 h-7 flex items-center justify-center rounded shrink-0">
+                  {item.quantity}
+                </span>
+                <div>
+                  <span className="text-sm font-medium">{item.role_name}</span>
+                  {item.instrument && (
+                    <span className="text-xs text-[var(--muted-foreground)] ml-2">({item.instrument.name})</span>
+                  )}
+                </div>
                 {item.is_vocal && (
-                  <span className="text-xs ml-2 px-2 py-0.5 rounded bg-blue-500/10 text-blue-400">
+                  <span className="text-xs px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 shrink-0">
                     {item.gender_filter === 'male' ? 'Masc' : item.gender_filter === 'female' ? 'Fem' : 'Qualquer'}
                   </span>
                 )}
               </div>
-              <button onClick={() => deleteBandPatternItem(item.id)} className="p-1.5 text-red-400 hover:bg-red-500/10 rounded">
+              <button onClick={() => deleteBandPatternItem(item.id)} className="p-1.5 text-red-400 hover:bg-red-500/10 rounded shrink-0">
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
           ))}
-          {bandPattern.length === 0 && (
-            <p className="text-sm text-[var(--muted-foreground)]">Nenhum padrão definido. Adicione instrumentos e vocais.</p>
+          {bandPattern.length === 0 && !showPatternForm && (
+            <p className="text-sm text-[var(--muted-foreground)]">Nenhum padrão definido.</p>
           )}
         </div>
 
@@ -240,7 +250,7 @@ export default function ConfigPage() {
       {/* ========== TIPOS DE ESCALA ========== */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold flex items-center gap-2">
+          <h3 className="font-semibold flex items-center gap-2 text-base">
             <Tag className="w-5 h-5" />
             Tipos de Escala
           </h3>
@@ -262,10 +272,13 @@ export default function ConfigPage() {
               </button>
             </div>
           ))}
+          {scaleTypes.length === 0 && (
+            <p className="text-sm text-[var(--muted-foreground)]">Nenhum tipo cadastrado.</p>
+          )}
         </div>
 
         {showScaleForm && (
-          <form onSubmit={addScaleType} className="card flex gap-2">
+          <form onSubmit={addScaleType} className="card flex gap-3">
             <input
               type="text"
               value={newScaleName}
@@ -273,11 +286,12 @@ export default function ConfigPage() {
               placeholder="Nome (ex: ALIVE, CELEBRAÇÃO)"
               required
               className="flex-1"
+              autoFocus
             />
-            <button type="submit" className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-100">
+            <button type="submit" className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-100 shrink-0">
               Salvar
             </button>
-            <button type="button" onClick={() => setShowScaleForm(false)} className="p-2 text-[var(--muted-foreground)]">
+            <button type="button" onClick={() => setShowScaleForm(false)} className="p-2 text-[var(--muted-foreground)] shrink-0">
               <X className="w-4 h-4" />
             </button>
           </form>
@@ -287,7 +301,7 @@ export default function ConfigPage() {
       {/* ========== BLOQUEIOS ========== */}
       <section>
         <Link href="/admin/membros/bloqueios" className="card flex items-center gap-4 w-full hover:border-[#444] transition-colors">
-          <CalendarOff className="w-5 h-5 text-red-400" />
+          <CalendarOff className="w-5 h-5 text-red-400 shrink-0" />
           <div>
             <p className="font-medium text-sm">Bloqueios Específicos</p>
             <p className="text-xs text-[var(--muted-foreground)]">Bloquear membros em datas específicas</p>
@@ -298,7 +312,7 @@ export default function ConfigPage() {
       {/* ========== LOGOUT ========== */}
       <section>
         <button onClick={handleLogout} className="card flex items-center gap-4 w-full text-red-400 hover:border-red-500/30 transition-colors">
-          <LogOut className="w-5 h-5" />
+          <LogOut className="w-5 h-5 shrink-0" />
           <span className="font-medium text-sm">Sair</span>
         </button>
       </section>
@@ -306,7 +320,6 @@ export default function ConfigPage() {
   )
 }
 
-// --- Band Pattern Form Component ---
 function BandPatternForm({
   instruments,
   onClose,
@@ -347,29 +360,30 @@ function BandPatternForm({
   }
 
   return (
-    <div className="card border-white/20 space-y-4">
+    <div className="card border-white/20 space-y-5">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold">Novo item do padrão</h4>
+        <h4 className="text-sm font-bold">Novo item do padrão</h4>
         <button onClick={onClose} className="p-1.5 text-[var(--muted-foreground)] hover:bg-[var(--accent)] rounded">
           <X className="w-4 h-4" />
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-[var(--muted-foreground)]">Nome da função</label>
+      <form onSubmit={handleSubmit} className="space-y-5">
+        <div>
+          <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Nome da função</label>
           <input
             type="text"
             value={roleName}
             onChange={(e) => setRoleName(e.target.value)}
             placeholder="Ex: Guitarra, Vocal Masculino..."
             required
+            autoFocus
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-[var(--muted-foreground)]">Quantidade</label>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Quantidade</label>
             <input
               type="number"
               min={1}
@@ -378,8 +392,8 @@ function BandPatternForm({
               onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
             />
           </div>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-[var(--muted-foreground)]">Instrumento</label>
+          <div>
+            <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Instrumento</label>
             <select value={instrumentId} onChange={(e) => setInstrumentId(e.target.value)}>
               <option value="">Nenhum (vocal)</option>
               {instruments.map((i) => (
@@ -389,8 +403,8 @@ function BandPatternForm({
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-[var(--muted-foreground)]">Filtro de gênero</label>
+        <div>
+          <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Filtro de gênero</label>
           <div className="grid grid-cols-3 gap-2">
             {[
               { key: 'any', label: 'Qualquer' },
@@ -401,7 +415,7 @@ function BandPatternForm({
                 key={g.key}
                 type="button"
                 onClick={() => setGenderFilter(g.key as typeof genderFilter)}
-                className={`py-2 rounded-lg text-xs font-medium transition-all ${
+                className={`py-2.5 rounded-lg text-xs font-medium transition-all ${
                   genderFilter === g.key
                     ? 'bg-white text-black'
                     : 'bg-[var(--accent)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
@@ -413,7 +427,7 @@ function BandPatternForm({
           </div>
         </div>
 
-        <label className="flex items-center gap-4 cursor-pointer py-2">
+        <label className="flex items-center gap-4 cursor-pointer px-4 py-3 bg-[var(--accent)] rounded-lg">
           <input
             type="checkbox"
             checked={isVocal}
@@ -425,7 +439,7 @@ function BandPatternForm({
         <button
           type="submit"
           disabled={saving || !roleName}
-          className="w-full bg-white text-black font-semibold py-2.5 rounded-lg text-sm disabled:opacity-40 hover:bg-gray-100"
+          className="w-full bg-white text-black font-semibold py-3 rounded-lg text-sm disabled:opacity-40 hover:bg-gray-100"
         >
           {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Adicionar ao padrão'}
         </button>
