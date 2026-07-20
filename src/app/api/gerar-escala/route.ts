@@ -141,9 +141,10 @@ export async function POST(request: Request) {
     return Math.ceil(d.getDate() / 7)
   }
 
-  // Helper: check if member was already assigned in the same week on sat or sun
+  // Helper: check if member was already assigned in the same week on adjacent days (fri+sat or sat+sun)
   function wasAssignedSameWeekend(memberId: string, currentDate: string, currentDow: number): boolean {
-    if (currentDow !== 0 && currentDow !== 6) return false // Only applies to sat/sun
+    // Rule: don't assign same person on fri+sat or sat+sun of same week
+    if (currentDow !== 0 && currentDow !== 5 && currentDow !== 6) return false
 
     const currentWeek = getWeekOfDate(currentDate)
     const assignedDates = memberAssignedDates[memberId] || []
@@ -154,10 +155,12 @@ export async function POST(request: Request) {
       const week = getWeekOfDate(dateStr)
 
       if (week === currentWeek) {
-        // If current is sunday(0), check if was on saturday(6) of same week
+        // Friday(5): check if was on Saturday(6)
+        if (currentDow === 5 && dow === 6) return true
+        // Saturday(6): check if was on Friday(5) or Sunday(0)
+        if (currentDow === 6 && (dow === 5 || dow === 0)) return true
+        // Sunday(0): check if was on Saturday(6)
         if (currentDow === 0 && dow === 6) return true
-        // If current is saturday(6), check if was on sunday(0) of same week
-        if (currentDow === 6 && dow === 0) return true
       }
     }
     return false
@@ -326,7 +329,9 @@ export async function POST(request: Request) {
         }
       }
     } else {
-      // NORMAL: 1 male leader + 2 female (one should be back)
+      // NORMAL: Vocal 1 = líder masc, Vocal 2 = back fem, Vocal 3 = qualquer (round-robin)
+      // Rules: always 1 leader + 1 back among the 3 vocals
+
       const maleLeader = getNextLeader(maleLeaders, 'male', dayOfWeekNum, blockedSet, assignedThisEvent, day.date)
       if (maleLeader) {
         assignments.push({ event_id: event.id, member_id: maleLeader.id, role: 'vocal_1' })
@@ -334,16 +339,49 @@ export async function POST(request: Request) {
         memberAssignedDates[maleLeader.id].push(day.date)
       }
 
-      // Vocal 2: prefer back member
-      const vocal2 = getNextFemaleVocal(blockedSet, assignedThisEvent, day.date, dayOfWeekNum, true)
+      // Vocal 2: must be a back (female)
+      // If female leader is also back, she satisfies both requirements
+      const allFemalePool = [...femaleLeaders, ...femaleVocals]
+      
+      let backsAvailable = allFemalePool.filter(m =>
+        m.is_back &&
+        !blockedSet.has(m.id) &&
+        !assignedThisEvent.has(m.id) &&
+        !wasAssignedSameWeekend(m.id, day.date, dayOfWeekNum)
+      )
+      if (backsAvailable.length === 0) {
+        backsAvailable = allFemalePool.filter(m =>
+          m.is_back && !blockedSet.has(m.id) && !assignedThisEvent.has(m.id)
+        )
+      }
+
+      const vocal2 = backsAvailable.length > 0 ? backsAvailable[0] : null
       if (vocal2) {
         assignments.push({ event_id: event.id, member_id: vocal2.id, role: 'vocal_2' })
         assignedThisEvent.add(vocal2.id)
         memberAssignedDates[vocal2.id].push(day.date)
       }
 
-      // Vocal 3: any female
-      const vocal3 = getNextFemaleVocal(blockedSet, assignedThisEvent, day.date, dayOfWeekNum, false)
+      // Vocal 3: any female available (round-robin, prioritize who was used least)
+      let vocal3Pool = allFemalePool.filter(m =>
+        !blockedSet.has(m.id) &&
+        !assignedThisEvent.has(m.id) &&
+        !wasAssignedSameWeekend(m.id, day.date, dayOfWeekNum)
+      )
+      if (vocal3Pool.length === 0) {
+        vocal3Pool = allFemalePool.filter(m =>
+          !blockedSet.has(m.id) && !assignedThisEvent.has(m.id)
+        )
+      }
+
+      // Sort by least used to ensure fair rotation (Letícia, Rany, etc. get turns)
+      vocal3Pool.sort((a, b) => {
+        const aCount = (memberAssignedDates[a.id] || []).length
+        const bCount = (memberAssignedDates[b.id] || []).length
+        return aCount - bCount
+      })
+
+      const vocal3 = vocal3Pool.length > 0 ? vocal3Pool[0] : null
       if (vocal3) {
         assignments.push({ event_id: event.id, member_id: vocal3.id, role: 'vocal_3' })
         assignedThisEvent.add(vocal3.id)
