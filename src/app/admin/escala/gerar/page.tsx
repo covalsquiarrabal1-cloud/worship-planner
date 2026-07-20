@@ -48,21 +48,34 @@ export default function GerarEscalaPage() {
   }, [])
 
   async function loadData() {
-    const { data: scaleTypesData } = await supabase
-      .from('scale_types')
-      .select('id, name')
-      .order('name')
+    const [scaleTypesRes, dayDefaultsRes] = await Promise.all([
+      supabase.from('scale_types').select('id, name').order('name'),
+      fetch('/api/day-defaults'),
+    ])
 
-    const existingNames = (scaleTypesData || []).map((st: ScaleType) => st.name)
+    const existingNames = (scaleTypesRes.data || []).map((st: ScaleType) => st.name)
     setQuickNames(existingNames)
 
-    // Initialize days from URL params
+    // Load day defaults
+    let dayDefaultsData: { day_of_week: number; scale_name: string; is_variable: boolean }[] = []
+    if (dayDefaultsRes.ok) {
+      const dd = await dayDefaultsRes.json()
+      if (Array.isArray(dd)) dayDefaultsData = dd
+    }
+
+    // Initialize days from URL params with defaults applied
     if (preSelectedDates) {
       const dates = preSelectedDates.split(',')
       const days: SelectedDay[] = dates.map((dateStr) => {
         const dateObj = new Date(dateStr + 'T12:00:00')
-        const dayOfWeek = dayNames[getDay(dateObj)] || ''
-        return { date: dateStr, dayOfWeek, scaleName: '' }
+        const dow = getDay(dateObj)
+        const dayOfWeek = dayNames[dow] || ''
+        
+        // Auto-fill scale name from defaults
+        const defaultForDay = dayDefaultsData.find(d => d.day_of_week === dow)
+        const autoName = (defaultForDay && !defaultForDay.is_variable) ? (defaultForDay.scale_name || '') : ''
+        
+        return { date: dateStr, dayOfWeek, scaleName: autoName }
       })
       setSelectedDays(days.sort((a, b) => a.date.localeCompare(b.date)))
     }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Trash2, Loader2, X, LogOut, Tag, CalendarOff, Guitar, Users } from 'lucide-react'
+import { Plus, Trash2, Loader2, X, LogOut, Tag, CalendarOff, Guitar, Users, Calendar } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -28,16 +28,24 @@ interface BandPatternItem {
   instrument: { id: string; name: string } | null
 }
 
+interface DayDefault {
+  day_of_week: number
+  scale_name: string
+  is_variable: boolean
+}
+
 export default function ConfigPage() {
   const [scaleTypes, setScaleTypes] = useState<ScaleType[]>([])
   const [instruments, setInstruments] = useState<Instrument[]>([])
   const [bandPattern, setBandPattern] = useState<BandPatternItem[]>([])
+  const [dayDefaults, setDayDefaults] = useState<DayDefault[]>([])
   const [loading, setLoading] = useState(true)
   const [showScaleForm, setShowScaleForm] = useState(false)
   const [showInstrumentForm, setShowInstrumentForm] = useState(false)
   const [showPatternForm, setShowPatternForm] = useState(false)
   const [newScaleName, setNewScaleName] = useState('')
   const [newInstrumentName, setNewInstrumentName] = useState('')
+  const [savingDefaults, setSavingDefaults] = useState(false)
   const supabase = createClient()
   const router = useRouter()
 
@@ -47,9 +55,10 @@ export default function ConfigPage() {
 
   async function loadAll() {
     try {
-      const [instrRes, patternRes] = await Promise.all([
+      const [instrRes, patternRes, defaultsRes] = await Promise.all([
         fetch('/api/instruments'),
         fetch('/api/band-pattern'),
+        fetch('/api/day-defaults'),
       ])
 
       if (instrRes.ok) {
@@ -61,11 +70,24 @@ export default function ConfigPage() {
         const patternData = await patternRes.json()
         setBandPattern(Array.isArray(patternData) ? patternData : [])
       }
+
+      if (defaultsRes.ok) {
+        const defaultsData = await defaultsRes.json()
+        if (Array.isArray(defaultsData) && defaultsData.length > 0) {
+          setDayDefaults(defaultsData)
+        } else {
+          // Initialize with empty defaults for common celebration days
+          setDayDefaults([
+            { day_of_week: 5, scale_name: '', is_variable: true },
+            { day_of_week: 6, scale_name: '', is_variable: false },
+            { day_of_week: 0, scale_name: '', is_variable: false },
+          ])
+        }
+      }
     } catch (e) {
       console.error('Error loading config:', e)
     }
 
-    // Scale types via supabase (these use anon key read which should work)
     const { data: stData } = await supabase.from('scale_types').select('*').order('name')
     setScaleTypes(stData || [])
 
@@ -117,6 +139,23 @@ export default function ConfigPage() {
     if (!confirm('Excluir este item do padrão?')) return
     await fetch(`/api/band-pattern?id=${id}`, { method: 'DELETE' })
     loadAll()
+  }
+
+  // --- Day Defaults ---
+  function updateDayDefault(dayOfWeek: number, field: 'scale_name' | 'is_variable', value: string | boolean) {
+    setDayDefaults(prev =>
+      prev.map(d => d.day_of_week === dayOfWeek ? { ...d, [field]: value } : d)
+    )
+  }
+
+  async function saveDayDefaults() {
+    setSavingDefaults(true)
+    await fetch('/api/day-defaults', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ defaults: dayDefaults }),
+    })
+    setSavingDefaults(false)
   }
 
   async function handleLogout() {
@@ -245,6 +284,61 @@ export default function ConfigPage() {
             nextOrder={bandPattern.length + 1}
           />
         )}
+      </section>
+
+      {/* ========== ESCALA PADRÃO POR DIA ========== */}
+      <section className="space-y-4">
+        <h3 className="font-semibold flex items-center gap-2 text-base">
+          <Calendar className="w-5 h-5" />
+          Escala Padrão por Dia
+        </h3>
+
+        <p className="text-sm text-[var(--muted-foreground)]">
+          Defina qual escala é usada por padrão em cada dia. Dias &quot;variáveis&quot; não terão nome pré-preenchido.
+        </p>
+
+        <div className="space-y-2">
+          {dayDefaults.map((dd) => {
+            const dayLabel = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][dd.day_of_week]
+            return (
+              <div key={dd.day_of_week} className="card flex items-center gap-4">
+                <span className="text-sm font-medium w-20 shrink-0">{dayLabel}</span>
+                <div className="flex-1">
+                  {dd.is_variable ? (
+                    <span className="text-sm text-[var(--muted-foreground)] italic">Variável</span>
+                  ) : (
+                    <select
+                      value={dd.scale_name}
+                      onChange={(e) => updateDayDefault(dd.day_of_week, 'scale_name', e.target.value)}
+                      className="!py-2"
+                    >
+                      <option value="">Selecione...</option>
+                      {scaleTypes.map((st) => (
+                        <option key={st.id} value={st.name}>{st.name}</option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer shrink-0">
+                  <input
+                    type="checkbox"
+                    checked={dd.is_variable}
+                    onChange={(e) => updateDayDefault(dd.day_of_week, 'is_variable', e.target.checked)}
+                  />
+                  <span className="text-xs text-[var(--muted-foreground)]">Variável</span>
+                </label>
+              </div>
+            )
+          })}
+        </div>
+
+        <button
+          onClick={saveDayDefaults}
+          disabled={savingDefaults}
+          className="bg-white text-black font-semibold px-5 py-2.5 rounded-lg text-sm hover:bg-gray-100 disabled:opacity-50 flex items-center gap-2"
+        >
+          {savingDefaults ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar Padrões'}
+        </button>
       </section>
 
       {/* ========== TIPOS DE ESCALA ========== */}
