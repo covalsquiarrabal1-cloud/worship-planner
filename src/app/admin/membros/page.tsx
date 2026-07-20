@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Plus, Search, UserCircle, Guitar, Ban, Crown, Loader2, X } from 'lucide-react'
 
 interface Member {
@@ -23,18 +22,15 @@ export default function MembrosPage() {
   const [filter, setFilter] = useState<'all' | 'male' | 'female' | 'musician'>('all')
   const [showForm, setShowForm] = useState(false)
   const [editingMember, setEditingMember] = useState<Member | null>(null)
-  const supabase = createClient()
 
   useEffect(() => {
     loadMembers()
   }, [])
 
   async function loadMembers() {
-    const { data } = await supabase
-      .from('members')
-      .select('*')
-      .order('name')
-    setMembers(data || [])
+    const res = await fetch('/api/members')
+    const data = await res.json()
+    setMembers(Array.isArray(data) ? data : [])
     setLoading(false)
   }
 
@@ -48,12 +44,12 @@ export default function MembrosPage() {
   })
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
+    <div className="max-w-2xl mx-auto space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">Membros</h2>
         <button
           onClick={() => { setEditingMember(null); setShowForm(true) }}
-          className="flex items-center gap-1 bg-white text-black font-semibold px-3 py-1.5 rounded-lg text-sm"
+          className="flex items-center gap-1.5 bg-white text-black font-semibold px-4 py-2 rounded-lg text-sm"
         >
           <Plus className="w-4 h-4" />
           Novo
@@ -83,7 +79,7 @@ export default function MembrosPage() {
           <button
             key={f.key}
             onClick={() => setFilter(f.key as typeof filter)}
-            className={`px-3 py-1.5 rounded-full text-xs whitespace-nowrap ${
+            className={`px-4 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${
               filter === f.key
                 ? 'bg-white text-black font-medium'
                 : 'bg-[var(--accent)] text-[var(--muted-foreground)]'
@@ -99,38 +95,37 @@ export default function MembrosPage() {
         <div className="flex justify-center py-8">
           <Loader2 className="w-6 h-6 animate-spin" />
         </div>
+      ) : filteredMembers.length === 0 ? (
+        <p className="text-center text-sm text-[var(--muted-foreground)] py-8">
+          Nenhum membro encontrado.
+        </p>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {filteredMembers.map((member) => (
             <button
               key={member.id}
               onClick={() => { setEditingMember(member); setShowForm(true) }}
-              className="card w-full text-left flex items-center gap-3 py-2.5 px-3"
+              className="card w-full text-left flex items-center gap-4 py-3 px-4"
             >
-              <UserCircle className={`w-7 h-7 shrink-0 ${member.gender === 'male' ? 'text-blue-400' : 'text-pink-400'}`} />
+              <UserCircle className={`w-8 h-8 shrink-0 ${member.gender === 'male' ? 'text-blue-400' : 'text-pink-400'}`} />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="font-medium text-sm truncate">{member.name}</span>
                   {member.is_leader && <Crown className="w-3.5 h-3.5 text-yellow-400 shrink-0" />}
                   {member.is_blocked && <Ban className="w-3.5 h-3.5 text-red-400 shrink-0" />}
                 </div>
-                <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
+                <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)] mt-0.5">
                   {member.is_musician && (
-                    <span className="flex items-center gap-0.5">
+                    <span className="flex items-center gap-1">
                       <Guitar className="w-3 h-3" />
                       {member.instrument}
                     </span>
                   )}
-                  {member.is_back && <span className="bg-[var(--accent)] px-1.5 py-0.5 rounded">Back</span>}
+                  {member.is_back && <span className="bg-[var(--accent)] px-2 py-0.5 rounded">Back</span>}
                 </div>
               </div>
             </button>
           ))}
-          {filteredMembers.length === 0 && (
-            <p className="text-center text-sm text-[var(--muted-foreground)] py-4">
-              Nenhum membro encontrado.
-            </p>
-          )}
         </div>
       )}
 
@@ -155,8 +150,8 @@ function MemberForm({
   onClose: () => void
   onSave: () => void
 }) {
-  const supabase = createClient()
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const [form, setForm] = useState({
     name: member?.name || '',
     gender: member?.gender || 'male',
@@ -171,16 +166,34 @@ function MemberForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+    setError('')
 
     const payload = {
       ...form,
       instrument: form.is_musician ? form.instrument : null,
     }
 
+    let res: Response
+
     if (member) {
-      await supabase.from('members').update(payload).eq('id', member.id)
+      res = await fetch('/api/members', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: member.id, ...payload }),
+      })
     } else {
-      await supabase.from('members').insert(payload)
+      res = await fetch('/api/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+    }
+
+    if (!res.ok) {
+      const data = await res.json()
+      setError(data.error || 'Erro ao salvar')
+      setLoading(false)
+      return
     }
 
     setLoading(false)
@@ -190,35 +203,46 @@ function MemberForm({
   async function handleDelete() {
     if (!member) return
     if (!confirm('Tem certeza que deseja excluir este membro?')) return
-    await supabase.from('members').delete().eq('id', member.id)
+
+    const res = await fetch(`/api/members?id=${member.id}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const data = await res.json()
+      setError(data.error || 'Erro ao excluir')
+      return
+    }
     onSave()
   }
 
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
       <div className="bg-[var(--card)] w-full max-w-md rounded-xl max-h-[85vh] overflow-y-auto border border-[var(--border)]">
-        <div className="flex items-center justify-between p-4 border-b border-[var(--border)]">
-          <h3 className="font-semibold">
+        <div className="flex items-center justify-between p-5 border-b border-[var(--border)]">
+          <h3 className="font-semibold text-base">
             {member ? 'Editar Membro' : 'Novo Membro'}
           </h3>
-          <button onClick={onClose} className="p-1 rounded hover:bg-[var(--accent)]">
+          <button onClick={onClose} className="p-1.5 rounded hover:bg-[var(--accent)]">
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+        <form onSubmit={handleSubmit} className="p-5 space-y-5">
+          {error && (
+            <p className="text-sm text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">{error}</p>
+          )}
+
           <div>
-            <label className="text-xs text-[var(--muted-foreground)] mb-1 block">Nome</label>
+            <label className="text-sm text-[var(--muted-foreground)] mb-1.5 block">Nome</label>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               required
+              placeholder="Nome completo"
             />
           </div>
 
           <div>
-            <label className="text-xs text-[var(--muted-foreground)] mb-1 block">E-mail (login)</label>
+            <label className="text-sm text-[var(--muted-foreground)] mb-1.5 block">E-mail (login)</label>
             <input
               type="email"
               value={form.email}
@@ -228,12 +252,12 @@ function MemberForm({
           </div>
 
           <div>
-            <label className="text-xs text-[var(--muted-foreground)] mb-1.5 block">Gênero</label>
+            <label className="text-sm text-[var(--muted-foreground)] mb-2 block">Gênero</label>
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => setForm({ ...form, gender: 'male' })}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   form.gender === 'male' ? 'bg-blue-500 text-white' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'
                 }`}
               >
@@ -242,7 +266,7 @@ function MemberForm({
               <button
                 type="button"
                 onClick={() => setForm({ ...form, gender: 'female' })}
-                className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   form.gender === 'female' ? 'bg-pink-500 text-white' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'
                 }`}
               >
@@ -251,7 +275,7 @@ function MemberForm({
             </div>
           </div>
 
-          <div className="space-y-2.5">
+          <div className="space-y-3">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="checkbox"
@@ -291,7 +315,7 @@ function MemberForm({
 
           {form.is_musician && (
             <div>
-              <label className="text-xs text-[var(--muted-foreground)] mb-1 block">Instrumento</label>
+              <label className="text-sm text-[var(--muted-foreground)] mb-1.5 block">Instrumento</label>
               <select
                 value={form.instrument}
                 onChange={(e) => setForm({ ...form, instrument: e.target.value })}
@@ -306,12 +330,12 @@ function MemberForm({
             </div>
           )}
 
-          <div className="flex gap-2 pt-2 border-t border-[var(--border)]">
+          <div className="flex gap-3 pt-3 border-t border-[var(--border)]">
             {member && (
               <button
                 type="button"
                 onClick={handleDelete}
-                className="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 font-medium text-sm"
+                className="px-4 py-2.5 rounded-lg bg-red-500/20 text-red-400 font-medium text-sm hover:bg-red-500/30"
               >
                 Excluir
               </button>
@@ -319,7 +343,7 @@ function MemberForm({
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-white text-black font-semibold py-2 rounded-lg disabled:opacity-50 flex items-center justify-center text-sm"
+              className="flex-1 bg-white text-black font-semibold py-2.5 rounded-lg disabled:opacity-50 flex items-center justify-center text-sm"
             >
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
             </button>

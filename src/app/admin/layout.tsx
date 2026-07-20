@@ -32,7 +32,7 @@ export default async function AdminLayout({
           <LogoutButton />
         </div>
       </header>
-      <main className="px-4 py-4 max-w-5xl mx-auto">
+      <main className="px-6 py-5 max-w-5xl mx-auto">
         {children}
       </main>
       <AdminBottomNav />

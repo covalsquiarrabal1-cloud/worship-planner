@@ -53,13 +53,14 @@ input[type="password"],
 input[type="search"],
 input[type="url"],
 input[type="number"],
+input[type="date"],
 select,
 textarea {
   background: var(--input);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--foreground);
-  padding: 0.625rem 0.875rem;
+  padding: 0.75rem 1rem;
   font-size: 0.875rem;
   width: 100%;
   transition: border-color 0.2s;
@@ -141,5 +142,5 @@ button {
 
 /* Input with icon - ensure proper padding */
 .input-with-icon {
-  padding-left: 2.5rem;
+  padding-left: 2.75rem;
 }
