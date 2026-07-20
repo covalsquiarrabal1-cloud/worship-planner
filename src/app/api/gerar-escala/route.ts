@@ -14,7 +14,6 @@ export async function POST(request: Request) {
 
   const serviceClient = await createServiceRoleClient()
 
-  // Verify admin
   const { data: profile } = await serviceClient
     .from('profiles')
     .select('role')
@@ -32,26 +31,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Nenhum dia selecionado' }, { status: 400 })
   }
 
-  // Load members
-  const { data: members } = await serviceClient
-    .from('members')
-    .select('*')
-    .eq('is_blocked', false)
-    .order('name')
+  // Load all data
+  const [membersRes, blocksRes, dayBlocksRes, bandPatternRes, scaleTypesRes] = await Promise.all([
+    serviceClient.from('members').select('*').eq('is_blocked', false).order('name'),
+    serviceClient.from('member_blocks').select('member_id, blocked_date'),
+    serviceClient.from('member_day_blocks').select('member_id, day_of_week'),
+    serviceClient.from('band_pattern').select('*, instrument:instruments(id, name)').order('sort_order'),
+    serviceClient.from('scale_types').select('*'),
+  ])
 
-  if (!members) return NextResponse.json({ error: 'Erro ao carregar membros' }, { status: 500 })
+  const members = membersRes.data || []
+  const blocks = blocksRes.data || []
+  const dayBlocks = dayBlocksRes.data || []
+  const bandPattern = (bandPatternRes.data as any[]) || []
+  const scaleTypes = scaleTypesRes.data || []
 
-  // Load blocks
-  const { data: blocks } = await serviceClient
-    .from('member_blocks')
-    .select('member_id, blocked_date')
+  if (members.length === 0) {
+    return NextResponse.json({ error: 'Nenhum membro cadastrado' }, { status: 400 })
+  }
 
-  // Load day-of-week blocks
-  const { data: dayBlocks } = await serviceClient
-    .from('member_day_blocks')
-    .select('member_id, day_of_week')
-
-  // Get or create schedule for this month
+  // Get or create schedule
   const { data: existingSchedule } = await serviceClient
     .from('schedules')
     .select('id')
@@ -81,12 +80,7 @@ export async function POST(request: Request) {
   const scaleTypeMap: Record<string, string> = {}
 
   for (const name of uniqueNames) {
-    const { data: existing } = await serviceClient
-      .from('scale_types')
-      .select('id')
-      .eq('name', name)
-      .single()
-
+    const existing = scaleTypes.find((st: any) => st.name === name)
     if (existing) {
       scaleTypeMap[name] = existing.id
     } else {
@@ -99,22 +93,76 @@ export async function POST(request: Request) {
     }
   }
 
-  // Separate members by role
+  function getScaleTypeKind(scaleName: string): string {
+    const st = scaleTypes.find((s: any) => s.name === scaleName)
+    return st?.type || 'normal'
+  }
+
+  // === MEMBER POOLS ===
   const maleLeaders = members.filter(m => m.gender === 'male' && m.is_leader)
   const femaleLeaders = members.filter(m => m.gender === 'female' && m.is_leader)
-  const femaleMembers = members.filter(m => m.gender === 'female' && !m.is_leader && !m.is_musician)
-  const guitarists = members.filter(m => m.is_musician && m.instrument === 'guitarra')
-  const bassists = members.filter(m => m.is_musician && m.instrument === 'baixo')
-  const drummers = members.filter(m => m.is_musician && m.instrument === 'bateria')
-  const keyboardists = members.filter(m => m.is_musician && m.instrument === 'teclado')
+  const backs = members.filter(m => m.is_back)
+  const maleVocals = members.filter(m => m.gender === 'male' && !m.is_musician)
+  const femaleVocals = members.filter(m => m.gender === 'female' && !m.is_musician)
 
-  let maleLeaderIdx = 0
-  let femaleIdx = 0
-  let guitarIdx = 0
-  let bassIdx = 0
-  let drumIdx = 0
-  let keyboardIdx = 0
+  // Instrument pools
+  const instrumentPools: Record<string, any[]> = {}
+  members.forEach(m => {
+    if (m.is_musician && m.instrument) {
+      const key = m.instrument.toLowerCase()
+      if (!instrumentPools[key]) instrumentPools[key] = []
+      instrumentPools[key].push(m)
+    }
+  })
 
+  // === ROUND-ROBIN TRACKING ===
+  // Track usage count to ensure fair distribution
+  const usageCount: Record<string, number> = {}
+  members.forEach(m => { usageCount[m.id] = 0 })
+
+  // Track saturday/sunday assignments for the rule:
+  // "Each member needs at least 1 Saturday and 1 Sunday"
+  const saturdayAssigned = new Set<string>()
+  const sundayAssigned = new Set<string>()
+
+  // Round-robin indexes per pool
+  const rrIndex: Record<string, number> = {
+    maleLeader: 0,
+    femaleLeader: 0,
+    back: 0,
+    maleVocal: 0,
+    femaleVocal: 0,
+  }
+  const instrumentRR: Record<string, number> = {}
+  Object.keys(instrumentPools).forEach(k => { instrumentRR[k] = 0 })
+
+  // Helper: get next available from pool (round-robin, no repeat until exhausted)
+  function getNext(pool: any[], rrKey: string, blocked: Set<string>, assigned: Set<string>): any | null {
+    const available = pool.filter(m => !blocked.has(m.id) && !assigned.has(m.id))
+    if (available.length === 0) return null
+
+    // Sort by usage count to distribute evenly
+    available.sort((a, b) => (usageCount[a.id] || 0) - (usageCount[b.id] || 0))
+
+    const idx = (rrIndex[rrKey] || 0) % available.length
+    rrIndex[rrKey] = (rrIndex[rrKey] || 0) + 1
+    return available[idx]
+  }
+
+  function getNextInstrument(instrumentName: string, blocked: Set<string>, assigned: Set<string>): any | null {
+    const key = instrumentName.toLowerCase()
+    const pool = instrumentPools[key] || []
+    const available = pool.filter(m => !blocked.has(m.id) && !assigned.has(m.id))
+    if (available.length === 0) return null
+
+    available.sort((a, b) => (usageCount[a.id] || 0) - (usageCount[b.id] || 0))
+
+    const idx = (instrumentRR[key] || 0) % available.length
+    instrumentRR[key] = (instrumentRR[key] || 0) + 1
+    return available[idx]
+  }
+
+  // === GENERATE EVENTS ===
   const sortedDays = [...selectedDays].sort((a, b) => a.date.localeCompare(b.date))
 
   for (const day of sortedDays) {
@@ -122,31 +170,15 @@ export async function POST(request: Request) {
     const weekNum = Math.ceil(dateObj.getDate() / 7)
     const dayOfWeekNum = dateObj.getDay()
 
-    // Members blocked on this specific date
-    const blockedOnDate = (blocks || [])
-      .filter(b => b.blocked_date === day.date)
-      .map(b => b.member_id)
-
-    // Members blocked on this day of week
-    const blockedOnDayOfWeek = (dayBlocks || [])
-      .filter(b => b.day_of_week === dayOfWeekNum)
-      .map(b => b.member_id)
-
-    const allBlocked = [...new Set([...blockedOnDate, ...blockedOnDayOfWeek])]
-
-    function getAvailable(list: any[]) {
-      return list.filter((m: any) => !allBlocked.includes(m.id))
-    }
-
-    function getNext(list: any[], idx: number): { member: any | null; newIdx: number } {
-      const available = getAvailable(list)
-      if (available.length === 0) return { member: null, newIdx: idx }
-      const member = available[idx % available.length]
-      return { member, newIdx: idx + 1 }
-    }
+    // Get blocked members for this specific date + day of week
+    const blockedByDate = blocks.filter(b => b.blocked_date === day.date).map(b => b.member_id)
+    const blockedByDay = dayBlocks.filter(b => b.day_of_week === dayOfWeekNum).map(b => b.member_id)
+    const blockedSet = new Set([...blockedByDate, ...blockedByDay])
 
     const scaleTypeId = day.scaleName ? scaleTypeMap[day.scaleName] || null : null
+    const scaleKind = day.scaleName ? getScaleTypeKind(day.scaleName) : 'normal'
 
+    // Create event
     const { data: event, error: eventErr } = await serviceClient
       .from('schedule_events')
       .insert({
@@ -162,47 +194,98 @@ export async function POST(request: Request) {
     if (eventErr || !event) continue
 
     const assignments: { event_id: string; member_id: string; role: string }[] = []
+    const assignedThisEvent = new Set<string>()
 
-    // Vocal 1: male leader
-    const ml = getNext(maleLeaders, maleLeaderIdx)
-    if (ml.member) {
-      assignments.push({ event_id: event.id, member_id: ml.member.id, role: 'vocal_1' })
-      maleLeaderIdx = ml.newIdx
+    // --- RULE: 1 Líder Masculino (Vocal 1) ---
+    // --- RULE: 1 Líder Feminino ---
+    // --- RULE: Vocals based on scale type ---
+
+    if (scaleKind === 'strong_brothers') {
+      // 3 male vocals (leaders first)
+      const malePool = [...maleLeaders, ...maleVocals]
+      for (let i = 0; i < 3; i++) {
+        const member = getNext(malePool, 'maleVocal', blockedSet, assignedThisEvent)
+        if (member) {
+          assignments.push({ event_id: event.id, member_id: member.id, role: `vocal_${i + 1}` })
+          assignedThisEvent.add(member.id)
+          usageCount[member.id]++
+        }
+      }
+    } else if (scaleKind === 'empoderadas') {
+      // 3 female vocals (leaders first)
+      const femalePool = [...femaleLeaders, ...femaleVocals]
+      for (let i = 0; i < 3; i++) {
+        const member = getNext(femalePool, 'femaleVocal', blockedSet, assignedThisEvent)
+        if (member) {
+          assignments.push({ event_id: event.id, member_id: member.id, role: `vocal_${i + 1}` })
+          assignedThisEvent.add(member.id)
+          usageCount[member.id]++
+        }
+      }
+    } else {
+      // NORMAL: 1 male leader (Vocal 1) + 2 female vocals
+      const ml = getNext(maleLeaders, 'maleLeader', blockedSet, assignedThisEvent)
+      if (ml) {
+        assignments.push({ event_id: event.id, member_id: ml.id, role: 'vocal_1' })
+        assignedThisEvent.add(ml.id)
+        usageCount[ml.id]++
+      }
+
+      // 2 female vocals (leaders have priority)
+      const femalePool = [...femaleLeaders, ...femaleVocals]
+      for (let i = 0; i < 2; i++) {
+        const member = getNext(femalePool, 'femaleVocal', blockedSet, assignedThisEvent)
+        if (member) {
+          assignments.push({ event_id: event.id, member_id: member.id, role: `vocal_${i + 2}` })
+          assignedThisEvent.add(member.id)
+          usageCount[member.id]++
+        }
+      }
     }
 
-    // Vocal 2 & 3: females
-    const avFemales = getAvailable([...femaleLeaders, ...femaleMembers])
-    for (let i = 0; i < 2 && i < avFemales.length; i++) {
-      const idx = (femaleIdx + i) % avFemales.length
-      assignments.push({ event_id: event.id, member_id: avFemales[idx].id, role: `vocal_${i + 2}` })
-    }
-    femaleIdx += 2
-
-    // Musicians
-    const gtr = getNext(guitarists, guitarIdx)
-    if (gtr.member) {
-      assignments.push({ event_id: event.id, member_id: gtr.member.id, role: 'guitarra' })
-      guitarIdx = gtr.newIdx
+    // --- RULE: 1 Back vocal ---
+    const back = getNext(backs, 'back', blockedSet, assignedThisEvent)
+    if (back) {
+      assignments.push({ event_id: event.id, member_id: back.id, role: 'back' })
+      assignedThisEvent.add(back.id)
+      usageCount[back.id]++
     }
 
-    const bss = getNext(bassists, bassIdx)
-    if (bss.member) {
-      assignments.push({ event_id: event.id, member_id: bss.member.id, role: 'baixo' })
-      bassIdx = bss.newIdx
+    // --- INSTRUMENTS from band_pattern or fallback ---
+    const instrumentPatterns = bandPattern.filter((bp: any) => !bp.is_vocal && bp.instrument)
+
+    if (instrumentPatterns.length > 0) {
+      for (const ip of instrumentPatterns) {
+        const instrName = ip.instrument.name.toLowerCase()
+        for (let q = 0; q < ip.quantity; q++) {
+          const member = getNextInstrument(instrName, blockedSet, assignedThisEvent)
+          if (member) {
+            assignments.push({ event_id: event.id, member_id: member.id, role: instrName })
+            assignedThisEvent.add(member.id)
+            usageCount[member.id]++
+          }
+        }
+      }
+    } else {
+      // Fallback instruments
+      for (const instr of ['guitarra', 'violao', 'baixo', 'bateria', 'teclado']) {
+        const member = getNextInstrument(instr, blockedSet, assignedThisEvent)
+        if (member) {
+          assignments.push({ event_id: event.id, member_id: member.id, role: instr })
+          assignedThisEvent.add(member.id)
+          usageCount[member.id]++
+        }
+      }
     }
 
-    const drm = getNext(drummers, drumIdx)
-    if (drm.member) {
-      assignments.push({ event_id: event.id, member_id: drm.member.id, role: 'bateria' })
-      drumIdx = drm.newIdx
+    // Track saturday/sunday for fair distribution rule
+    if (dayOfWeekNum === 6) { // Saturday
+      assignedThisEvent.forEach(id => saturdayAssigned.add(id))
+    } else if (dayOfWeekNum === 0) { // Sunday
+      assignedThisEvent.forEach(id => sundayAssigned.add(id))
     }
 
-    const kbd = getNext(keyboardists, keyboardIdx)
-    if (kbd.member) {
-      assignments.push({ event_id: event.id, member_id: kbd.member.id, role: 'teclado' })
-      keyboardIdx = kbd.newIdx
-    }
-
+    // Insert assignments
     if (assignments.length > 0) {
       await serviceClient.from('schedule_assignments').insert(assignments)
     }
