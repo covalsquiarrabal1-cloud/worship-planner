@@ -209,6 +209,25 @@ export default function GerarEscalaPage() {
         </div>
       </div>
 
+      {/* Generate button at TOP */}
+      <button
+        onClick={generateSchedule}
+        disabled={generating || selectedDays.length === 0}
+        className="w-full bg-white text-black font-semibold py-3 rounded-xl disabled:opacity-40 flex items-center justify-center gap-2 text-sm hover:bg-gray-100 transition-colors"
+      >
+        {generating ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Gerando...
+          </>
+        ) : (
+          <>
+            <Calendar className="w-4 h-4" />
+            Gerar Escala ({selectedDays.length} dias)
+          </>
+        )}
+      </button>
+
       {/* Add new scale name */}
       <div className="card space-y-3">
         <label className="text-sm font-medium text-[var(--muted-foreground)] block">Adicionar novo tipo</label>
@@ -283,26 +302,8 @@ export default function GerarEscalaPage() {
         })}
       </div>
 
-      {/* Generate button - NOT sticky */}
-      <div className="pt-4">
-        <button
-          onClick={generateSchedule}
-          disabled={generating || selectedDays.length === 0}
-          className="w-full bg-white text-black font-semibold py-3 rounded-xl disabled:opacity-40 flex items-center justify-center gap-2 text-sm hover:bg-gray-100 transition-colors"
-        >
-          {generating ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Gerando...
-            </>
-          ) : (
-            <>
-              <Calendar className="w-4 h-4" />
-              Gerar Escala ({selectedDays.length} dias)
-            </>
-          )}
-        </button>
-      </div>
+      {/* Bottom spacer */}
+      <div style={{ height: '120px' }} />
     </div>
   )
 }

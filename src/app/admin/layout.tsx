@@ -24,17 +24,19 @@ export default async function AdminLayout({
   if (profile?.role !== 'admin') redirect('/membro')
 
   return (
-    <div className="pb-28">
-      <header className="sticky top-0 z-40 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--border)] px-6 py-4">
+    <div>
+      <header className="sticky top-0 z-40 bg-[var(--background)] border-b border-[var(--border)] px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="w-8" />
           <h1 className="text-lg font-bold">Worship Planner</h1>
           <LogoutButton />
         </div>
       </header>
-      <main className="px-6 py-6 max-w-5xl mx-auto pb-32">
+      <main className="px-6 py-6 max-w-5xl mx-auto">
         {children}
       </main>
+      {/* Spacer to prevent bottom nav from covering content */}
+      <div style={{ height: '100px' }} aria-hidden="true" />
       <AdminBottomNav />
     </div>
   )
