@@ -120,11 +120,11 @@ export async function POST(request: Request) {
       .filter(b => b.blocked_date === day.date)
       .map(b => b.member_id)
 
-    function getAvailable(list: typeof members) {
-      return list.filter(m => !blockedOnDate.includes(m.id))
+    function getAvailable(list: any[]) {
+      return list.filter((m: any) => !blockedOnDate.includes(m.id))
     }
 
-    function getNext(list: typeof members, idx: number): { member: typeof members[0] | null; newIdx: number } {
+    function getNext(list: any[], idx: number): { member: any | null; newIdx: number } {
       const available = getAvailable(list)
       if (available.length === 0) return { member: null, newIdx: idx }
       const member = available[idx % available.length]
