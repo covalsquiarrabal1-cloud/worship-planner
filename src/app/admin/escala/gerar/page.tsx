@@ -50,9 +50,29 @@ export default function GerarEscalaPage() {
   const [step, setStep] = useState<'select-days' | 'preview'>('select-days')
   const supabase = createClient()
 
+  // Pre-selected dates from calendar
+  const preSelectedDates = searchParams.get('dates')
+
   useEffect(() => {
     loadData()
   }, [])
+
+  // Initialize selected days from URL param
+  useEffect(() => {
+    if (preSelectedDates && scaleTypes.length > 0) {
+      const dates = preSelectedDates.split(',')
+      const days: SelectedDay[] = dates.map((dateStr) => {
+        const dateObj = new Date(dateStr + 'T12:00:00')
+        const dayOfWeek = dayNames[getDay(dateObj)] || ''
+        return {
+          date: dateStr,
+          dayOfWeek,
+          scaleTypeId: scaleTypes[0]?.id || '',
+        }
+      })
+      setSelectedDays(days)
+    }
+  }, [preSelectedDates, scaleTypes])
 
   async function loadData() {
     const [membersRes, scaleTypesRes, blocksRes] = await Promise.all([
