@@ -590,11 +590,19 @@ function ScaleTypeEditForm({
 
   async function handleSave() {
     setSaving(true)
-    await fetch('/api/scale-types', {
+    const res = await fetch('/api/scale-types', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: scaleType.id, male_vocals: maleVocals, female_vocals: femaleVocals }),
+      body: JSON.stringify({ 
+        id: scaleType.id, 
+        male_vocals: Number(maleVocals), 
+        female_vocals: Number(femaleVocals) 
+      }),
     })
+    if (!res.ok) {
+      const data = await res.json()
+      alert('Erro ao salvar: ' + (data.error || 'Erro desconhecido'))
+    }
     setSaving(false)
     onSave()
   }

@@ -65,12 +65,13 @@ export async function PUT(request: Request) {
 
   const { data, error } = await serviceClient
     .from('scale_types')
-    .update({ male_vocals, female_vocals })
+    .update({ male_vocals: Number(male_vocals), female_vocals: Number(female_vocals) })
     .eq('id', id)
     .select()
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!data) return NextResponse.json({ error: 'Tipo não encontrado' }, { status: 404 })
   return NextResponse.json(data)
 }
 
