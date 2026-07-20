@@ -56,7 +56,18 @@ export default function AdminPage() {
 
   useEffect(() => {
     loadEvents()
-    setSelectedDates([]) // Clear selection when month changes
+    // Restore previously selected dates for this month from localStorage
+    try {
+      const saved = localStorage.getItem(`selectedDates_${month}_${year}`)
+      if (saved) {
+        const dates = JSON.parse(saved).map((d: string) => new Date(d + 'T12:00:00'))
+        setSelectedDates(dates)
+      } else {
+        setSelectedDates([])
+      }
+    } catch {
+      setSelectedDates([])
+    }
   }, [month, year])
 
   async function loadEvents() {
@@ -119,8 +130,12 @@ export default function AdminPage() {
   }
 
   function handleGerarEscala() {
-    const dates = selectedDates.map((d) => format(d, 'yyyy-MM-dd')).join(',')
-    router.push(`/admin/escala/gerar?month=${month}&year=${year}&dates=${dates}`)
+    const dateStrs = selectedDates.map((d) => format(d, 'yyyy-MM-dd'))
+    // Save selection for next time
+    try {
+      localStorage.setItem(`selectedDates_${month}_${year}`, JSON.stringify(dateStrs))
+    } catch {}
+    router.push(`/admin/escala/gerar?month=${month}&year=${year}&dates=${dateStrs.join(',')}`)
   }
 
   // Get details for selected dates that have events

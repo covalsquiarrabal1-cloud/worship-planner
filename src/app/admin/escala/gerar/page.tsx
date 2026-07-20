@@ -77,6 +77,24 @@ export default function GerarEscalaPage() {
         
         return { date: dateStr, dayOfWeek, scaleName: autoName }
       })
+
+      // Check if we have saved names from last time for these dates
+      try {
+        const saved = localStorage.getItem('lastScaleConfig')
+        if (saved) {
+          const config = JSON.parse(saved)
+          if (config.selectedDays && Array.isArray(config.selectedDays)) {
+            // Apply previously saved names where dates match
+            days.forEach((day) => {
+              const savedDay = config.selectedDays.find((sd: SelectedDay) => sd.date === day.date)
+              if (savedDay && savedDay.scaleName) {
+                day.scaleName = savedDay.scaleName
+              }
+            })
+          }
+        }
+      } catch {}
+
       setSelectedDays(days.sort((a, b) => a.date.localeCompare(b.date)))
     }
 
@@ -112,6 +130,16 @@ export default function GerarEscalaPage() {
   async function generateSchedule() {
     if (selectedDays.length === 0) return
     setGenerating(true)
+
+    // Save preferences for next time
+    try {
+      localStorage.setItem('lastScaleConfig', JSON.stringify({
+        selectedDays,
+        quickNames,
+        month,
+        year,
+      }))
+    } catch {}
 
     try {
       const res = await fetch('/api/gerar-escala', {
