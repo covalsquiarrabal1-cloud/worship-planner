@@ -24,7 +24,7 @@ export default async function AdminLayout({
   if (profile?.role !== 'admin') redirect('/membro')
 
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-screen pb-24">
       <header className="sticky top-0 z-40 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--border)] px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="w-8" />

@@ -55,10 +55,11 @@ export default function ConfigPage() {
 
   async function loadAll() {
     try {
-      const [instrRes, patternRes, defaultsRes] = await Promise.all([
+      const [instrRes, patternRes, defaultsRes, scaleTypesRes] = await Promise.all([
         fetch('/api/instruments'),
         fetch('/api/band-pattern'),
         fetch('/api/day-defaults'),
+        fetch('/api/scale-types'),
       ])
 
       if (instrRes.ok) {
@@ -76,7 +77,6 @@ export default function ConfigPage() {
         if (Array.isArray(defaultsData) && defaultsData.length > 0) {
           setDayDefaults(defaultsData)
         } else {
-          // Initialize with empty defaults for common celebration days
           setDayDefaults([
             { day_of_week: 5, scale_name: '', is_variable: true },
             { day_of_week: 6, scale_name: '', is_variable: false },
@@ -84,12 +84,14 @@ export default function ConfigPage() {
           ])
         }
       }
+
+      if (scaleTypesRes.ok) {
+        const stData = await scaleTypesRes.json()
+        setScaleTypes(Array.isArray(stData) ? stData : [])
+      }
     } catch (e) {
       console.error('Error loading config:', e)
     }
-
-    const { data: stData } = await supabase.from('scale_types').select('*').order('name')
-    setScaleTypes(stData || [])
 
     setLoading(false)
   }
