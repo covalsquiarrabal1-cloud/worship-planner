@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server'
 
 export default async function Home() {
   const supabase = await createServerSupabaseClient()
@@ -9,8 +9,9 @@ export default async function Home() {
     redirect('/login')
   }
 
-  // Check if admin
-  const { data: profile } = await supabase
+  // Use service role to bypass RLS when checking role
+  const serviceClient = await createServiceRoleClient()
+  const { data: profile } = await serviceClient
     .from('profiles')
     .select('role')
     .eq('id', user.id)

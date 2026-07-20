@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createServerSupabaseClient } from '@/lib/supabase/server'
+import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { AdminBottomNav } from '@/components/BottomNav'
 import { LogoutButton } from '@/components/LogoutButton'
 
@@ -13,7 +13,9 @@ export default async function AdminLayout({
 
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
+  // Use service role to bypass RLS when checking admin role
+  const serviceClient = await createServiceRoleClient()
+  const { data: profile } = await serviceClient
     .from('profiles')
     .select('role')
     .eq('id', user.id)
