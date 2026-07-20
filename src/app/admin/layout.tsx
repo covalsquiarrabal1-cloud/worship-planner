@@ -24,13 +24,15 @@ export default async function AdminLayout({
   if (profile?.role !== 'admin') redirect('/membro')
 
   return (
-    <div className="min-h-screen pb-safe">
-      <header className="sticky top-0 z-40 bg-[var(--background)] border-b border-[var(--border)] px-4 py-3 flex items-center justify-between">
-        <div className="w-8" />
-        <h1 className="text-lg font-bold">Worship Planner</h1>
-        <LogoutButton />
+    <div className="min-h-screen pb-16">
+      <header className="sticky top-0 z-40 bg-[var(--background)] border-b border-[var(--border)] px-4 py-3">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <div className="w-8" />
+          <h1 className="text-lg font-bold">Worship Planner</h1>
+          <LogoutButton />
+        </div>
       </header>
-      <main className="px-4 py-4">
+      <main className="px-4 py-4 max-w-5xl mx-auto">
         {children}
       </main>
       <AdminBottomNav />

@@ -7,7 +7,6 @@ import {
   startOfMonth,
   endOfMonth,
   eachDayOfInterval,
-  getDay,
   addMonths,
   subMonths,
   startOfWeek,
@@ -26,7 +25,6 @@ import {
   FileDown,
   Loader2,
   Plus,
-  Calendar,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -116,7 +114,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-4xl mx-auto space-y-5">
       {/* Month Navigation */}
       <div className="flex items-center justify-between">
         <button
@@ -136,117 +134,128 @@ export default function AdminPage() {
         </button>
       </div>
 
-      {/* Calendar Grid */}
-      <div className="card p-3">
-        {/* Week day headers */}
-        <div className="grid grid-cols-7 mb-2">
-          {weekDays.map((day) => (
-            <div
-              key={day}
-              className="text-center text-xs font-medium text-[var(--muted-foreground)] py-1"
-            >
-              {day}
-            </div>
-          ))}
-        </div>
-
-        {/* Day cells */}
-        <div className="grid grid-cols-7 gap-1">
-          {calendarDays.map((day) => {
-            const inMonth = isSameMonth(day, currentDate)
-            const eventOnDay = hasEvent(day)
-            const isSelected = selectedDate && isSameDay(day, selectedDate)
-            const today = isToday(day)
-
-            return (
-              <button
-                key={day.toISOString()}
-                onClick={() => setSelectedDate(day)}
-                className={`
-                  relative aspect-square flex flex-col items-center justify-center rounded-lg text-sm transition-all
-                  ${!inMonth ? 'opacity-30' : ''}
-                  ${isSelected ? 'bg-white text-black font-bold' : ''}
-                  ${!isSelected && today ? 'ring-1 ring-white/50' : ''}
-                  ${!isSelected && eventOnDay ? 'bg-[var(--accent)]' : ''}
-                  ${!isSelected && !eventOnDay && inMonth ? 'hover:bg-[var(--accent)]/50' : ''}
-                `}
+      {/* Calendar + Detail side by side on desktop */}
+      <div className="flex flex-col lg:flex-row gap-4">
+        {/* Calendar Grid */}
+        <div className="card p-3 lg:flex-1">
+          {/* Week day headers */}
+          <div className="grid grid-cols-7 mb-1">
+            {weekDays.map((day) => (
+              <div
+                key={day}
+                className="text-center text-xs font-medium text-[var(--muted-foreground)] py-1"
               >
-                <span>{format(day, 'd')}</span>
-                {eventOnDay && !isSelected && (
-                  <div className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-green-400" />
-                )}
-                {eventOnDay && isSelected && (
-                  <div className="absolute bottom-1 w-1.5 h-1.5 rounded-full bg-green-700" />
-                )}
-              </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Selected day detail */}
-      {selectedDate && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold">
-              {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
-              <span className="text-sm font-normal text-[var(--muted-foreground)] ml-2 capitalize">
-                {format(selectedDate, 'EEEE', { locale: ptBR })}
-              </span>
-            </h3>
+                {day}
+              </div>
+            ))}
           </div>
 
-          {loading ? (
-            <Loader2 className="w-5 h-5 animate-spin mx-auto" />
-          ) : selectedEvent ? (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm bg-green-500/20 text-green-400 px-2 py-0.5 rounded font-medium">
-                  {selectedEvent.scale_type?.name || 'Escala'}
-                </span>
-                <Link
-                  href={`/admin/escala/${selectedEvent.id}`}
-                  className="text-xs text-[var(--muted-foreground)] underline"
+          {/* Day cells */}
+          <div className="grid grid-cols-7 gap-0.5">
+            {calendarDays.map((day) => {
+              const inMonth = isSameMonth(day, currentDate)
+              const eventOnDay = hasEvent(day)
+              const isSelected = selectedDate && isSameDay(day, selectedDate)
+              const today = isToday(day)
+
+              return (
+                <button
+                  key={day.toISOString()}
+                  onClick={() => setSelectedDate(day)}
+                  className={`
+                    relative py-2 flex flex-col items-center justify-center rounded-md text-sm transition-all
+                    ${!inMonth ? 'opacity-30' : ''}
+                    ${isSelected ? 'bg-white text-black font-bold' : ''}
+                    ${!isSelected && today ? 'ring-1 ring-white/50' : ''}
+                    ${!isSelected && eventOnDay ? 'bg-[var(--accent)]' : ''}
+                    ${!isSelected && !eventOnDay && inMonth ? 'hover:bg-[var(--accent)]/50' : ''}
+                  `}
                 >
-                  Editar →
-                </Link>
+                  <span>{format(day, 'd')}</span>
+                  {eventOnDay && !isSelected && (
+                    <div className="absolute bottom-0.5 w-1.5 h-1.5 rounded-full bg-green-400" />
+                  )}
+                  {eventOnDay && isSelected && (
+                    <div className="absolute bottom-0.5 w-1.5 h-1.5 rounded-full bg-green-700" />
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Selected day detail */}
+        <div className="lg:w-72">
+          {selectedDate ? (
+            <div className="card h-full">
+              <div className="mb-2">
+                <h3 className="font-semibold text-sm">
+                  {format(selectedDate, "dd 'de' MMMM", { locale: ptBR })}
+                </h3>
+                <span className="text-xs text-[var(--muted-foreground)] capitalize">
+                  {format(selectedDate, 'EEEE', { locale: ptBR })}
+                </span>
               </div>
-              <div className="grid grid-cols-2 gap-1.5 text-xs">
-                {selectedEvent.assignments
-                  .sort((a, b) => a.role.localeCompare(b.role))
-                  .map((a) => (
-                    <div
-                      key={a.id}
-                      className="flex justify-between bg-[var(--accent)] px-2 py-1.5 rounded"
+
+              {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin mx-auto" />
+              ) : selectedEvent ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded font-medium">
+                      {selectedEvent.scale_type?.name || 'Escala'}
+                    </span>
+                    <Link
+                      href={`/admin/escala/${selectedEvent.id}`}
+                      className="text-xs text-[var(--muted-foreground)] underline"
                     >
-                      <span className="text-[var(--muted-foreground)]">
-                        {roleLabels[a.role] || a.role}
-                      </span>
-                      <span className="font-medium">{a.member?.name || '-'}</span>
-                    </div>
-                  ))}
-              </div>
+                      Editar
+                    </Link>
+                  </div>
+                  <div className="space-y-1 text-xs">
+                    {selectedEvent.assignments
+                      .sort((a, b) => a.role.localeCompare(b.role))
+                      .map((a) => (
+                        <div
+                          key={a.id}
+                          className="flex justify-between bg-[var(--accent)] px-2 py-1.5 rounded"
+                        >
+                          <span className="text-[var(--muted-foreground)]">
+                            {roleLabels[a.role] || a.role}
+                          </span>
+                          <span className="font-medium">{a.member?.name || '-'}</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  Nenhuma celebração neste dia.
+                </p>
+              )}
             </div>
           ) : (
-            <p className="text-sm text-[var(--muted-foreground)]">
-              Nenhuma celebração neste dia.
-            </p>
+            <div className="card h-full flex items-center justify-center">
+              <p className="text-xs text-[var(--muted-foreground)]">
+                Selecione um dia no calendário
+              </p>
+            </div>
           )}
         </div>
-      )}
+      </div>
 
       {/* Action buttons */}
       <div className="flex gap-2">
         <Link
           href={`/admin/escala/gerar?month=${month}&year=${year}`}
-          className="flex-1 flex items-center justify-center gap-2 bg-white text-black font-semibold py-3 rounded-xl"
+          className="flex-1 flex items-center justify-center gap-2 bg-white text-black font-semibold py-2.5 rounded-xl text-sm"
         >
           <Plus className="w-4 h-4" />
           Gerar Escala
         </Link>
         <Link
           href={`/admin/escala/exportar?month=${month}&year=${year}`}
-          className="flex items-center justify-center gap-2 bg-[var(--accent)] px-4 py-3 rounded-xl"
+          className="flex items-center justify-center gap-2 bg-[var(--accent)] px-4 py-2.5 rounded-xl"
         >
           <FileDown className="w-4 h-4" />
         </Link>
@@ -254,27 +263,27 @@ export default function AdminPage() {
 
       {/* Quick menu */}
       <div className="space-y-2">
-        <h3 className="text-sm font-medium text-[var(--muted-foreground)]">Menu</h3>
+        <h3 className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Menu</h3>
         <div className="grid grid-cols-3 gap-2">
           <Link
             href="/admin/membros"
-            className="card flex flex-col items-center gap-2 py-4"
+            className="card flex flex-col items-center gap-1.5 py-3"
           >
-            <Users className="w-6 h-6" />
+            <Users className="w-5 h-5" />
             <span className="text-xs font-medium">Membros</span>
           </Link>
           <Link
             href="/admin/musicas"
-            className="card flex flex-col items-center gap-2 py-4"
+            className="card flex flex-col items-center gap-1.5 py-3"
           >
-            <Music className="w-6 h-6" />
+            <Music className="w-5 h-5" />
             <span className="text-xs font-medium">Músicas</span>
           </Link>
           <Link
             href="/admin/config"
-            className="card flex flex-col items-center gap-2 py-4"
+            className="card flex flex-col items-center gap-1.5 py-3"
           >
-            <Settings className="w-6 h-6" />
+            <Settings className="w-5 h-5" />
             <span className="text-xs font-medium">Config</span>
           </Link>
         </div>
