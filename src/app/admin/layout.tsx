@@ -24,7 +24,7 @@ export default async function AdminLayout({
   if (profile?.role !== 'admin') redirect('/membro')
 
   return (
-    <div className="pb-24">
+    <div className="pb-28">
       <header className="sticky top-0 z-40 bg-[var(--background)]/80 backdrop-blur-md border-b border-[var(--border)] px-6 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="w-8" />
@@ -32,7 +32,7 @@ export default async function AdminLayout({
           <LogoutButton />
         </div>
       </header>
-      <main className="px-6 py-6 max-w-5xl mx-auto">
+      <main className="px-6 py-6 max-w-5xl mx-auto pb-32">
         {children}
       </main>
       <AdminBottomNav />

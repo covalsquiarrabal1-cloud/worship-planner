@@ -196,7 +196,7 @@ export default function GerarEscalaPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5 pb-8">
+    <div className="max-w-2xl mx-auto space-y-5">
       <div className="flex items-center gap-3">
         <Link href="/admin" className="p-2 rounded-lg bg-[var(--accent)] hover:bg-[var(--border)]">
           <ArrowLeft className="w-4 h-4" />

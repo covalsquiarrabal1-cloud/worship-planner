@@ -174,7 +174,7 @@ export default function ConfigPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-10 pb-32">
+    <div className="max-w-2xl mx-auto space-y-10">
       <h2 className="text-xl font-bold">Configurações</h2>
 
       {/* ========== INSTRUMENTOS ========== */}

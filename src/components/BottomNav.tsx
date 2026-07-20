@@ -21,7 +21,7 @@ export function AdminBottomNav() {
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[var(--card)]/80 backdrop-blur-md border-t border-[var(--border)] z-50">
+    <nav className="fixed bottom-0 left-0 right-0 bg-[var(--card)] border-t border-[var(--border)] z-50">
       <div className="max-w-5xl mx-auto flex items-center justify-around py-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
         {items.map((item) => {
           const isActive = pathname === item.href || 
