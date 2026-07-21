@@ -63,24 +63,13 @@ export default function MemberSchedulePage() {
     const start = format(startOfMonth(currentDate), 'yyyy-MM-dd')
     const end = format(endOfMonth(currentDate), 'yyyy-MM-dd')
 
-    const { data } = await supabase
-      .from('schedule_events')
-      .select(`
-        id,
-        event_date,
-        day_of_week,
-        week_number,
-        scale_type:scale_types(name),
-        assignments:schedule_assignments(
-          role,
-          member:members(name)
-        )
-      `)
-      .gte('event_date', start)
-      .lte('event_date', end)
-      .order('event_date')
-
-    setEvents((data as unknown as ScheduleEvent[]) || [])
+    const res = await fetch(`/api/schedule-events?start=${start}&end=${end}`)
+    if (res.ok) {
+      const data = await res.json()
+      setEvents(Array.isArray(data) ? data : [])
+    } else {
+      setEvents([])
+    }
     setLoading(false)
   }
 
