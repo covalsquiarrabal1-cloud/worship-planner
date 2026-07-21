@@ -147,33 +147,31 @@ export async function POST(request: Request) {
     const dayKey = `${genderKey}_${dayOfWeekNum}`
     if (!dayTypeUsed[dayKey]) dayTypeUsed[dayKey] = []
 
-    // Available: not blocked, not assigned this event, not same weekend
-    let available = pool.filter(m =>
+    // All non-blocked, non-assigned-this-event members
+    const allAvailable = pool.filter(m =>
       !blockedSet.has(m.id) &&
-      !assignedThisEvent.has(m.id) &&
+      !assignedThisEvent.has(m.id)
+    )
+
+    if (allAvailable.length === 0) return null
+
+    // Split: those who haven't had a turn on this day type yet vs those who have
+    let notYetUsed = allAvailable.filter(m => !dayTypeUsed[dayKey].includes(m.id))
+
+    // If everyone has had a turn, reset (new round)
+    if (notYetUsed.length === 0) {
+      dayTypeUsed[dayKey] = []
+      notYetUsed = allAvailable
+    }
+
+    // PRIORITY 1: Pick from notYetUsed (mandatory round-robin)
+    // Within notYetUsed, prefer those NOT on same weekend (soft constraint)
+    const notYetUsedPreferred = notYetUsed.filter(m =>
       !wasAssignedSameWeekend(m.id, currentDate, dayOfWeekNum)
     )
 
-    if (available.length === 0) {
-      // Fallback: allow same weekend
-      available = pool.filter(m =>
-        !blockedSet.has(m.id) &&
-        !assignedThisEvent.has(m.id)
-      )
-    }
-
-    if (available.length === 0) return null
-
-    // Split into: those who haven't had a turn on this day type yet, and those who have
-    const notYetUsed = available.filter(m => !dayTypeUsed[dayKey].includes(m.id))
-    const alreadyUsed = available.filter(m => dayTypeUsed[dayKey].includes(m.id))
-
-    // If everyone has had a turn, reset the tracker (new round)
-    let candidates = notYetUsed.length > 0 ? notYetUsed : available
-    if (notYetUsed.length === 0) {
-      // Reset: everyone gets a fresh round
-      dayTypeUsed[dayKey] = []
-    }
+    // Use preferred if available, otherwise allow same weekend to satisfy round-robin
+    let candidates = notYetUsedPreferred.length > 0 ? notYetUsedPreferred : notYetUsed
 
     // Sort candidates by preference
     candidates.sort((a, b) => {
