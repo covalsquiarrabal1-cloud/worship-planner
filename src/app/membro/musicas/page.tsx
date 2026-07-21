@@ -143,9 +143,9 @@ export default function MemberMusicasPage() {
                       href={song.youtube_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="p-2 bg-red-500/20 rounded-lg shrink-0"
+                      className="p-3 bg-red-500/20 rounded-lg shrink-0"
                     >
-                      <ExternalLink className="w-4 h-4 text-red-400" />
+                      <ExternalLink className="w-5 h-5 text-red-400" />
                     </a>
                   )}
                 </div>
