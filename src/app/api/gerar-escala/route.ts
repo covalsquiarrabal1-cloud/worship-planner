@@ -75,26 +75,36 @@ export async function POST(request: Request) {
     scheduleId = newSchedule.id
   }
 
-  // Scale type map
+  // Scale type map (with vocal counts)
   const uniqueNames = [...new Set(selectedDays.map(d => d.scaleName).filter(Boolean))]
   const scaleTypeMap: Record<string, string> = {}
+  const scaleTypeVocals: Record<string, { male: number; female: number }> = {}
   for (const name of uniqueNames) {
     const existing = scaleTypes.find((st: any) => st.name === name)
     if (existing) {
       scaleTypeMap[name] = existing.id
+      scaleTypeVocals[name] = {
+        male: existing.male_vocals ?? 1,
+        female: existing.female_vocals ?? 2,
+      }
     } else {
       const { data: created } = await serviceClient
         .from('scale_types')
         .insert({ name, type: 'normal' })
-        .select('id')
+        .select('*')
         .single()
-      if (created) scaleTypeMap[name] = created.id
+      if (created) {
+        scaleTypeMap[name] = created.id
+        scaleTypeVocals[name] = {
+          male: created.male_vocals ?? 1,
+          female: created.female_vocals ?? 2,
+        }
+      }
     }
   }
 
-  function getScaleTypeKind(scaleName: string): string {
-    const st = scaleTypes.find((s: any) => s.name === scaleName)
-    return st?.type || 'normal'
+  function getVocalCounts(scaleName: string): { male: number; female: number } {
+    return scaleTypeVocals[scaleName] || { male: 1, female: 2 }
   }
 
   // === MEMBER POOLS ===
@@ -114,16 +124,7 @@ export async function POST(request: Request) {
   })
 
   // === TRACKING per day-of-week (for round-robin per day type) ===
-  // Track which leaders have been used on each day type (5=friday, 6=saturday, 0=sunday)
-  const leaderUsedOnDayType: Record<string, string[]> = {
-    'male_5': [], // male leaders used on fridays
-    'male_6': [], // male leaders used on saturdays
-    'male_0': [], // male leaders used on sundays
-    'female_5': [],
-    'female_6': [],
-    'female_0': [],
-  }
-
+  // === TRACKING ===
   // Track which members were assigned on which date (to prevent same person on sat+sun of same week)
   const memberAssignedDates: Record<string, string[]> = {}
   members.forEach(m => { memberAssignedDates[m.id] = [] })
@@ -166,88 +167,6 @@ export async function POST(request: Request) {
     return false
   }
 
-  // Helper: get next leader ensuring round-robin per day type
-  function getNextLeader(
-    pool: any[],
-    genderKey: string,
-    dayOfWeekNum: number,
-    blockedSet: Set<string>,
-    assignedThisEvent: Set<string>,
-    currentDate: string
-  ): any | null {
-    const dayTypeKey = `${genderKey}_${dayOfWeekNum}`
-    const usedOnThisDay = leaderUsedOnDayType[dayTypeKey] || []
-
-    // Filter available
-    let available = pool.filter(m =>
-      !blockedSet.has(m.id) &&
-      !assignedThisEvent.has(m.id) &&
-      !wasAssignedSameWeekend(m.id, currentDate, dayOfWeekNum)
-    )
-
-    if (available.length === 0) {
-      // Fallback: allow same weekend if no other option
-      available = pool.filter(m =>
-        !blockedSet.has(m.id) &&
-        !assignedThisEvent.has(m.id)
-      )
-    }
-
-    if (available.length === 0) return null
-
-    // Prefer leaders who haven't been on this day type yet
-    const notYetUsed = available.filter(m => !usedOnThisDay.includes(m.id))
-
-    let chosen: any
-    if (notYetUsed.length > 0) {
-      chosen = notYetUsed[0]
-    } else {
-      // All have been used - reset and start over
-      leaderUsedOnDayType[dayTypeKey] = []
-      chosen = available[0]
-    }
-
-    // Track usage
-    if (!leaderUsedOnDayType[dayTypeKey]) leaderUsedOnDayType[dayTypeKey] = []
-    leaderUsedOnDayType[dayTypeKey].push(chosen.id)
-
-    return chosen
-  }
-
-  // Helper: get next female vocal with same rules
-  function getNextFemaleVocal(
-    blockedSet: Set<string>,
-    assignedThisEvent: Set<string>,
-    currentDate: string,
-    dayOfWeekNum: number,
-    preferBack: boolean
-  ): any | null {
-    const pool = [...femaleLeaders, ...femaleVocals]
-
-    let available = pool.filter(m =>
-      !blockedSet.has(m.id) &&
-      !assignedThisEvent.has(m.id) &&
-      !wasAssignedSameWeekend(m.id, currentDate, dayOfWeekNum)
-    )
-
-    if (available.length === 0) {
-      available = pool.filter(m =>
-        !blockedSet.has(m.id) &&
-        !assignedThisEvent.has(m.id)
-      )
-    }
-
-    if (available.length === 0) return null
-
-    // If preferBack, try to pick a back member first
-    if (preferBack) {
-      const backs = available.filter(m => m.is_back)
-      if (backs.length > 0) return backs[0]
-    }
-
-    return available[0]
-  }
-
   function getNextInstrument(instrumentName: string, blockedSet: Set<string>, assignedThisEvent: Set<string>): any | null {
     const key = instrumentName.toLowerCase()
     const pool = instrumentPools[key] || []
@@ -269,7 +188,7 @@ export async function POST(request: Request) {
     const blockedSet = new Set([...blockedByDate, ...blockedByDay])
 
     const scaleTypeId = day.scaleName ? scaleTypeMap[day.scaleName] || null : null
-    const scaleKind = day.scaleName ? getScaleTypeKind(day.scaleName) : 'normal'
+    const vocalCounts = day.scaleName ? getVocalCounts(day.scaleName) : { male: 1, female: 2 }
 
     // Create event
     const { data: event, error: eventErr } = await serviceClient
@@ -290,102 +209,63 @@ export async function POST(request: Request) {
     const assignedThisEvent = new Set<string>()
 
     // === VOCALS ===
-    if (scaleKind === 'strong_brothers') {
-      // 3 male vocals
-      const malePool = [...maleLeaders, ...maleVocals]
-      for (let i = 0; i < 3; i++) {
-        let available = malePool.filter(m =>
-          !blockedSet.has(m.id) &&
-          !assignedThisEvent.has(m.id) &&
-          !wasAssignedSameWeekend(m.id, day.date, dayOfWeekNum)
-        )
-        if (available.length === 0) {
-          available = malePool.filter(m => !blockedSet.has(m.id) && !assignedThisEvent.has(m.id))
-        }
-        if (available.length > 0) {
-          const member = available[0]
-          assignments.push({ event_id: event.id, member_id: member.id, role: `vocal_${i + 1}` })
-          assignedThisEvent.add(member.id)
-          memberAssignedDates[member.id].push(day.date)
-        }
-      }
-    } else if (scaleKind === 'empoderadas') {
-      // 3 female vocals
-      const femalePool = [...femaleLeaders, ...femaleVocals]
-      for (let i = 0; i < 3; i++) {
-        let available = femalePool.filter(m =>
-          !blockedSet.has(m.id) &&
-          !assignedThisEvent.has(m.id) &&
-          !wasAssignedSameWeekend(m.id, day.date, dayOfWeekNum)
-        )
-        if (available.length === 0) {
-          available = femalePool.filter(m => !blockedSet.has(m.id) && !assignedThisEvent.has(m.id))
-        }
-        if (available.length > 0) {
-          const member = available[0]
-          assignments.push({ event_id: event.id, member_id: member.id, role: `vocal_${i + 1}` })
-          assignedThisEvent.add(member.id)
-          memberAssignedDates[member.id].push(day.date)
-        }
-      }
-    } else {
-      // NORMAL: Vocal 1 = líder masc, Vocal 2 = back fem, Vocal 3 = qualquer (round-robin)
-      // Rules: always 1 leader + 1 back among the 3 vocals
-
-      const maleLeader = getNextLeader(maleLeaders, 'male', dayOfWeekNum, blockedSet, assignedThisEvent, day.date)
-      if (maleLeader) {
-        assignments.push({ event_id: event.id, member_id: maleLeader.id, role: 'vocal_1' })
-        assignedThisEvent.add(maleLeader.id)
-        memberAssignedDates[maleLeader.id].push(day.date)
-      }
-
-      // Vocal 2: must be a back (female)
-      // If female leader is also back, she satisfies both requirements
-      const allFemalePool = [...femaleLeaders, ...femaleVocals]
-      
-      let backsAvailable = allFemalePool.filter(m =>
-        m.is_back &&
+    // Assign male vocals based on male_vocals count
+    const malePool = [...maleLeaders, ...maleVocals]
+    for (let i = 0; i < vocalCounts.male; i++) {
+      let available = malePool.filter(m =>
         !blockedSet.has(m.id) &&
         !assignedThisEvent.has(m.id) &&
         !wasAssignedSameWeekend(m.id, day.date, dayOfWeekNum)
       )
-      if (backsAvailable.length === 0) {
-        backsAvailable = allFemalePool.filter(m =>
-          m.is_back && !blockedSet.has(m.id) && !assignedThisEvent.has(m.id)
-        )
+      if (available.length === 0) {
+        available = malePool.filter(m => !blockedSet.has(m.id) && !assignedThisEvent.has(m.id))
       }
 
-      const vocal2 = backsAvailable.length > 0 ? backsAvailable[0] : null
-      if (vocal2) {
-        assignments.push({ event_id: event.id, member_id: vocal2.id, role: 'vocal_2' })
-        assignedThisEvent.add(vocal2.id)
-        memberAssignedDates[vocal2.id].push(day.date)
+      if (available.length > 0) {
+        // Prefer leaders first, then sort by least used
+        available.sort((a, b) => {
+          if (a.is_leader && !b.is_leader) return -1
+          if (!a.is_leader && b.is_leader) return 1
+          const aCount = (memberAssignedDates[a.id] || []).length
+          const bCount = (memberAssignedDates[b.id] || []).length
+          return aCount - bCount
+        })
+        const member = available[0]
+        const vocalIndex = assignments.filter(a => a.role.startsWith('vocal_')).length + 1
+        assignments.push({ event_id: event.id, member_id: member.id, role: `vocal_${vocalIndex}` })
+        assignedThisEvent.add(member.id)
+        memberAssignedDates[member.id].push(day.date)
       }
+    }
 
-      // Vocal 3: any female available (round-robin, prioritize who was used least)
-      let vocal3Pool = allFemalePool.filter(m =>
+    // Assign female vocals based on female_vocals count
+    const femalePool = [...femaleLeaders, ...femaleVocals]
+    for (let i = 0; i < vocalCounts.female; i++) {
+      let available = femalePool.filter(m =>
         !blockedSet.has(m.id) &&
         !assignedThisEvent.has(m.id) &&
         !wasAssignedSameWeekend(m.id, day.date, dayOfWeekNum)
       )
-      if (vocal3Pool.length === 0) {
-        vocal3Pool = allFemalePool.filter(m =>
-          !blockedSet.has(m.id) && !assignedThisEvent.has(m.id)
-        )
+      if (available.length === 0) {
+        available = femalePool.filter(m => !blockedSet.has(m.id) && !assignedThisEvent.has(m.id))
       }
 
-      // Sort by least used to ensure fair rotation (Letícia, Rany, etc. get turns)
-      vocal3Pool.sort((a, b) => {
-        const aCount = (memberAssignedDates[a.id] || []).length
-        const bCount = (memberAssignedDates[b.id] || []).length
-        return aCount - bCount
-      })
-
-      const vocal3 = vocal3Pool.length > 0 ? vocal3Pool[0] : null
-      if (vocal3) {
-        assignments.push({ event_id: event.id, member_id: vocal3.id, role: 'vocal_3' })
-        assignedThisEvent.add(vocal3.id)
-        memberAssignedDates[vocal3.id].push(day.date)
+      if (available.length > 0) {
+        // Prefer backs first for the first female slot, then sort by least used
+        available.sort((a, b) => {
+          if (i === 0) {
+            if (a.is_back && !b.is_back) return -1
+            if (!a.is_back && b.is_back) return 1
+          }
+          const aCount = (memberAssignedDates[a.id] || []).length
+          const bCount = (memberAssignedDates[b.id] || []).length
+          return aCount - bCount
+        })
+        const member = available[0]
+        const vocalIndex = assignments.filter(a => a.role.startsWith('vocal_')).length + 1
+        assignments.push({ event_id: event.id, member_id: member.id, role: `vocal_${vocalIndex}` })
+        assignedThisEvent.add(member.id)
+        memberAssignedDates[member.id].push(day.date)
       }
     }
 
