@@ -148,6 +148,9 @@ export default function MeusDiasPage() {
           </div>
         </div>
       )}
+
+      {/* Bottom spacer for fixed nav */}
+      <div className="h-24" />
     </div>
   )
 }
