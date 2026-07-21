@@ -22,11 +22,41 @@ export default function MemberSchedulePage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState<ScheduleEvent[]>([])
   const [loading, setLoading] = useState(true)
+  const [memberName, setMemberName] = useState('')
   const supabase = createClient()
+
+  useEffect(() => {
+    loadMemberInfo()
+  }, [])
 
   useEffect(() => {
     loadEvents()
   }, [currentDate])
+
+  async function loadMemberInfo() {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.full_name) {
+      setMemberName(profile.full_name)
+    } else {
+      // Fallback: try to get name from members table by email
+      const { data: member } = await supabase
+        .from('members')
+        .select('name')
+        .eq('email', user.email)
+        .single()
+      if (member?.name) {
+        setMemberName(member.name)
+      }
+    }
+  }
 
   async function loadEvents() {
     setLoading(true)
@@ -74,6 +104,17 @@ export default function MemberSchedulePage() {
 
   return (
     <div className="space-y-4">
+      {/* Greeting */}
+      {memberName && (
+        <div className="card border-[var(--border)] bg-gradient-to-br from-[var(--card)] to-[var(--accent)]">
+          <h2 className="text-lg font-bold mb-2">Olá, {memberName}! 👋</h2>
+          <p className="text-sm text-[var(--muted-foreground)] italic leading-relaxed">
+            &ldquo;Seja forte e corajoso! Não se apavore nem desanime, pois o Senhor, o seu Deus, estará com você por onde você andar.&rdquo;
+          </p>
+          <p className="text-xs text-[var(--muted-foreground)] mt-1">Josué 1:9</p>
+        </div>
+      )}
+
       {/* Month Navigation */}
       <div className="flex items-center justify-between">
         <button
