@@ -40,6 +40,7 @@ export default function AdminMusicasPage() {
   const [newUrl, setNewUrl] = useState('')
   const [saving, setSaving] = useState(false)
   const [tab, setTab] = useState<'musicas' | 'sugestoes'>('musicas')
+  const [generating, setGenerating] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -64,6 +65,26 @@ export default function AdminMusicasPage() {
       setSuggestions(Array.isArray(data) ? data : [])
     }
     setLoading(false)
+  }
+
+  async function generateSongs() {
+    if (!confirm('Gerar louvores automaticamente para todos os dias do mês? Isso substituirá os louvores existentes.')) return
+    setGenerating(true)
+    const month = currentDate.getMonth() + 1
+    const year = currentDate.getFullYear()
+    const res = await fetch('/api/gerar-louvores', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month, year }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      alert('Erro: ' + (data.error || 'Erro desconhecido'))
+    } else {
+      alert(`${data.songsCreated} louvores gerados com sucesso!`)
+      loadData()
+    }
+    setGenerating(false)
   }
 
   async function addSong(eventId: string) {
@@ -169,7 +190,7 @@ export default function AdminMusicasPage() {
       ) : (
         /* === MÚSICAS === */
         <>
-          {/* Month Navigation */}
+          {/* Month Navigation + Generate button */}
           <div className="flex items-center justify-between">
             <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-2 rounded-lg bg-[var(--accent)]">
               <ChevronLeft className="w-5 h-5" />
@@ -181,6 +202,14 @@ export default function AdminMusicasPage() {
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
+
+          <button
+            onClick={generateSongs}
+            disabled={generating}
+            className="w-full bg-green-600 text-white font-semibold py-3 rounded-xl text-sm hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : '🎵 Gerar Louvores Automaticamente'}
+          </button>
 
           {events.length === 0 ? (
             <div className="text-center py-8 text-[var(--muted-foreground)]">
