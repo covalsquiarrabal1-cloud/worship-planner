@@ -287,6 +287,18 @@ export default function AdminPage() {
             <FileDown className="w-4 h-4" />
             Exportar
           </Link>
+          <button
+            onClick={async () => {
+              if (!confirm('Importar escala manual de Julho 2026? Isso vai substituir a escala atual.')) return
+              const res = await fetch('/api/import-escala', { method: 'POST' })
+              const data = await res.json()
+              if (res.ok) { alert('Importado! ' + data.eventsCreated + ' eventos'); loadEvents() }
+              else alert('Erro: ' + data.error)
+            }}
+            className="flex items-center justify-center gap-2 bg-orange-600 text-white py-2.5 rounded-xl text-sm hover:bg-orange-700"
+          >
+            Importar Jul/26
+          </button>
         </div>
       </div>
 
