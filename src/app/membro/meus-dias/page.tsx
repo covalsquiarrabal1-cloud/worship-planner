@@ -147,10 +147,7 @@ function ExpandableDay({ item, roleLabels, memberName }: {
 }) {
   const [expanded, setExpanded] = useState(false)
 
-  const vocalRoles = ['vocal_1', 'vocal_2', 'vocal_3']
   const instrumentRoles = ['bateria', 'guitarra', 'baixo', 'teclado']
-
-  const vocals = (item.event.assignments || []).filter((a: any) => vocalRoles.includes(a.role)).sort((a: any, b: any) => a.role.localeCompare(b.role))
   const instruments = (item.event.assignments || []).filter((a: any) => instrumentRoles.includes(a.role))
   const songs = (item.event.songs || []).sort((a: any, b: any) => a.order_num - b.order_num)
 
@@ -175,38 +172,42 @@ function ExpandableDay({ item, roleLabels, memberName }: {
       </div>
 
       {expanded && (
-        <div className="mt-4 pt-3 border-t border-[var(--border)] space-y-3">
-          {/* Escala */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] mb-1">Vocais</p>
-              {vocals.map((a: any) => (
-                <div key={a.id} className={`text-xs py-0.5 ${a.member?.name?.toUpperCase() === memberName.toUpperCase() ? 'text-green-400 font-bold' : ''}`}>
-                  {roleLabels[a.role]}: {a.member?.name || '-'}
-                </div>
-              ))}
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] mb-1">Músicos</p>
-              {instruments.map((a: any) => (
-                <div key={a.id} className={`text-xs py-0.5 ${a.member?.name?.toUpperCase() === memberName.toUpperCase() ? 'text-green-400 font-bold' : ''}`}>
-                  {roleLabels[a.role] || a.role}: {a.member?.name || '-'}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Louvores */}
+        <div className="mt-4 pt-3 border-t border-[var(--border)] space-y-3" onClick={(e) => e.stopPropagation()}>
+          {/* Louvores table */}
           {songs.length > 0 && (
-            <div>
-              <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] mb-1">Louvores</p>
-              {songs.map((song: any) => (
-                <div key={song.id} className="text-xs py-1 flex items-center gap-2">
-                  <span className="text-[var(--muted-foreground)] w-4">{song.order_num}.</span>
-                  <span className="font-medium flex-1">{song.title}</span>
-                  {song.minister && <span className="text-[var(--muted-foreground)]">{song.minister}</span>}
-                </div>
-              ))}
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-[var(--border)]">
+                  <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold w-8">#</th>
+                  <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold">Louvor</th>
+                  <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold">Versão</th>
+                  <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold">Ministro</th>
+                </tr>
+              </thead>
+              <tbody>
+                {songs.map((song: any) => (
+                  <tr key={song.id} className="border-b border-[var(--border)]/30">
+                    <td className="py-2 px-1 text-center font-bold">{song.order_num}</td>
+                    <td className="py-2 px-1 font-medium">{song.title}</td>
+                    <td className="py-2 px-1 text-[var(--muted-foreground)]">{song.version || '-'}</td>
+                    <td className={`py-2 px-1 ${song.minister && song.minister.toUpperCase().includes(memberName.toUpperCase()) ? 'text-green-400 font-bold' : ''}`}>{song.minister || '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+
+          {/* Músicos at bottom */}
+          {instruments.length > 0 && (
+            <div className="border-t border-[var(--border)] pt-2">
+              <div className="grid grid-cols-2 gap-1">
+                {instruments.map((a: any) => (
+                  <div key={a.id} className={`text-xs py-0.5 ${a.member?.name?.toUpperCase() === memberName.toUpperCase() ? 'text-green-400 font-bold' : ''}`}>
+                    <span className="text-[var(--muted-foreground)]">{roleLabels[a.role] || a.role}: </span>
+                    <span className="font-bold">{a.member?.name || '-'}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>
