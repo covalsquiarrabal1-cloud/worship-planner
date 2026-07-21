@@ -9,6 +9,8 @@ interface SetlistItem {
   number: number
   title: string
   version: string | null
+  celebration_type: string | null
+  vocal_type: string | null
   worship_type: string | null
   description: string | null
   key: string | null
@@ -22,7 +24,7 @@ export default function SetlistPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editData, setEditData] = useState<Partial<SetlistItem>>({})
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newItem, setNewItem] = useState({ title: '', version: '', worship_type: '', description: '', key: '', status: 'ON' })
+  const [newItem, setNewItem] = useState({ title: '', version: '', celebration_type: '', vocal_type: '', worship_type: '', description: '', key: '', status: 'ON' })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => { loadSetlist() }, [])
@@ -58,7 +60,7 @@ export default function SetlistPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...newItem, number: nextNumber }),
     })
-    setNewItem({ title: '', version: '', worship_type: '', description: '', key: '', status: 'ON' })
+    setNewItem({ title: '', version: '', celebration_type: '', vocal_type: '', worship_type: '', description: '', key: '', status: 'ON' })
     setShowAddForm(false)
     setSaving(false)
     loadSetlist()
@@ -93,6 +95,8 @@ export default function SetlistPage() {
     setEditData({
       title: item.title,
       version: item.version || '',
+      celebration_type: item.celebration_type || '',
+      vocal_type: item.vocal_type || '',
       worship_type: item.worship_type || '',
       description: item.description || '',
       key: item.key || '',
@@ -104,6 +108,8 @@ export default function SetlistPage() {
     return (
       item.title.toLowerCase().includes(q) ||
       (item.version || '').toLowerCase().includes(q) ||
+      (item.celebration_type || '').toLowerCase().includes(q) ||
+      (item.vocal_type || '').toLowerCase().includes(q) ||
       (item.worship_type || '').toLowerCase().includes(q) ||
       (item.description || '').toLowerCase().includes(q)
     )
@@ -148,9 +154,11 @@ export default function SetlistPage() {
             <h4 className="text-sm font-bold">Novo Louvor</h4>
             <button onClick={() => setShowAddForm(false)} className="p-1"><X className="w-4 h-4" /></button>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             <input placeholder="Louvor *" value={newItem.title} onChange={(e) => setNewItem(p => ({ ...p, title: e.target.value }))} />
             <input placeholder="Versão" value={newItem.version} onChange={(e) => setNewItem(p => ({ ...p, version: e.target.value }))} />
+            <input placeholder="Tipo Celebração (GERAL, ALIVE...)" value={newItem.celebration_type} onChange={(e) => setNewItem(p => ({ ...p, celebration_type: e.target.value }))} />
+            <input placeholder="Tipo Vocal (MASCULINO, FEMININO...)" value={newItem.vocal_type} onChange={(e) => setNewItem(p => ({ ...p, vocal_type: e.target.value }))} />
             <input placeholder="Tipo de Louvor" value={newItem.worship_type} onChange={(e) => setNewItem(p => ({ ...p, worship_type: e.target.value }))} />
             <input placeholder="Descrição" value={newItem.description} onChange={(e) => setNewItem(p => ({ ...p, description: e.target.value }))} />
             <input placeholder="Tom" value={newItem.key} onChange={(e) => setNewItem(p => ({ ...p, key: e.target.value }))} />
@@ -169,7 +177,9 @@ export default function SetlistPage() {
               <th className="text-left px-2 py-2 text-xs font-semibold text-[var(--muted-foreground)] w-10">#</th>
               <th className="text-left px-2 py-2 text-xs font-semibold text-[var(--muted-foreground)]">Louvor</th>
               <th className="text-left px-2 py-2 text-xs font-semibold text-[var(--muted-foreground)]">Versão</th>
-              <th className="text-left px-2 py-2 text-xs font-semibold text-[var(--muted-foreground)]">Tipo</th>
+              <th className="text-left px-2 py-2 text-xs font-semibold text-[var(--muted-foreground)]">Tipo Celeb.</th>
+              <th className="text-left px-2 py-2 text-xs font-semibold text-[var(--muted-foreground)]">Tipo Vocal</th>
+              <th className="text-left px-2 py-2 text-xs font-semibold text-[var(--muted-foreground)]">Tipo Louvor</th>
               <th className="text-left px-2 py-2 text-xs font-semibold text-[var(--muted-foreground)]">Descrição</th>
               <th className="text-left px-2 py-2 text-xs font-semibold text-[var(--muted-foreground)] w-14">Tom</th>
               <th className="text-center px-2 py-2 text-xs font-semibold text-[var(--muted-foreground)] w-14">Status</th>
@@ -184,6 +194,8 @@ export default function SetlistPage() {
                     <td className="px-2 py-1.5 text-xs">{item.number}</td>
                     <td className="px-1 py-1"><input className="!py-1 text-xs" value={editData.title || ''} onChange={(e) => setEditData(p => ({ ...p, title: e.target.value }))} /></td>
                     <td className="px-1 py-1"><input className="!py-1 text-xs" value={editData.version || ''} onChange={(e) => setEditData(p => ({ ...p, version: e.target.value }))} /></td>
+                    <td className="px-1 py-1"><input className="!py-1 text-xs" value={editData.celebration_type || ''} onChange={(e) => setEditData(p => ({ ...p, celebration_type: e.target.value }))} /></td>
+                    <td className="px-1 py-1"><input className="!py-1 text-xs" value={editData.vocal_type || ''} onChange={(e) => setEditData(p => ({ ...p, vocal_type: e.target.value }))} /></td>
                     <td className="px-1 py-1"><input className="!py-1 text-xs" value={editData.worship_type || ''} onChange={(e) => setEditData(p => ({ ...p, worship_type: e.target.value }))} /></td>
                     <td className="px-1 py-1"><input className="!py-1 text-xs" value={editData.description || ''} onChange={(e) => setEditData(p => ({ ...p, description: e.target.value }))} /></td>
                     <td className="px-1 py-1"><input className="!py-1 text-xs w-12" value={editData.key || ''} onChange={(e) => setEditData(p => ({ ...p, key: e.target.value }))} /></td>
@@ -199,6 +211,8 @@ export default function SetlistPage() {
                     <td className="px-2 py-1.5 text-xs text-[var(--muted-foreground)]">{item.number}</td>
                     <td className="px-2 py-1.5 text-xs font-medium">{item.title}</td>
                     <td className="px-2 py-1.5 text-xs text-[var(--muted-foreground)]">{item.version || '-'}</td>
+                    <td className="px-2 py-1.5 text-xs">{item.celebration_type || '-'}</td>
+                    <td className="px-2 py-1.5 text-xs">{item.vocal_type || '-'}</td>
                     <td className="px-2 py-1.5 text-xs">{item.worship_type || '-'}</td>
                     <td className="px-2 py-1.5 text-xs text-[var(--muted-foreground)]">{item.description || '-'}</td>
                     <td className="px-2 py-1.5 text-xs">{item.key || '-'}</td>
