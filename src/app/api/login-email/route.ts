@@ -14,6 +14,12 @@ export async function POST(request: Request) {
     }
 
     const normalizedEmail = email.trim().toLowerCase()
+    
+    // Validate env vars
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json({ error: 'Configuração do servidor incompleta' }, { status: 500 })
+    }
+
     const serviceClient = await createServiceRoleClient()
 
     // Check if email exists in members table or profiles table

@@ -21,28 +21,46 @@ export default function LoginPage() {
       const res = await fetch('/api/login-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: email.trim() }),
       })
 
+      let data: any = null
+      try {
+        data = await res.json()
+      } catch {
+        setError(`Erro no servidor (${res.status}). Tente novamente.`)
+        setLoading(false)
+        return
+      }
+
       if (!res.ok) {
-        const data = await res.json().catch(() => null)
         setError(data?.error || `Erro ${res.status}. Tente novamente.`)
         setLoading(false)
         return
       }
 
-      const data = await res.json()
+      if (!data?.session?.access_token) {
+        setError('Resposta inválida do servidor.')
+        setLoading(false)
+        return
+      }
 
       // Set the session on the client
-      await supabase.auth.setSession({
+      const { error: sessionError } = await supabase.auth.setSession({
         access_token: data.session.access_token,
         refresh_token: data.session.refresh_token,
       })
 
+      if (sessionError) {
+        setError('Erro ao iniciar sessão: ' + sessionError.message)
+        setLoading(false)
+        return
+      }
+
       router.push('/')
       router.refresh()
     } catch (err: any) {
-      setError('Erro de conexão: ' + (err?.message || 'verifique sua internet'))
+      setError('Falha na conexão: ' + (err?.message || 'verifique sua internet'))
       setLoading(false)
     }
   }
