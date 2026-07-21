@@ -6,18 +6,22 @@ import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Loader2, CalendarDays } from 'lucide-react'
 
-interface MyEvent {
-  role: string
-  schedule_event: {
-    event_date: string
-    day_of_week: string
-    scale_type: { name: string } | null
-  }
+interface ScheduleEvent {
+  id: string
+  event_date: string
+  day_of_week: string
+  week_number: number
+  scale_type: { id: string; name: string } | null
+  assignments: {
+    id: string
+    role: string
+    member: { id: string; name: string } | null
+  }[]
 }
 
 export default function MeusDiasPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [myEvents, setMyEvents] = useState<MyEvent[]>([])
+  const [myEvents, setMyEvents] = useState<{ event: ScheduleEvent; role: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [memberName, setMemberName] = useState('')
   const supabase = createClient()
@@ -29,50 +33,43 @@ export default function MeusDiasPage() {
   async function loadMyEvents() {
     setLoading(true)
 
-    // Get current user
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    if (!user) { setLoading(false); return }
 
-    // Find member linked to this user email
+    // Get member name from members table
     const { data: member } = await supabase
       .from('members')
-      .select('id, name')
+      .select('name')
       .eq('email', user.email)
       .single()
 
-    if (!member) {
-      setLoading(false)
-      return
-    }
+    const name = member?.name || ''
+    setMemberName(name)
 
-    setMemberName(member.name)
+    if (!name) { setLoading(false); return }
 
+    // Fetch all events for the month via API
     const start = format(startOfMonth(currentDate), 'yyyy-MM-dd')
     const end = format(endOfMonth(currentDate), 'yyyy-MM-dd')
 
-    const { data } = await supabase
-      .from('schedule_assignments')
-      .select(`
-        role,
-        schedule_event:schedule_events(
-          event_date,
-          day_of_week,
-          scale_type:scale_types(name)
-        )
-      `)
-      .eq('member_id', member.id)
+    const res = await fetch(`/api/schedule-events?start=${start}&end=${end}`)
+    if (!res.ok) { setLoading(false); return }
 
-    // Filter by date range client-side (nested filter limitation)
-    const filtered = (data as unknown as MyEvent[])?.filter(e => {
-      const date = e.schedule_event?.event_date
-      return date && date >= start && date <= end
-    }) || []
+    const events: ScheduleEvent[] = await res.json()
 
-    filtered.sort((a, b) =>
-      a.schedule_event.event_date.localeCompare(b.schedule_event.event_date)
-    )
+    // Filter events where this member is assigned
+    const myDays: { event: ScheduleEvent; role: string }[] = []
+    for (const event of events) {
+      for (const assignment of event.assignments) {
+        if (assignment.member?.name?.toUpperCase() === name.toUpperCase()) {
+          myDays.push({ event, role: assignment.role })
+          break
+        }
+      }
+    }
 
-    setMyEvents(filtered)
+    myDays.sort((a, b) => a.event.event_date.localeCompare(b.event.event_date))
+    setMyEvents(myDays)
     setLoading(false)
   }
 
@@ -123,24 +120,23 @@ export default function MeusDiasPage() {
         <div className="text-center py-8 text-[var(--muted-foreground)]">
           <CalendarDays className="w-8 h-8 mx-auto mb-2 opacity-50" />
           <p>Nenhuma escala encontrada para este mês.</p>
-          <p className="text-xs mt-1">Verifique se seu e-mail está vinculado ao cadastro.</p>
         </div>
       ) : (
         <div className="space-y-2">
-          {myEvents.map((ev, idx) => (
+          {myEvents.map((item, idx) => (
             <div key={idx} className="card flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-[var(--accent)] flex flex-col items-center justify-center">
+              <div className="w-12 h-12 rounded-lg bg-[var(--accent)] flex flex-col items-center justify-center shrink-0">
                 <span className="text-lg font-bold">
-                  {format(new Date(ev.schedule_event.event_date + 'T12:00:00'), 'dd')}
+                  {format(new Date(item.event.event_date + 'T12:00:00'), 'dd')}
                 </span>
                 <span className="text-[10px] text-[var(--muted-foreground)] capitalize">
-                  {ev.schedule_event.day_of_week.slice(0, 3)}
+                  {item.event.day_of_week.slice(0, 3)}
                 </span>
               </div>
               <div className="flex-1">
-                <p className="font-medium">{ev.schedule_event.scale_type?.name || '-'}</p>
+                <p className="font-medium text-green-400">{item.event.scale_type?.name || '-'}</p>
                 <p className="text-xs text-[var(--muted-foreground)]">
-                  {roleLabels[ev.role] || ev.role}
+                  {roleLabels[item.role] || item.role}
                 </p>
               </div>
             </div>

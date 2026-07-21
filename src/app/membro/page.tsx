@@ -11,10 +11,11 @@ interface ScheduleEvent {
   event_date: string
   day_of_week: string
   week_number: number
-  scale_type: { name: string } | null
+  scale_type: { id: string; name: string } | null
   assignments: {
+    id: string
     role: string
-    member: { name: string } | null
+    member: { id: string; name: string } | null
   }[]
 }
 
@@ -23,6 +24,8 @@ export default function MemberSchedulePage() {
   const [events, setEvents] = useState<ScheduleEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [memberName, setMemberName] = useState('')
+  const [view, setView] = useState<'mensal' | 'semanal'>('semanal')
+  const [currentWeek, setCurrentWeek] = useState(1)
   const supabase = createClient()
 
   useEffect(() => {
@@ -37,24 +40,21 @@ export default function MemberSchedulePage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', user.id)
+    const { data: member } = await supabase
+      .from('members')
+      .select('name')
+      .eq('email', user.email)
       .single()
 
-    if (profile?.full_name) {
-      setMemberName(profile.full_name)
+    if (member?.name) {
+      setMemberName(member.name)
     } else {
-      // Fallback: try to get name from members table by email
-      const { data: member } = await supabase
-        .from('members')
-        .select('name')
-        .eq('email', user.email)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
         .single()
-      if (member?.name) {
-        setMemberName(member.name)
-      }
+      if (profile?.full_name) setMemberName(profile.full_name)
     }
   }
 
@@ -84,12 +84,37 @@ export default function MemberSchedulePage() {
     back: 'Back',
   }
 
+  // Sort roles: vocals first, then instruments
+  const vocalRoles = ['vocal_1', 'vocal_2', 'vocal_3']
+  const instrumentRoles = ['bateria', 'guitarra', 'baixo', 'teclado']
+
+  function sortedAssignments(assignments: ScheduleEvent['assignments']) {
+    const vocals = assignments.filter(a => vocalRoles.includes(a.role)).sort((a, b) => a.role.localeCompare(b.role))
+    const instruments = assignments.filter(a => instrumentRoles.includes(a.role)).sort((a, b) => {
+      const order = instrumentRoles
+      return order.indexOf(a.role) - order.indexOf(b.role)
+    })
+    const others = assignments.filter(a => !vocalRoles.includes(a.role) && !instrumentRoles.includes(a.role))
+    return { vocals, instruments: [...instruments, ...others] }
+  }
+
+  function isMe(name: string | undefined): boolean {
+    if (!name || !memberName) return false
+    return name.toUpperCase() === memberName.toUpperCase()
+  }
+
   const groupedByWeek = events.reduce((acc, event) => {
     const week = event.week_number
     if (!acc[week]) acc[week] = []
     acc[week].push(event)
     return acc
   }, {} as Record<number, ScheduleEvent[]>)
+
+  const weeks = Object.keys(groupedByWeek).map(Number).sort((a, b) => a - b)
+
+  const displayedEvents = view === 'semanal'
+    ? groupedByWeek[currentWeek] || []
+    : events
 
   return (
     <div className="space-y-4">
@@ -123,6 +148,33 @@ export default function MemberSchedulePage() {
         </button>
       </div>
 
+      {/* View Toggle */}
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setView('semanal')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${view === 'semanal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+        >
+          Semanal
+        </button>
+        <button
+          onClick={() => setView('mensal')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${view === 'mensal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+        >
+          Mensal
+        </button>
+        {view === 'semanal' && weeks.length > 0 && (
+          <div className="flex items-center gap-2 ml-auto">
+            <button onClick={() => setCurrentWeek(w => Math.max(1, w - 1))} className="p-1.5 rounded bg-[var(--accent)]">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-medium">Sem {currentWeek}</span>
+            <button onClick={() => setCurrentWeek(w => w + 1)} className="p-1.5 rounded bg-[var(--accent)]">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Events */}
       {loading ? (
         <div className="flex justify-center py-8">
@@ -132,34 +184,54 @@ export default function MemberSchedulePage() {
         <div className="text-center py-8 text-[var(--muted-foreground)]">
           <p>Nenhuma escala publicada para este mês.</p>
         </div>
+      ) : displayedEvents.length === 0 ? (
+        <div className="text-center py-8 text-[var(--muted-foreground)]">
+          <p>Nenhum evento na semana {currentWeek}.</p>
+        </div>
       ) : (
-        Object.entries(groupedByWeek).map(([week, weekEvents]) => (
-          <div key={week} className="space-y-2">
-            <h3 className="text-sm font-medium text-[var(--muted-foreground)]">Semana {week}</h3>
-            {weekEvents.map((event) => (
-              <div key={event.id} className="card">
-                <div className="flex items-center justify-between mb-2">
-                  <div>
-                    <span className="text-xs text-[var(--muted-foreground)] capitalize">
-                      {event.day_of_week}, {format(new Date(event.event_date + 'T12:00:00'), 'dd/MM')}
-                    </span>
-                    <h4 className="font-semibold">{event.scale_type?.name || '-'}</h4>
-                  </div>
+        <div className="space-y-4">
+          {displayedEvents.map((event) => {
+            const { vocals, instruments } = sortedAssignments(event.assignments)
+            const imOnThisDay = event.assignments.some(a => isMe(a.member?.name))
+
+            return (
+              <div key={event.id} className={`card ${imOnThisDay ? 'border-green-500/40' : ''}`}>
+                <div className="mb-3">
+                  <span className="text-xs text-[var(--muted-foreground)] capitalize">
+                    {event.day_of_week}, {format(new Date(event.event_date + 'T12:00:00'), 'dd/MM')}
+                  </span>
+                  <h4 className="font-bold text-green-400">{event.scale_type?.name || '-'}</h4>
                 </div>
-                <div className="grid grid-cols-2 gap-1 text-xs">
-                  {event.assignments
-                    .sort((a, b) => a.role.localeCompare(b.role))
-                    .map((a, idx) => (
-                      <div key={idx} className="flex justify-between bg-[var(--accent)] px-2 py-1 rounded">
-                        <span className="text-[var(--muted-foreground)]">{roleLabels[a.role] || a.role}</span>
-                        <span className="font-medium">{a.member?.name || '-'}</span>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Vocais - Left */}
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase mb-1">Vocais</p>
+                    {vocals.map((a, idx) => (
+                      <div key={idx} className={`text-xs px-2 py-1.5 rounded ${isMe(a.member?.name) ? 'bg-green-500/20 text-green-300 font-bold' : 'bg-[var(--accent)]'}`}>
+                        <span className="text-[var(--muted-foreground)]">{roleLabels[a.role]}: </span>
+                        <span className={isMe(a.member?.name) ? 'text-green-300' : ''}>{a.member?.name || '-'}</span>
                       </div>
                     ))}
+                    {vocals.length === 0 && <p className="text-xs text-[var(--muted-foreground)]">-</p>}
+                  </div>
+
+                  {/* Músicos - Right */}
+                  <div className="space-y-1">
+                    <p className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase mb-1">Músicos</p>
+                    {instruments.map((a, idx) => (
+                      <div key={idx} className={`text-xs px-2 py-1.5 rounded ${isMe(a.member?.name) ? 'bg-green-500/20 text-green-300 font-bold' : 'bg-[var(--accent)]'}`}>
+                        <span className="text-[var(--muted-foreground)]">{roleLabels[a.role] || a.role}: </span>
+                        <span className={isMe(a.member?.name) ? 'text-green-300' : ''}>{a.member?.name || '-'}</span>
+                      </div>
+                    ))}
+                    {instruments.length === 0 && <p className="text-xs text-[var(--muted-foreground)]">-</p>}
+                  </div>
                 </div>
               </div>
-            ))}
-          </div>
-        ))
+            )
+          })}
+        </div>
       )}
     </div>
   )
