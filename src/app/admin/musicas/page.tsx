@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Music, ExternalLink, Loader2, Plus, Trash2, X, MessageSquare, Link2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Music, ExternalLink, Loader2, Plus, Trash2, X, MessageSquare, Link2, ChevronUp, ChevronDown, Edit2 } from 'lucide-react'
 
 interface SongEvent {
   id: string
@@ -40,6 +40,10 @@ export default function AdminMusicasPage() {
   const [linkValue, setLinkValue] = useState('')
   const [newTitle, setNewTitle] = useState('')
   const [newUrl, setNewUrl] = useState('')
+  const [newMinister, setNewMinister] = useState('')
+  const [newVersion, setNewVersion] = useState('')
+  const [editingSong, setEditingSong] = useState<string | null>(null)
+  const [editSongData, setEditSongData] = useState({ title: '', version: '', minister: '' })
   const [saving, setSaving] = useState(false)
   const [tab, setTab] = useState<'musicas' | 'sugestoes'>('musicas')
   const [generating, setGenerating] = useState(false)
@@ -102,6 +106,8 @@ export default function AdminMusicasPage() {
       body: JSON.stringify({
         event_id: eventId,
         title: newTitle.trim(),
+        version: newVersion.trim() || null,
+        minister: newMinister.trim() || null,
         youtube_url: newUrl.trim() || null,
         order_num: nextOrder,
       }),
@@ -109,6 +115,8 @@ export default function AdminMusicasPage() {
 
     setNewTitle('')
     setNewUrl('')
+    setNewVersion('')
+    setNewMinister('')
     setShowAddForm(null)
     setSaving(false)
     loadData()
@@ -133,6 +141,36 @@ export default function AdminMusicasPage() {
     })
     setEditingLink(null)
     setLinkValue('')
+    loadData()
+  }
+
+  async function moveSong(songId: string, eventId: string, direction: 'up' | 'down') {
+    const event = events.find(e => e.id === eventId)
+    if (!event) return
+    const sorted = [...event.songs].sort((a, b) => a.order_num - b.order_num)
+    const idx = sorted.findIndex(s => s.id === songId)
+    if (idx === -1) return
+    if (direction === 'up' && idx === 0) return
+    if (direction === 'down' && idx === sorted.length - 1) return
+
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+    const currentOrder = sorted[idx].order_num
+    const swapOrder = sorted[swapIdx].order_num
+
+    await Promise.all([
+      fetch('/api/songs/update', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: sorted[idx].id, order_num: swapOrder }) }),
+      fetch('/api/songs/update', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: sorted[swapIdx].id, order_num: currentOrder }) }),
+    ])
+    loadData()
+  }
+
+  async function saveEditSong(songId: string) {
+    await fetch('/api/songs/update', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: songId, title: editSongData.title, version: editSongData.version || null, minister: editSongData.minister || null }),
+    })
+    setEditingSong(null)
     loadData()
   }
 
@@ -253,60 +291,56 @@ export default function AdminMusicasPage() {
                     <div className="space-y-1">
                       {event.songs.sort((a, b) => a.order_num - b.order_num).map((song) => (
                         <div key={song.id} className="space-y-1">
-                          <div className="flex items-center gap-2 bg-[var(--accent)] rounded-lg px-3 py-2">
-                            <span className="text-xs text-[var(--muted-foreground)] w-5">{song.order_num}.</span>
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium truncate">{song.title}</p>
-                              {song.minister && <p className="text-xs text-[var(--muted-foreground)]">{song.minister}</p>}
+                          {editingSong === song.id ? (
+                            <div className="bg-[var(--accent)] rounded-lg px-3 py-2 space-y-2">
+                              <input className="!py-1 text-xs w-full" placeholder="Título" value={editSongData.title} onChange={(e) => setEditSongData(p => ({ ...p, title: e.target.value }))} />
+                              <input className="!py-1 text-xs w-full" placeholder="Versão" value={editSongData.version} onChange={(e) => setEditSongData(p => ({ ...p, version: e.target.value }))} />
+                              <input className="!py-1 text-xs w-full" placeholder="Ministro (ex: COVALSQUI / ÉRICA)" value={editSongData.minister} onChange={(e) => setEditSongData(p => ({ ...p, minister: e.target.value }))} />
+                              <div className="flex gap-2">
+                                <button onClick={() => saveEditSong(song.id)} className="px-3 py-1 bg-white text-black rounded text-xs font-medium">Salvar</button>
+                                <button onClick={() => setEditingSong(null)} className="px-3 py-1 text-[var(--muted-foreground)] text-xs">Cancelar</button>
+                              </div>
                             </div>
-                            {song.youtube_url ? (
-                              <a href={song.youtube_url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-red-400 shrink-0">
-                                <ExternalLink className="w-3.5 h-3.5" />
-                              </a>
-                            ) : (
+                          ) : (
+                            <div className="flex items-center gap-1 bg-[var(--accent)] rounded-lg px-3 py-2">
+                              <div className="flex flex-col shrink-0">
+                                <button onClick={() => moveSong(song.id, event.id, 'up')} className="p-0.5 text-[var(--muted-foreground)] hover:text-white"><ChevronUp className="w-3 h-3" /></button>
+                                <button onClick={() => moveSong(song.id, event.id, 'down')} className="p-0.5 text-[var(--muted-foreground)] hover:text-white"><ChevronDown className="w-3 h-3" /></button>
+                              </div>
+                              <span className="text-xs text-[var(--muted-foreground)] w-5">{song.order_num}.</span>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{song.title}</p>
+                                {song.minister && <p className="text-xs text-[var(--muted-foreground)]">{song.minister}</p>}
+                              </div>
                               <button
-                                onClick={() => { setEditingLink(song.id); setLinkValue('') }}
-                                className="p-1.5 text-blue-400 hover:bg-blue-500/10 rounded shrink-0"
-                                title="Adicionar link"
+                                onClick={() => { setEditingSong(song.id); setEditSongData({ title: song.title, version: song.version || '', minister: song.minister || '' }) }}
+                                className="p-1.5 text-[var(--muted-foreground)] hover:text-white shrink-0"
+                                title="Editar"
                               >
-                                <Link2 className="w-3.5 h-3.5" />
+                                <Edit2 className="w-3.5 h-3.5" />
                               </button>
-                            )}
-                            {song.youtube_url && (
+                              {song.youtube_url ? (
+                                <a href={song.youtube_url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-red-400 shrink-0">
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </a>
+                              ) : null}
                               <button
                                 onClick={() => { setEditingLink(song.id); setLinkValue(song.youtube_url || '') }}
-                                className="p-1.5 text-[var(--muted-foreground)] hover:text-white shrink-0"
-                                title="Editar link"
+                                className="p-1.5 text-blue-400 hover:bg-blue-500/10 rounded shrink-0"
+                                title="Link"
                               >
                                 <Link2 className="w-3.5 h-3.5" />
                               </button>
-                            )}
-                            <button onClick={() => deleteSong(song.id)} className="p-1 text-red-400 hover:bg-red-500/10 rounded shrink-0">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                          {editingLink === song.id && (
+                              <button onClick={() => deleteSong(song.id)} className="p-1 text-red-400 hover:bg-red-500/10 rounded shrink-0">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                          {editingLink === song.id && editingSong !== song.id && (
                             <div className="flex gap-2 px-3">
-                              <input
-                                type="url"
-                                placeholder="Cole o link (YouTube, Spotify...)"
-                                value={linkValue}
-                                onChange={(e) => setLinkValue(e.target.value)}
-                                autoFocus
-                                className="flex-1 !py-1.5 text-xs"
-                              />
-                              <button
-                                onClick={() => saveLink(song.id)}
-                                className="px-3 py-1.5 bg-white text-black rounded text-xs font-medium shrink-0"
-                              >
-                                Salvar
-                              </button>
-                              <button
-                                onClick={() => setEditingLink(null)}
-                                className="p-1.5 text-[var(--muted-foreground)]"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </button>
+                              <input type="url" placeholder="Cole o link" value={linkValue} onChange={(e) => setLinkValue(e.target.value)} autoFocus className="flex-1 !py-1.5 text-xs" />
+                              <button onClick={() => saveLink(song.id)} className="px-3 py-1.5 bg-white text-black rounded text-xs font-medium shrink-0">Salvar</button>
+                              <button onClick={() => setEditingLink(null)} className="p-1.5 text-[var(--muted-foreground)]"><X className="w-3.5 h-3.5" /></button>
                             </div>
                           )}
                         </div>
@@ -317,19 +351,10 @@ export default function AdminMusicasPage() {
                   {/* Add form */}
                   {showAddForm === event.id && (
                     <div className="space-y-2 pt-2 border-t border-[var(--border)]">
-                      <input
-                        type="text"
-                        placeholder="Nome do louvor"
-                        value={newTitle}
-                        onChange={(e) => setNewTitle(e.target.value)}
-                        autoFocus
-                      />
-                      <input
-                        type="url"
-                        placeholder="Link (YouTube, Spotify, etc.)"
-                        value={newUrl}
-                        onChange={(e) => setNewUrl(e.target.value)}
-                      />
+                      <input type="text" placeholder="Nome do louvor" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} autoFocus />
+                      <input type="text" placeholder="Versão (ex: GABI SAMPAIO)" value={newVersion} onChange={(e) => setNewVersion(e.target.value)} />
+                      <input type="text" placeholder="Ministro (ex: COVALSQUI / ÉRICA)" value={newMinister} onChange={(e) => setNewMinister(e.target.value)} />
+                      <input type="url" placeholder="Link (YouTube, Spotify, etc.)" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} />
                       <div className="flex gap-2">
                         <button
                           onClick={() => addSong(event.id)}
@@ -339,7 +364,7 @@ export default function AdminMusicasPage() {
                           {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Adicionar'}
                         </button>
                         <button
-                          onClick={() => { setShowAddForm(null); setNewTitle(''); setNewUrl('') }}
+                          onClick={() => { setShowAddForm(null); setNewTitle(''); setNewUrl(''); setNewVersion(''); setNewMinister('') }}
                           className="p-2 text-[var(--muted-foreground)]"
                         >
                           <X className="w-4 h-4" />
