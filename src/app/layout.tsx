@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   title: "Worship Planner",
   description: "Sistema de escalação de equipes de louvor",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icon-512.png",
+    apple: "/icon-512.png",
+  },
 };
 
 export const viewport: Viewport = {
