@@ -129,6 +129,75 @@ export async function POST(request: Request) {
   const memberAssignedDates: Record<string, string[]> = {}
   members.forEach(m => { memberAssignedDates[m.id] = [] })
 
+  // Round-robin per day-of-week: track who already appeared on each day type
+  // Key: "male_6" (male on saturdays), "female_0" (female on sundays), etc.
+  // Value: list of member IDs that already had a turn on this day type
+  const dayTypeUsed: Record<string, string[]> = {}
+
+  function getNextFromPoolByDayType(
+    pool: any[],
+    dayOfWeekNum: number,
+    genderKey: string,
+    blockedSet: Set<string>,
+    assignedThisEvent: Set<string>,
+    currentDate: string,
+    preferLeader: boolean,
+    preferBack: boolean,
+  ): any | null {
+    const dayKey = `${genderKey}_${dayOfWeekNum}`
+    if (!dayTypeUsed[dayKey]) dayTypeUsed[dayKey] = []
+
+    // Available: not blocked, not assigned this event, not same weekend
+    let available = pool.filter(m =>
+      !blockedSet.has(m.id) &&
+      !assignedThisEvent.has(m.id) &&
+      !wasAssignedSameWeekend(m.id, currentDate, dayOfWeekNum)
+    )
+
+    if (available.length === 0) {
+      // Fallback: allow same weekend
+      available = pool.filter(m =>
+        !blockedSet.has(m.id) &&
+        !assignedThisEvent.has(m.id)
+      )
+    }
+
+    if (available.length === 0) return null
+
+    // Split into: those who haven't had a turn on this day type yet, and those who have
+    const notYetUsed = available.filter(m => !dayTypeUsed[dayKey].includes(m.id))
+    const alreadyUsed = available.filter(m => dayTypeUsed[dayKey].includes(m.id))
+
+    // If everyone has had a turn, reset the tracker (new round)
+    let candidates = notYetUsed.length > 0 ? notYetUsed : available
+    if (notYetUsed.length === 0) {
+      // Reset: everyone gets a fresh round
+      dayTypeUsed[dayKey] = []
+    }
+
+    // Sort candidates by preference
+    candidates.sort((a, b) => {
+      // Leader preference
+      if (preferLeader) {
+        if (a.is_leader && !b.is_leader) return -1
+        if (!a.is_leader && b.is_leader) return 1
+      }
+      // Back preference
+      if (preferBack) {
+        if (a.is_back && !b.is_back) return -1
+        if (!a.is_back && b.is_back) return 1
+      }
+      // Tie-break: least used overall
+      const aCount = (memberAssignedDates[a.id] || []).length
+      const bCount = (memberAssignedDates[b.id] || []).length
+      return aCount - bCount
+    })
+
+    const chosen = candidates[0]
+    dayTypeUsed[dayKey].push(chosen.id)
+    return chosen
+  }
+
   // Instrument round-robin counters
   const instrumentRR: Record<string, number> = {}
   Object.keys(instrumentPools).forEach(k => { instrumentRR[k] = 0 })
@@ -209,28 +278,20 @@ export async function POST(request: Request) {
     const assignedThisEvent = new Set<string>()
 
     // === VOCALS ===
-    // Assign male vocals based on male_vocals count
+    // Assign male vocals based on male_vocals count (with per-day-of-week round-robin)
     const malePool = [...maleLeaders, ...maleVocals]
     for (let i = 0; i < vocalCounts.male; i++) {
-      let available = malePool.filter(m =>
-        !blockedSet.has(m.id) &&
-        !assignedThisEvent.has(m.id) &&
-        !wasAssignedSameWeekend(m.id, day.date, dayOfWeekNum)
+      const member = getNextFromPoolByDayType(
+        malePool,
+        dayOfWeekNum,
+        'male',
+        blockedSet,
+        assignedThisEvent,
+        day.date,
+        true,  // prefer leader
+        false, // no back preference
       )
-      if (available.length === 0) {
-        available = malePool.filter(m => !blockedSet.has(m.id) && !assignedThisEvent.has(m.id))
-      }
-
-      if (available.length > 0) {
-        // Prefer leaders first, then sort by least used
-        available.sort((a, b) => {
-          if (a.is_leader && !b.is_leader) return -1
-          if (!a.is_leader && b.is_leader) return 1
-          const aCount = (memberAssignedDates[a.id] || []).length
-          const bCount = (memberAssignedDates[b.id] || []).length
-          return aCount - bCount
-        })
-        const member = available[0]
+      if (member) {
         const vocalIndex = assignments.filter(a => a.role.startsWith('vocal_')).length + 1
         assignments.push({ event_id: event.id, member_id: member.id, role: `vocal_${vocalIndex}` })
         assignedThisEvent.add(member.id)
@@ -238,30 +299,20 @@ export async function POST(request: Request) {
       }
     }
 
-    // Assign female vocals based on female_vocals count
+    // Assign female vocals based on female_vocals count (with per-day-of-week round-robin)
     const femalePool = [...femaleLeaders, ...femaleVocals]
     for (let i = 0; i < vocalCounts.female; i++) {
-      let available = femalePool.filter(m =>
-        !blockedSet.has(m.id) &&
-        !assignedThisEvent.has(m.id) &&
-        !wasAssignedSameWeekend(m.id, day.date, dayOfWeekNum)
+      const member = getNextFromPoolByDayType(
+        femalePool,
+        dayOfWeekNum,
+        'female',
+        blockedSet,
+        assignedThisEvent,
+        day.date,
+        false, // no leader preference
+        i === 0, // prefer back for first female slot
       )
-      if (available.length === 0) {
-        available = femalePool.filter(m => !blockedSet.has(m.id) && !assignedThisEvent.has(m.id))
-      }
-
-      if (available.length > 0) {
-        // Prefer backs first for the first female slot, then sort by least used
-        available.sort((a, b) => {
-          if (i === 0) {
-            if (a.is_back && !b.is_back) return -1
-            if (!a.is_back && b.is_back) return 1
-          }
-          const aCount = (memberAssignedDates[a.id] || []).length
-          const bCount = (memberAssignedDates[b.id] || []).length
-          return aCount - bCount
-        })
-        const member = available[0]
+      if (member) {
         const vocalIndex = assignments.filter(a => a.role.startsWith('vocal_')).length + 1
         assignments.push({ event_id: event.id, member_id: member.id, role: `vocal_${vocalIndex}` })
         assignedThisEvent.add(member.id)
