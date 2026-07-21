@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Loader2, CalendarDays } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, CalendarDays, ChevronDown } from 'lucide-react'
 
 interface ScheduleEvent {
   id: string
@@ -124,22 +124,7 @@ export default function MeusDiasPage() {
       ) : (
         <div className="space-y-2">
           {myEvents.map((item, idx) => (
-            <div key={idx} className="card flex items-center gap-3">
-              <div className="w-12 h-12 rounded-lg bg-[var(--accent)] flex flex-col items-center justify-center shrink-0">
-                <span className="text-lg font-bold">
-                  {format(new Date(item.event.event_date + 'T12:00:00'), 'dd')}
-                </span>
-                <span className="text-[10px] text-[var(--muted-foreground)] capitalize">
-                  {item.event.day_of_week.slice(0, 3)}
-                </span>
-              </div>
-              <div className="flex-1">
-                <p className="font-medium text-green-400">{item.event.scale_type?.name || '-'}</p>
-                <p className="text-xs text-[var(--muted-foreground)]">
-                  {roleLabels[item.role] || item.role}
-                </p>
-              </div>
-            </div>
+            <ExpandableDay key={idx} item={item} roleLabels={roleLabels} memberName={memberName} />
           ))}
           <div className="card bg-[var(--accent)] text-center">
             <p className="text-sm">
@@ -151,6 +136,81 @@ export default function MeusDiasPage() {
 
       {/* Bottom spacer for fixed nav */}
       <div className="h-24" />
+    </div>
+  )
+}
+
+function ExpandableDay({ item, roleLabels, memberName }: {
+  item: { event: any; role: string }
+  roleLabels: Record<string, string>
+  memberName: string
+}) {
+  const [expanded, setExpanded] = useState(false)
+
+  const vocalRoles = ['vocal_1', 'vocal_2', 'vocal_3']
+  const instrumentRoles = ['bateria', 'guitarra', 'baixo', 'teclado']
+
+  const vocals = (item.event.assignments || []).filter((a: any) => vocalRoles.includes(a.role)).sort((a: any, b: any) => a.role.localeCompare(b.role))
+  const instruments = (item.event.assignments || []).filter((a: any) => instrumentRoles.includes(a.role))
+  const songs = (item.event.songs || []).sort((a: any, b: any) => a.order_num - b.order_num)
+
+  return (
+    <div className="card cursor-pointer" onClick={() => setExpanded(!expanded)}>
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 rounded-lg bg-[var(--accent)] flex flex-col items-center justify-center shrink-0">
+          <span className="text-lg font-bold">
+            {format(new Date(item.event.event_date + 'T12:00:00'), 'dd')}
+          </span>
+          <span className="text-[10px] text-[var(--muted-foreground)] capitalize">
+            {item.event.day_of_week.slice(0, 3)}
+          </span>
+        </div>
+        <div className="flex-1">
+          <p className="font-medium text-green-400">{item.event.scale_type?.name || '-'}</p>
+          <p className="text-xs text-[var(--muted-foreground)]">
+            {roleLabels[item.role] || item.role}
+          </p>
+        </div>
+        <ChevronDown className={`w-4 h-4 text-[var(--muted-foreground)] transition-transform ${expanded ? 'rotate-180' : ''}`} />
+      </div>
+
+      {expanded && (
+        <div className="mt-4 pt-3 border-t border-[var(--border)] space-y-3">
+          {/* Escala */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] mb-1">Vocais</p>
+              {vocals.map((a: any) => (
+                <div key={a.id} className={`text-xs py-0.5 ${a.member?.name?.toUpperCase() === memberName.toUpperCase() ? 'text-green-400 font-bold' : ''}`}>
+                  {roleLabels[a.role]}: {a.member?.name || '-'}
+                </div>
+              ))}
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] mb-1">Músicos</p>
+              {instruments.map((a: any) => (
+                <div key={a.id} className={`text-xs py-0.5 ${a.member?.name?.toUpperCase() === memberName.toUpperCase() ? 'text-green-400 font-bold' : ''}`}>
+                  {roleLabels[a.role] || a.role}: {a.member?.name || '-'}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Louvores */}
+          {songs.length > 0 && (
+            <div>
+              <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] mb-1">Louvores</p>
+              {songs.map((song: any) => (
+                <div key={song.id} className="text-xs py-1 flex items-center gap-2">
+                  <span className="text-[var(--muted-foreground)] w-4">{song.order_num}.</span>
+                  <span className="font-medium flex-1">{song.title}</span>
+                  {song.minister && <span className="text-[var(--muted-foreground)]">{song.minister}</span>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

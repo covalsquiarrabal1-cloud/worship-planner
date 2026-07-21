@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Calendar, Users, Music, Settings, User, ListMusic } from 'lucide-react'
+import { playClick } from '@/lib/sounds'
 
 interface NavItem {
   href: string
@@ -32,6 +33,7 @@ export function AdminBottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              onClick={() => playClick()}
               className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-lg transition-colors ${
                 isActive ? 'text-white' : 'text-[var(--muted-foreground)] hover:text-white/70'
               }`}
@@ -57,19 +59,20 @@ export function MemberBottomNav() {
 
   return (
     <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, width: '100%', overflow: 'hidden', zIndex: 50 }} className="bg-[var(--card)] border-t border-[var(--border)]">
-      <div className="max-w-5xl mx-auto flex items-center justify-around py-3">
+      <div className="max-w-5xl mx-auto flex items-center justify-around py-4">
         {items.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
           return (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex flex-col items-center gap-1 px-4 py-1.5 rounded-lg transition-colors ${
+              onClick={() => playClick()}
+              className={`flex flex-col items-center gap-1.5 px-5 py-2 rounded-lg transition-colors ${
                 isActive ? 'text-white' : 'text-[var(--muted-foreground)] hover:text-white/70'
               }`}
             >
-              {item.icon}
-              <span className="text-[11px] font-medium">{item.label}</span>
+              <span className="w-6 h-6 flex items-center justify-center">{item.icon}</span>
+              <span className="text-xs font-medium">{item.label}</span>
             </Link>
           )
         })}
