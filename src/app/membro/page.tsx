@@ -212,52 +212,43 @@ export default function MemberSchedulePage() {
                   <h4 className="font-bold text-green-400">{event.scale_type?.name || '-'}</h4>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Vocais - Left */}
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase mb-1">Vocais</p>
-                    {vocals.map((a, idx) => (
-                      <div key={idx} className={`text-xs px-2 py-1.5 rounded ${isMe(a.member?.name) ? 'bg-green-500/20 text-green-300 font-bold' : 'bg-[var(--accent)]'}`}>
-                        <span className="text-[var(--muted-foreground)]">{roleLabels[a.role]}: </span>
-                        <span className={isMe(a.member?.name) ? 'text-green-300' : ''}>{a.member?.name || '-'}</span>
-                      </div>
-                    ))}
-                    {vocals.length === 0 && <p className="text-xs text-[var(--muted-foreground)]">-</p>}
-                  </div>
-
-                  {/* Músicos - Right */}
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase mb-1">Músicos</p>
-                    {instruments.map((a, idx) => (
-                      <div key={idx} className={`text-xs px-2 py-1.5 rounded ${isMe(a.member?.name) ? 'bg-green-500/20 text-green-300 font-bold' : 'bg-[var(--accent)]'}`}>
-                        <span className="text-[var(--muted-foreground)]">{roleLabels[a.role] || a.role}: </span>
-                        <span className={isMe(a.member?.name) ? 'text-green-300' : ''}>{a.member?.name || '-'}</span>
-                      </div>
-                    ))}
-                    {instruments.length === 0 && <p className="text-xs text-[var(--muted-foreground)]">-</p>}
-                  </div>
-                </div>
-
-                {/* Louvores */}
+                {/* Louvores first */}
                 {event.songs && event.songs.length > 0 && (
-                  <div className="mt-4 pt-3 border-t border-[var(--border)]">
-                    <p className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase mb-2">Louvores</p>
-                    <div className="space-y-1.5">
-                      {[...event.songs].sort((a, b) => a.order_num - b.order_num).map(song => (
-                        <div key={song.id} className="flex items-center gap-2 text-xs bg-[var(--accent)] rounded px-2 py-2">
-                          <span className="text-[var(--muted-foreground)] w-4 shrink-0">{song.order_num}.</span>
-                          <div className="flex-1 min-w-0">
-                            <span className="font-medium">{song.title}</span>
-                            {song.minister && <span className="text-[var(--muted-foreground)]"> — {song.minister}</span>}
-                          </div>
-                          {song.youtube_url && (
-                            <a href={song.youtube_url} target="_blank" rel="noopener noreferrer" className="text-red-400 shrink-0">▶</a>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                  <div className="mb-3">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-[var(--border)]">
+                          <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold w-8">#</th>
+                          <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold">Louvor</th>
+                          <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold">Versão</th>
+                          <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold">Ministro</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...event.songs].sort((a, b) => a.order_num - b.order_num).map(song => (
+                          <tr key={song.id} className="border-b border-[var(--border)]/30">
+                            <td className="py-2 px-1 text-center font-bold">{song.order_num}</td>
+                            <td className={`py-2 px-1 font-medium ${song.minister && isMe(song.minister.split(' / ').find(n => isMe(n)) || '') ? 'text-green-300' : ''}`}>{song.title}</td>
+                            <td className="py-2 px-1 text-[var(--muted-foreground)]">{song.version || '-'}</td>
+                            <td className={`py-2 px-1 ${song.minister && song.minister.toUpperCase().includes(memberName.toUpperCase()) ? 'text-green-300 font-bold' : ''}`}>{song.minister || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 )}
+
+                {/* Músicos at bottom */}
+                <div className="border-t border-[var(--border)] pt-2">
+                  <div className="grid grid-cols-2 gap-1">
+                    {instruments.map((a, idx) => (
+                      <div key={idx} className={`text-xs py-0.5 ${isMe(a.member?.name) ? 'text-green-300 font-bold' : ''}`}>
+                        <span className="text-[var(--muted-foreground)]">{roleLabels[a.role] || a.role}: </span>
+                        <span className="font-bold">{a.member?.name || '-'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )
           })}

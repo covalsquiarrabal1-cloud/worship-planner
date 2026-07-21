@@ -525,76 +525,62 @@ function WeeklyView({ events, members, onUpdateAssignment }: {
     )
   }
 
-  const vocalRoles = ['vocal_1', 'vocal_2', 'vocal_3']
-  const instrumentRoles = ['bateria', 'guitarra', 'baixo', 'teclado']
+  const instrumentRoles = ['guitarra', 'baixo', 'bateria', 'teclado']
   const roleLabels: Record<string, string> = {
-    vocal_1: 'Vocal 1', vocal_2: 'Vocal 2', vocal_3: 'Vocal 3',
     bateria: 'Bateria', guitarra: 'Guitarra', baixo: 'Baixo', teclado: 'Teclado',
   }
 
   return (
     <div className="space-y-6">
       {events.map((event) => {
-        const vocals = event.assignments.filter(a => vocalRoles.includes(a.role)).sort((a, b) => a.role.localeCompare(b.role))
         const instruments = event.assignments.filter(a => instrumentRoles.includes(a.role))
         const songs = (event.songs || []).sort((a, b) => a.order_num - b.order_num)
 
         return (
           <div key={event.id} className="card space-y-4">
             {/* Header */}
-            <div>
+            <div className="text-center border-b border-[var(--border)] pb-3">
               <span className="text-xs text-[var(--muted-foreground)] capitalize">
                 {event.day_of_week}, {event.event_date.slice(8, 10)}/{event.event_date.slice(5, 7)}
               </span>
               <h3 className="text-lg font-bold text-green-400">{event.scale_type?.name || '-'}</h3>
             </div>
 
-            {/* Escala: Vocais + Músicos side by side */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] mb-1">Vocais</p>
-                {vocals.map(a => (
-                  <div key={a.id} className="text-xs py-1">
-                    <span className="text-[var(--muted-foreground)]">{roleLabels[a.role]}: </span>
-                    <span className="font-medium">{a.member?.name || '-'}</span>
-                  </div>
-                ))}
-              </div>
-              <div>
-                <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] mb-1">Músicos</p>
-                {instruments.map(a => (
-                  <div key={a.id} className="text-xs py-1">
-                    <span className="text-[var(--muted-foreground)]">{roleLabels[a.role] || a.role}: </span>
-                    <span className="font-medium">{a.member?.name || '-'}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Louvores */}
+            {/* Louvores table */}
             {songs.length > 0 && (
-              <div>
-                <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] mb-2">Louvores</p>
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-[var(--border)]">
-                      <th className="text-left py-1.5 px-2 text-[var(--muted-foreground)] font-medium w-8">#</th>
-                      <th className="text-left py-1.5 px-2 text-[var(--muted-foreground)] font-medium">Louvor</th>
-                      <th className="text-left py-1.5 px-2 text-[var(--muted-foreground)] font-medium">Versão</th>
-                      <th className="text-left py-1.5 px-2 text-[var(--muted-foreground)] font-medium">Ministro</th>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="border-b border-[var(--border)]">
+                    <th className="text-left py-2 px-2 text-[var(--muted-foreground)] font-semibold w-10">Ordem</th>
+                    <th className="text-left py-2 px-2 text-[var(--muted-foreground)] font-semibold">Louvor</th>
+                    <th className="text-left py-2 px-2 text-[var(--muted-foreground)] font-semibold">Versão</th>
+                    <th className="text-left py-2 px-2 text-[var(--muted-foreground)] font-semibold">Ministro</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {songs.map(song => (
+                    <tr key={song.id} className="border-b border-[var(--border)]/30">
+                      <td className="py-2.5 px-2 text-center font-bold">{song.order_num}</td>
+                      <td className="py-2.5 px-2 font-medium">{song.title}</td>
+                      <td className="py-2.5 px-2 text-[var(--muted-foreground)]">{song.version || '-'}</td>
+                      <td className="py-2.5 px-2 font-medium">{song.minister || '-'}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {songs.map(song => (
-                      <tr key={song.id} className="border-b border-[var(--border)]/50">
-                        <td className="py-2 px-2 text-[var(--muted-foreground)]">{song.order_num}</td>
-                        <td className="py-2 px-2 font-medium">{song.title}</td>
-                        <td className="py-2 px-2 text-[var(--muted-foreground)]">{song.version || '-'}</td>
-                        <td className="py-2 px-2">{song.minister || '-'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                  ))}
+                </tbody>
+              </table>
+            )}
+
+            {/* Músicos (bottom) */}
+            {instruments.length > 0 && (
+              <div className="border-t border-[var(--border)] pt-3">
+                <div className="grid grid-cols-2 gap-2">
+                  {instruments.map(a => (
+                    <div key={a.id} className="text-xs py-1">
+                      <span className="text-[var(--muted-foreground)]">{roleLabels[a.role] || a.role}: </span>
+                      <span className="font-bold">{a.member?.name || '-'}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
