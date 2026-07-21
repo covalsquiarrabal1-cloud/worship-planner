@@ -2,57 +2,48 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Music, Mail, Loader2, CheckCircle } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Music, Mail, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [sent, setSent] = useState(false)
   const supabase = createClient()
+  const router = useRouter()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+    try {
+      const res = await fetch('/api/login-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
 
-    if (error) {
-      setError('Erro ao enviar o link. Verifique o e-mail.')
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error || 'Erro ao entrar')
+        setLoading(false)
+        return
+      }
+
+      // Set the session on the client
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      })
+
+      router.push('/')
+      router.refresh()
+    } catch {
+      setError('Erro de conexão. Tente novamente.')
       setLoading(false)
-      return
     }
-
-    setSent(true)
-    setLoading(false)
-  }
-
-  if (sent) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6">
-        <div className="w-full max-w-sm text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-green-500/20 mb-5">
-            <CheckCircle className="w-8 h-8 text-green-400" />
-          </div>
-          <h1 className="text-xl font-bold mb-2">Link enviado!</h1>
-          <p className="text-[var(--muted-foreground)] text-sm mb-6">
-            Verifique sua caixa de entrada em <strong className="text-white">{email}</strong> e clique no link para entrar.
-          </p>
-          <button
-            onClick={() => { setSent(false); setEmail('') }}
-            className="text-sm text-[var(--muted-foreground)] hover:text-white transition-colors"
-          >
-            Usar outro e-mail
-          </button>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -64,7 +55,7 @@ export default function LoginPage() {
             <Music className="w-8 h-8 text-black" />
           </div>
           <h1 className="text-2xl font-bold">Worship Planner</h1>
-          <p className="text-[var(--muted-foreground)] text-sm mt-2">Digite seu e-mail para receber o link de acesso</p>
+          <p className="text-[var(--muted-foreground)] text-sm mt-2">Digite seu e-mail para entrar</p>
         </div>
 
         {/* Form */}
@@ -94,14 +85,10 @@ export default function LoginPage() {
             {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              'Enviar link de acesso'
+              'Entrar'
             )}
           </button>
         </form>
-
-        <p className="text-xs text-center text-[var(--muted-foreground)] mt-6">
-          Sem senha necessária. Você receberá um link no e-mail.
-        </p>
       </div>
     </div>
   )
