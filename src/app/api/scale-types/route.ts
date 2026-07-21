@@ -63,9 +63,14 @@ export async function PUT(request: Request) {
 
   if (!id) return NextResponse.json({ error: 'ID obrigatório' }, { status: 400 })
 
+  const updateData: { male_vocals: number; female_vocals: number } = {
+    male_vocals: male_vocals !== undefined && male_vocals !== null ? Number(male_vocals) : 1,
+    female_vocals: female_vocals !== undefined && female_vocals !== null ? Number(female_vocals) : 2,
+  }
+
   const { data, error } = await serviceClient
     .from('scale_types')
-    .update({ male_vocals: Number(male_vocals), female_vocals: Number(female_vocals) })
+    .update(updateData)
     .eq('id', id)
     .select()
     .single()

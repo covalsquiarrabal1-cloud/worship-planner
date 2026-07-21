@@ -369,10 +369,10 @@ export default function ConfigPage() {
                 <span className="text-sm font-medium">{st.name}</span>
                 <div className="flex gap-2 mt-1">
                   <span className="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded">
-                    {st.male_vocals || 1}H
+                    {st.male_vocals ?? 1}H
                   </span>
                   <span className="text-xs bg-pink-500/10 text-pink-400 px-2 py-0.5 rounded">
-                    {st.female_vocals || 2}M
+                    {st.female_vocals ?? 2}M
                   </span>
                 </div>
               </div>
@@ -584,23 +584,24 @@ function ScaleTypeEditForm({
   onClose: () => void
   onSave: () => void
 }) {
-  const [maleVocals, setMaleVocals] = useState(scaleType.male_vocals || 1)
-  const [femaleVocals, setFemaleVocals] = useState(scaleType.female_vocals || 2)
+  const [maleVocals, setMaleVocals] = useState(scaleType.male_vocals ?? 1)
+  const [femaleVocals, setFemaleVocals] = useState(scaleType.female_vocals ?? 2)
   const [saving, setSaving] = useState(false)
 
   async function handleSave() {
     setSaving(true)
+    const payload = { 
+      id: scaleType.id, 
+      male_vocals: maleVocals, 
+      female_vocals: femaleVocals 
+    }
     const res = await fetch('/api/scale-types', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        id: scaleType.id, 
-        male_vocals: Number(maleVocals), 
-        female_vocals: Number(femaleVocals) 
-      }),
+      body: JSON.stringify(payload),
     })
+    const data = await res.json()
     if (!res.ok) {
-      const data = await res.json()
       alert('Erro ao salvar: ' + (data.error || 'Erro desconhecido'))
     }
     setSaving(false)
@@ -626,9 +627,12 @@ function ScaleTypeEditForm({
               <input
                 type="number"
                 min={0}
-                max={5}
+                max={10}
                 value={maleVocals}
-                onChange={(e) => setMaleVocals(parseInt(e.target.value) || 0)}
+                onChange={(e) => {
+                  const val = e.target.value === '' ? 0 : parseInt(e.target.value)
+                  setMaleVocals(isNaN(val) ? 0 : val)
+                }}
               />
             </div>
             <div>
@@ -636,9 +640,12 @@ function ScaleTypeEditForm({
               <input
                 type="number"
                 min={0}
-                max={5}
+                max={10}
                 value={femaleVocals}
-                onChange={(e) => setFemaleVocals(parseInt(e.target.value) || 0)}
+                onChange={(e) => {
+                  const val = e.target.value === '' ? 0 : parseInt(e.target.value)
+                  setFemaleVocals(isNaN(val) ? 0 : val)
+                }}
               />
             </div>
           </div>

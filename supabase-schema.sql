@@ -40,6 +40,8 @@ CREATE TABLE IF NOT EXISTS scale_types (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   type TEXT NOT NULL DEFAULT 'normal' CHECK (type IN ('normal', 'strong_brothers', 'empoderadas')),
+  male_vocals INTEGER NOT NULL DEFAULT 1,
+  female_vocals INTEGER NOT NULL DEFAULT 2,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
