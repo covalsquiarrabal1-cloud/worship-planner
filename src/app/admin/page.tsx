@@ -48,7 +48,7 @@ export default function AdminPage() {
   const [events, setEvents] = useState<ScheduleEvent[]>([])
   const [selectedDates, setSelectedDates] = useState<Date[]>([])
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState<'mensal' | 'semanal'>('mensal')
+  const [view, setView] = useState<'mensal' | 'semanal' | 'pessoa'>('mensal')
   const [currentWeek, setCurrentWeek] = useState(1)
   const supabase = createClient()
   const router = useRouter()
@@ -222,7 +222,7 @@ export default function AdminPage() {
       </div>
 
       {/* === VIEW TOGGLE === */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <button
           onClick={() => setView('mensal')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${view === 'mensal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
@@ -234,6 +234,12 @@ export default function AdminPage() {
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${view === 'semanal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
         >
           Visão Semanal
+        </button>
+        <button
+          onClick={() => setView('pessoa')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${view === 'pessoa' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+        >
+          Visão por Pessoa
         </button>
         {view === 'semanal' && (
           <div className="flex items-center gap-2 ml-4">
@@ -258,6 +264,8 @@ export default function AdminPage() {
           <p className="text-sm text-[var(--muted-foreground)]">Nenhuma escala gerada para este mês.</p>
           <p className="text-xs text-[var(--muted-foreground)] mt-1">Selecione os dias no calendário e clique &quot;Gerar Escala&quot;.</p>
         </div>
+      ) : view === 'pessoa' ? (
+        <PersonView events={events} />
       ) : (
         <div className="card p-0 overflow-x-auto">
           <table className="w-full text-sm">
@@ -328,6 +336,86 @@ export default function AdminPage() {
           <span className="text-xs font-medium">Config</span>
         </Link>
       </div>
+    </div>
+  )
+}
+
+
+function PersonView({ events }: { events: ScheduleEvent[] }) {
+  // Day of week mapping from day_of_week string to index
+  const dayMap: Record<string, number> = {
+    'domingo': 0,
+    'segunda': 1,
+    'terça': 2,
+    'quarta': 3,
+    'quinta': 4,
+    'sexta-feira': 5,
+    'sexta': 5,
+    'sábado': 6,
+  }
+
+  const dayLabels = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM']
+  // Map: dayLabels index -> day_of_week number (1=seg, 2=ter, ..., 6=sab, 0=dom)
+  const dayLabelToNum = [1, 2, 3, 4, 5, 6, 0]
+
+  // Build person stats
+  const personStats: Record<string, { name: string; days: number[] }> = {}
+
+  for (const event of events) {
+    const dow = dayMap[event.day_of_week.toLowerCase()] ?? -1
+    if (dow === -1) continue
+
+    for (const assignment of event.assignments) {
+      const name = assignment.member?.name
+      if (!name) continue
+
+      if (!personStats[name]) {
+        personStats[name] = { name, days: [0, 0, 0, 0, 0, 0, 0] } // indices 0-6 = dom-sab
+      }
+      personStats[name].days[dow]++
+    }
+  }
+
+  // Convert to array sorted by name
+  const rows = Object.values(personStats).sort((a, b) => a.name.localeCompare(b.name))
+
+  if (rows.length === 0) {
+    return (
+      <div className="card text-center py-8">
+        <p className="text-sm text-[var(--muted-foreground)]">Nenhum dado disponível.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="card p-0 overflow-x-auto">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-[var(--border)] bg-[var(--accent)]">
+            <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Nome</th>
+            {dayLabels.map((label) => (
+              <th key={label} className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">{label}</th>
+            ))}
+            <th className="text-center px-3 py-2.5 text-xs font-semibold text-white">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => {
+            const total = row.days.reduce((sum, v) => sum + v, 0)
+            return (
+              <tr key={row.name} className="border-b border-[var(--border)] hover:bg-[var(--accent)]/50">
+                <td className="px-3 py-2 text-xs font-medium">{row.name}</td>
+                {dayLabelToNum.map((dowNum, idx) => (
+                  <td key={idx} className="text-center px-3 py-2 text-xs">
+                    {row.days[dowNum] > 0 ? row.days[dowNum] : ''}
+                  </td>
+                ))}
+                <td className="text-center px-3 py-2 text-xs font-bold">{total}</td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
     </div>
   )
 }
