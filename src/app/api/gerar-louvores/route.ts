@@ -243,36 +243,80 @@ function assignMinisters(
   back: any | null,
   other: any | null
 ): string {
-  const names: string[] = []
+  const vocalType = (song.vocal_type || '').toUpperCase()
 
-  // Position 0,1 = louvor 1,2 | Position 2,3 = louvor 3,4
-  // "Outro" never does position 3 (4th song), preferably 0 or 1
+  // Categorize vocalists by gender
+  const maleVocals = [leader, back, other].filter(v => v && v.gender === 'male')
+  const femaleVocals = [leader, back, other].filter(v => v && v.gender === 'female')
+  const allVocals = [leader, back, other].filter(v => v)
 
-  // Simple distribution patterns
-  const patterns = [
-    // Pattern A: L+B, O, L+B, L/B
-    [['leader', 'back'], ['other'], ['leader', 'back'], ['leader']],
-    // Pattern B: L, O, L+B, L+B
-    [['leader'], ['other'], ['leader', 'back'], ['leader', 'back']],
-    // Pattern C: B, O, L, L+B
-    [['back'], ['other'], ['leader'], ['leader', 'back']],
-    // Pattern D: L+O, O, L+B, L+B
-    [['leader', 'other'], ['other'], ['leader', 'back'], ['leader', 'back']],
-  ]
-
-  const pattern = patterns[Math.floor(Math.random() * patterns.length)]
-  const roles = pattern[position] || ['leader']
-
-  for (const role of roles) {
-    if (role === 'leader' && leader) names.push(leader.name)
-    else if (role === 'back' && back) names.push(back.name)
-    else if (role === 'other' && other) names.push(other.name)
-    else if (role === 'leader' && !leader && back) names.push(back.name)
-    else if (role === 'back' && !back && leader) names.push(leader.name)
-    else if (role === 'other' && !other && back) names.push(back.name)
+  // Determine who CAN sing this song based on vocal_type
+  let eligiblePool: any[] = []
+  if (vocalType === 'MASCULINO') {
+    eligiblePool = maleVocals
+  } else if (vocalType === 'FEMININO' || vocalType === 'FEMININO 2 VOCAIS') {
+    eligiblePool = femaleVocals
+  } else if (vocalType === 'MASCULINO / FEMININO') {
+    // Needs at least one male AND one female
+    eligiblePool = allVocals // will pick from both
+  } else {
+    // UNISEX - anyone can sing
+    eligiblePool = allVocals
   }
 
-  // Remove duplicates
-  const unique = [...new Set(names)]
-  return unique.length > 0 ? unique.join(' / ') : '-'
+  if (eligiblePool.length === 0) return '-'
+
+  // Distribution rules:
+  // - "Outro" never does position 3 (4th song), preferably 0 or 1
+  // - Leader/Back can do any position
+  // For MASCULINO / FEMININO, always pick one male + one female
+
+  if (vocalType === 'MASCULINO / FEMININO') {
+    const male = maleVocals.length > 0 ? maleVocals[Math.floor(Math.random() * maleVocals.length)] : null
+    const female = femaleVocals.length > 0 ? femaleVocals[Math.floor(Math.random() * femaleVocals.length)] : null
+    const names: string[] = []
+    if (male) names.push(male.name)
+    if (female) names.push(female.name)
+    return names.length > 0 ? names.join(' / ') : '-'
+  }
+
+  // For single-gender or unisex songs, apply distribution pattern
+  // Position 3 (4th song): only leader or back from eligible pool
+  // Position 0,1: can include "other" if eligible
+  const eligibleLeader = eligiblePool.find(v => v.id === leader?.id)
+  const eligibleBack = eligiblePool.find(v => v.id === back?.id)
+  const eligibleOther = eligiblePool.find(v => v.id === other?.id)
+
+  if (position === 3) {
+    // 4th song: only leader or back (never "outro")
+    if (eligibleLeader && eligibleBack) {
+      // randomly pick one or both
+      const r = Math.random()
+      if (r < 0.4) return eligibleLeader.name
+      if (r < 0.7) return eligibleBack.name
+      return `${eligibleLeader.name} / ${eligibleBack.name}`
+    }
+    if (eligibleLeader) return eligibleLeader.name
+    if (eligibleBack) return eligibleBack.name
+    return eligiblePool[0].name
+  }
+
+  if (position <= 1 && eligibleOther) {
+    // Positions 0,1: "outro" can participate
+    const r = Math.random()
+    if (r < 0.3 && eligibleLeader) return `${eligibleLeader.name} / ${eligibleOther.name}`
+    if (r < 0.5) return eligibleOther.name
+    if (eligibleLeader) return eligibleLeader.name
+    return eligibleOther.name
+  }
+
+  // Positions 2,3: prefer leader+back combo
+  if (eligibleLeader && eligibleBack) {
+    const r = Math.random()
+    if (r < 0.5) return `${eligibleLeader.name} / ${eligibleBack.name}`
+    return eligibleLeader.name
+  }
+  if (eligibleLeader) return eligibleLeader.name
+  if (eligibleBack) return eligibleBack.name
+  return eligiblePool[0].name
 }
