@@ -252,19 +252,63 @@ export default function AdminMusicasPage() {
                   {event.songs.length > 0 && (
                     <div className="space-y-1">
                       {event.songs.sort((a, b) => a.order_num - b.order_num).map((song) => (
-                        <div key={song.id} className="flex items-center gap-2 bg-[var(--accent)] rounded-lg px-3 py-2">
-                          <span className="text-xs text-[var(--muted-foreground)] w-5">{song.order_num}.</span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{song.title}</p>
+                        <div key={song.id} className="space-y-1">
+                          <div className="flex items-center gap-2 bg-[var(--accent)] rounded-lg px-3 py-2">
+                            <span className="text-xs text-[var(--muted-foreground)] w-5">{song.order_num}.</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium truncate">{song.title}</p>
+                              {song.minister && <p className="text-xs text-[var(--muted-foreground)]">{song.minister}</p>}
+                            </div>
+                            {song.youtube_url ? (
+                              <a href={song.youtube_url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-red-400 shrink-0">
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            ) : (
+                              <button
+                                onClick={() => { setEditingLink(song.id); setLinkValue('') }}
+                                className="p-1.5 text-blue-400 hover:bg-blue-500/10 rounded shrink-0"
+                                title="Adicionar link"
+                              >
+                                <Link2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            {song.youtube_url && (
+                              <button
+                                onClick={() => { setEditingLink(song.id); setLinkValue(song.youtube_url || '') }}
+                                className="p-1.5 text-[var(--muted-foreground)] hover:text-white shrink-0"
+                                title="Editar link"
+                              >
+                                <Link2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            <button onClick={() => deleteSong(song.id)} className="p-1 text-red-400 hover:bg-red-500/10 rounded shrink-0">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
-                          {song.youtube_url && (
-                            <a href={song.youtube_url} target="_blank" rel="noopener noreferrer" className="p-1 text-red-400 shrink-0">
-                              <ExternalLink className="w-3.5 h-3.5" />
-                            </a>
+                          {editingLink === song.id && (
+                            <div className="flex gap-2 px-3">
+                              <input
+                                type="url"
+                                placeholder="Cole o link (YouTube, Spotify...)"
+                                value={linkValue}
+                                onChange={(e) => setLinkValue(e.target.value)}
+                                autoFocus
+                                className="flex-1 !py-1.5 text-xs"
+                              />
+                              <button
+                                onClick={() => saveLink(song.id)}
+                                className="px-3 py-1.5 bg-white text-black rounded text-xs font-medium shrink-0"
+                              >
+                                Salvar
+                              </button>
+                              <button
+                                onClick={() => setEditingLink(null)}
+                                className="p-1.5 text-[var(--muted-foreground)]"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           )}
-                          <button onClick={() => deleteSong(song.id)} className="p-1 text-red-400 hover:bg-red-500/10 rounded shrink-0">
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
                         </div>
                       ))}
                     </div>
