@@ -71,6 +71,10 @@ export async function POST(request: Request) {
   const eventIds = events.map(e => e.id)
   await serviceClient.from('songs').delete().in('event_id', eventIds)
 
+  // Track how many times MASCULINO/FEMININO has been used this month
+  let duetCount = 0
+  const MAX_DUETS_PER_MONTH = 2
+
   // Track used songs to avoid repetition within the month
   const usedSongIds = new Set<string>()
 
@@ -101,29 +105,44 @@ export async function POST(request: Request) {
     // Choose worship type order
     const worshipOrder = chooseWorshipOrder(isCeia)
 
-    // Pick 4 songs
+    // === NEW LOGIC: Choose songs based on vocal composition ===
+    // Analyze the vocal team
+    const numMales = maleVocals.length
+    const numFemales = femaleVocals.length
+    
+    // Determine ideal vocal type distribution for 4 songs
+    // Goal: each vocal sings 1-2 songs, distributed fairly
+    const desiredVocalTypes = planVocalTypeDistribution(numMales, numFemales, duetCount < MAX_DUETS_PER_MONTH)
+    
+    // Count duets in this event's plan
+    if (desiredVocalTypes.includes('MASCULINO / FEMININO')) duetCount++
+
+    // Pick 4 songs matching worship order AND desired vocal types
     const pickedSongs: { song: SetlistItem; ministers: string }[] = []
 
     for (let i = 0; i < 4; i++) {
       const requiredWorshipType = worshipOrder[i]
+      const preferredVocalType = desiredVocalTypes[i]
 
-      // Find compatible songs
-      const compatible = setlist.filter(s => {
-        // Already used this month? Try to avoid
+      // Find songs matching all criteria
+      let candidates = setlist.filter(s => {
         if (usedSongIds.has(s.id) && setlist.length > 20) return false
-        // Already picked for this event?
         if (pickedSongs.some(p => p.song.id === s.id)) return false
-        // Worship type match
         if (s.worship_type?.toUpperCase() !== requiredWorshipType) return false
-        // Celebration type match
         if (!matchesCelebrationType(s.celebration_type, celebrationFilter, scaleName)) return false
-        // Vocal type compatibility
         if (!isVocalCompatible(s.vocal_type, maleVocals, femaleVocals)) return false
         return true
       })
 
-      // If no compatible found, relax the "used" constraint
-      let candidates = compatible
+      // Prefer songs matching the desired vocal type
+      const preferred = candidates.filter(s => {
+        const vt = (s.vocal_type || '').toUpperCase()
+        return vt === preferredVocalType || (preferredVocalType === 'ANY' && true)
+      })
+
+      if (preferred.length > 0) candidates = preferred
+
+      // Relax "used" constraint if needed
       if (candidates.length === 0) {
         candidates = setlist.filter(s => {
           if (pickedSongs.some(p => p.song.id === s.id)) return false
@@ -134,7 +153,7 @@ export async function POST(request: Request) {
         })
       }
 
-      // If still nothing, relax worship type
+      // Relax worship type if needed
       if (candidates.length === 0) {
         candidates = setlist.filter(s => {
           if (pickedSongs.some(p => p.song.id === s.id)) return false
@@ -146,15 +165,13 @@ export async function POST(request: Request) {
 
       if (candidates.length === 0) continue
 
-      // Try thematic coherence: louvores 1&2 similar, 3&4 similar
+      // Thematic coherence: louvores 1&2 similar, 3&4 similar
       let chosen: SetlistItem
       if (i === 1 && pickedSongs.length > 0) {
-        // Try to match description with song 1
         const prev = pickedSongs[0].song
         const thematic = candidates.filter(s => s.description === prev.description)
         chosen = thematic.length > 0 ? thematic[Math.floor(Math.random() * thematic.length)] : candidates[Math.floor(Math.random() * candidates.length)]
       } else if (i === 3 && pickedSongs.length >= 3) {
-        // Try to match description with song 3
         const prev = pickedSongs[2].song
         const thematic = candidates.filter(s => s.description === prev.description)
         chosen = thematic.length > 0 ? thematic[Math.floor(Math.random() * thematic.length)] : candidates[Math.floor(Math.random() * candidates.length)]
@@ -162,12 +179,11 @@ export async function POST(request: Request) {
         chosen = candidates[Math.floor(Math.random() * candidates.length)]
       }
 
-      // Assign ministers (placeholder - will be done after all songs are picked)
       pickedSongs.push({ song: chosen, ministers: '' })
       usedSongIds.add(chosen.id)
     }
 
-    // Now assign ministers for all 4 songs together (ensures fair distribution)
+    // Assign ministers for all 4 songs together (ensures fair distribution)
     const songObjects = pickedSongs.map(p => p.song)
     const ministersList = assignAllMinisters(songObjects, leader, back, other)
     
@@ -239,6 +255,55 @@ function chooseWorshipOrder(isCeia: boolean): string[] {
   return options[Math.floor(Math.random() * options.length)]
 }
 
+// Plan what vocal types we WANT for each position based on the vocal team
+function planVocalTypeDistribution(numMales: number, numFemales: number, allowDuet: boolean): string[] {
+  const hasBoth = numMales > 0 && numFemales > 0
+
+  if (numMales > 0 && numFemales === 0) {
+    // All males (e.g. STRONGBROTHERS)
+    return ['MASCULINO', 'MASCULINO', 'UNISEX', 'MASCULINO']
+  }
+
+  if (numFemales > 0 && numMales === 0) {
+    // All females (e.g. EMPODERADAS)
+    return ['FEMININO', 'FEMININO', 'UNISEX', 'FEMININO']
+  }
+
+  // Mixed team - distribute fairly
+  // Include MASCULINO/FEMININO only if allowed (max 2 per month)
+  if (hasBoth && allowDuet && Math.random() < 0.4) {
+    // Patterns with 1 MASCULINO/FEMININO duet (~40% chance when allowed)
+    const patterns = [
+      ['MASCULINO / FEMININO', 'FEMININO', 'MASCULINO', 'UNISEX'],
+      ['MASCULINO', 'MASCULINO / FEMININO', 'FEMININO', 'UNISEX'],
+      ['FEMININO', 'MASCULINO', 'MASCULINO / FEMININO', 'UNISEX'],
+      ['UNISEX', 'FEMININO', 'MASCULINO', 'MASCULINO / FEMININO'],
+    ]
+    return patterns[Math.floor(Math.random() * patterns.length)]
+  }
+
+  // No duet - balanced distribution
+  if (numMales >= 2) {
+    const patterns = [
+      ['MASCULINO', 'MASCULINO', 'FEMININO', 'UNISEX'],
+      ['MASCULINO', 'UNISEX', 'MASCULINO', 'FEMININO'],
+    ]
+    return patterns[Math.floor(Math.random() * patterns.length)]
+  }
+
+  if (numFemales >= 2) {
+    const patterns = [
+      ['FEMININO', 'FEMININO', 'MASCULINO', 'UNISEX'],
+      ['MASCULINO', 'FEMININO', 'UNISEX', 'FEMININO'],
+      ['FEMININO', 'MASCULINO', 'FEMININO', 'UNISEX'],
+    ]
+    return patterns[Math.floor(Math.random() * patterns.length)]
+  }
+
+  // 1 male, 1 female
+  return ['MASCULINO', 'FEMININO', 'UNISEX', 'UNISEX']
+}
+
 function assignMinisters(
   position: number,
   song: SetlistItem,
@@ -307,11 +372,19 @@ function assignAllMinisters(
       continue
     }
 
-    // Rule: position 3 (4th song) - only leader or back, never "outro"
+    // Rule: position 3 (4th song) - prefer leader or back, but allow "outro" if it avoids overloading
     if (i === 3) {
       const leaderBack = eligible.filter(v => v.id === leader?.id || v.id === back?.id)
+      // Only restrict to leader/back if they have fewer assignments than "outro"
       if (leaderBack.length > 0) {
-        eligible = leaderBack
+        const minLeaderBack = Math.min(...leaderBack.map(v => assignCount[v.id] || 0))
+        const otherCount = eligible.find(v => v.id === other?.id) ? (assignCount[other?.id] || 0) : 999
+        // If leader/back are already at 2 and outro is at 0 or 1, allow outro
+        if (minLeaderBack >= 2 && otherCount < minLeaderBack) {
+          // Keep full eligible pool
+        } else {
+          eligible = leaderBack
+        }
       }
     }
 
@@ -330,7 +403,9 @@ function assignAllMinisters(
 
 function getLeastUsed(pool: any[], assignCount: Record<string, number>): any | null {
   if (pool.length === 0) return null
-  return pool.reduce((min, v) => {
-    return (assignCount[v.id] || 0) < (assignCount[min.id] || 0) ? v : min
-  }, pool[0])
+  // Filter out anyone with 2+ assignments if others have less
+  const minCount = Math.min(...pool.map(v => assignCount[v.id] || 0))
+  const leastUsed = pool.filter(v => (assignCount[v.id] || 0) === minCount)
+  // Pick randomly among those with least usage
+  return leastUsed[Math.floor(Math.random() * leastUsed.length)]
 }
