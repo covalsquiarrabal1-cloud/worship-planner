@@ -162,12 +162,15 @@ export async function POST(request: Request) {
         chosen = candidates[Math.floor(Math.random() * candidates.length)]
       }
 
-      // Assign ministers
-      const ministers = assignMinisters(i, chosen, leader, back, other)
-      pickedSongs.push({ song: chosen, ministers })
+      // Assign ministers (placeholder - will be done after all songs are picked)
+      pickedSongs.push({ song: chosen, ministers: '' })
       usedSongIds.add(chosen.id)
     }
 
+    // Now assign ministers for all 4 songs together (ensures fair distribution)
+    const songObjects = pickedSongs.map(p => p.song)
+    const ministersList = assignAllMinisters(songObjects, leader, back, other)
+    
     // Add to batch
     for (let i = 0; i < pickedSongs.length; i++) {
       allSongs.push({
@@ -175,7 +178,7 @@ export async function POST(request: Request) {
         order_num: i + 1,
         title: pickedSongs[i].song.title,
         version: pickedSongs[i].song.version,
-        minister: pickedSongs[i].ministers,
+        minister: ministersList[i] || '-',
       })
     }
   }
@@ -243,80 +246,91 @@ function assignMinisters(
   back: any | null,
   other: any | null
 ): string {
-  const vocalType = (song.vocal_type || '').toUpperCase()
+  // This function is now a simple placeholder - actual assignment is done in assignAllMinisters
+  return '-'
+}
 
-  // Categorize vocalists by gender
-  const maleVocals = [leader, back, other].filter(v => v && v.gender === 'male')
-  const femaleVocals = [leader, back, other].filter(v => v && v.gender === 'female')
+// New function: assigns ministers to ALL 4 songs at once ensuring proper distribution
+function assignAllMinisters(
+  songs: SetlistItem[],
+  leader: any | null,
+  back: any | null,
+  other: any | null
+): string[] {
   const allVocals = [leader, back, other].filter(v => v)
+  if (allVocals.length === 0) return songs.map(() => '-')
 
-  // Determine who CAN sing this song based on vocal_type
-  let eligiblePool: any[] = []
-  if (vocalType === 'MASCULINO') {
-    eligiblePool = maleVocals
-  } else if (vocalType === 'FEMININO' || vocalType === 'FEMININO 2 VOCAIS') {
-    eligiblePool = femaleVocals
-  } else if (vocalType === 'MASCULINO / FEMININO') {
-    // Needs at least one male AND one female
-    eligiblePool = allVocals // will pick from both
-  } else {
-    // UNISEX - anyone can sing
-    eligiblePool = allVocals
-  }
+  const maleVocals = allVocals.filter(v => v.gender === 'male')
+  const femaleVocals = allVocals.filter(v => v.gender === 'female')
 
-  if (eligiblePool.length === 0) return '-'
+  // Track how many songs each vocal has been assigned
+  const assignCount: Record<string, number> = {}
+  allVocals.forEach(v => { assignCount[v.id] = 0 })
 
-  // Distribution rules:
-  // - "Outro" never does position 3 (4th song), preferably 0 or 1
-  // - Leader/Back can do any position
-  // For MASCULINO / FEMININO, always pick one male + one female
+  const results: string[] = []
 
-  if (vocalType === 'MASCULINO / FEMININO') {
-    const male = maleVocals.length > 0 ? maleVocals[Math.floor(Math.random() * maleVocals.length)] : null
-    const female = femaleVocals.length > 0 ? femaleVocals[Math.floor(Math.random() * femaleVocals.length)] : null
-    const names: string[] = []
-    if (male) names.push(male.name)
-    if (female) names.push(female.name)
-    return names.length > 0 ? names.join(' / ') : '-'
-  }
+  for (let i = 0; i < songs.length; i++) {
+    const song = songs[i]
+    const vocalType = (song.vocal_type || '').toUpperCase()
 
-  // For single-gender or unisex songs, apply distribution pattern
-  // Position 3 (4th song): only leader or back from eligible pool
-  // Position 0,1: can include "other" if eligible
-  const eligibleLeader = eligiblePool.find(v => v.id === leader?.id)
-  const eligibleBack = eligiblePool.find(v => v.id === back?.id)
-  const eligibleOther = eligiblePool.find(v => v.id === other?.id)
-
-  if (position === 3) {
-    // 4th song: only leader or back (never "outro")
-    if (eligibleLeader && eligibleBack) {
-      // randomly pick one or both
-      const r = Math.random()
-      if (r < 0.4) return eligibleLeader.name
-      if (r < 0.7) return eligibleBack.name
-      return `${eligibleLeader.name} / ${eligibleBack.name}`
+    // Determine eligible singers based on vocal_type
+    let eligible: any[] = []
+    if (vocalType === 'MASCULINO') {
+      eligible = maleVocals
+    } else if (vocalType === 'FEMININO' || vocalType === 'FEMININO 2 VOCAIS') {
+      eligible = femaleVocals
+    } else if (vocalType === 'MASCULINO / FEMININO') {
+      // Needs one male + one female
+      const male = getLeastUsed(maleVocals, assignCount)
+      const female = getLeastUsed(femaleVocals, assignCount)
+      if (male && female) {
+        assignCount[male.id]++
+        assignCount[female.id]++
+        results.push(`${male.name} / ${female.name}`)
+      } else if (male) {
+        assignCount[male.id]++
+        results.push(male.name)
+      } else if (female) {
+        assignCount[female.id]++
+        results.push(female.name)
+      } else {
+        results.push('-')
+      }
+      continue
+    } else {
+      // UNISEX - any ONE person
+      eligible = allVocals
     }
-    if (eligibleLeader) return eligibleLeader.name
-    if (eligibleBack) return eligibleBack.name
-    return eligiblePool[0].name
+
+    if (eligible.length === 0) {
+      results.push('-')
+      continue
+    }
+
+    // Rule: position 3 (4th song) - only leader or back, never "outro"
+    if (i === 3) {
+      const leaderBack = eligible.filter(v => v.id === leader?.id || v.id === back?.id)
+      if (leaderBack.length > 0) {
+        eligible = leaderBack
+      }
+    }
+
+    // Pick the person with least assignments (fair distribution)
+    const chosen = getLeastUsed(eligible, assignCount)
+    if (chosen) {
+      assignCount[chosen.id]++
+      results.push(chosen.name)
+    } else {
+      results.push('-')
+    }
   }
 
-  if (position <= 1 && eligibleOther) {
-    // Positions 0,1: "outro" can participate
-    const r = Math.random()
-    if (r < 0.3 && eligibleLeader) return `${eligibleLeader.name} / ${eligibleOther.name}`
-    if (r < 0.5) return eligibleOther.name
-    if (eligibleLeader) return eligibleLeader.name
-    return eligibleOther.name
-  }
+  return results
+}
 
-  // Positions 2,3: prefer leader+back combo
-  if (eligibleLeader && eligibleBack) {
-    const r = Math.random()
-    if (r < 0.5) return `${eligibleLeader.name} / ${eligibleBack.name}`
-    return eligibleLeader.name
-  }
-  if (eligibleLeader) return eligibleLeader.name
-  if (eligibleBack) return eligibleBack.name
-  return eligiblePool[0].name
+function getLeastUsed(pool: any[], assignCount: Record<string, number>): any | null {
+  if (pool.length === 0) return null
+  return pool.reduce((min, v) => {
+    return (assignCount[v.id] || 0) < (assignCount[min.id] || 0) ? v : min
+  }, pool[0])
 }
