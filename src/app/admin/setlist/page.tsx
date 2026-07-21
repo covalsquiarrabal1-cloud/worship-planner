@@ -25,6 +25,10 @@ export default function SetlistPage() {
   const [filterVocal, setFilterVocal] = useState('')
   const [filterWorship, setFilterWorship] = useState('')
   const [filterStatus, setFilterStatus] = useState('')
+  const [filterTitle, setFilterTitle] = useState('')
+  const [filterVersion, setFilterVersion] = useState('')
+  const [filterDescription, setFilterDescription] = useState('')
+  const [filterKey, setFilterKey] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editData, setEditData] = useState<Partial<SetlistItem>>({})
   const [showAddForm, setShowAddForm] = useState(false)
@@ -114,11 +118,15 @@ export default function SetlistPage() {
       (item.version || '').toLowerCase().includes(q) ||
       (item.description || '').toLowerCase().includes(q)
     )
+    const matchesTitle = !filterTitle || item.title.toLowerCase().includes(filterTitle.toLowerCase())
+    const matchesVersion = !filterVersion || (item.version || '').toLowerCase().includes(filterVersion.toLowerCase())
     const matchesCelebration = !filterCelebration || (item.celebration_type || '').toUpperCase() === filterCelebration
     const matchesVocal = !filterVocal || (item.vocal_type || '').toUpperCase() === filterVocal
     const matchesWorship = !filterWorship || (item.worship_type || '').toUpperCase() === filterWorship
+    const matchesDescription = !filterDescription || (item.description || '').toLowerCase().includes(filterDescription.toLowerCase())
+    const matchesKey = !filterKey || (item.key || '').toLowerCase().includes(filterKey.toLowerCase())
     const matchesStatus = !filterStatus || item.status === filterStatus
-    return matchesSearch && matchesCelebration && matchesVocal && matchesWorship && matchesStatus
+    return matchesSearch && matchesTitle && matchesVersion && matchesCelebration && matchesVocal && matchesWorship && matchesDescription && matchesKey && matchesStatus
   })
 
   // Get unique values for filter dropdowns
@@ -186,8 +194,12 @@ export default function SetlistPage() {
           <thead>
             <tr className="border-b border-[var(--border)] bg-[var(--accent)]">
               <th className="text-left px-3 py-3 text-xs font-semibold text-[var(--muted-foreground)] w-[3%]">#</th>
-              <th className="text-left px-3 py-3 text-xs font-semibold text-[var(--muted-foreground)] w-[18%]">Louvor</th>
-              <th className="text-left px-3 py-3 text-xs font-semibold text-[var(--muted-foreground)] w-[14%]">Versão</th>
+              <th className="text-left px-3 py-3 text-xs font-semibold text-[var(--muted-foreground)] w-[18%]">
+                <input type="text" placeholder="Louvor 🔍" value={filterTitle} onChange={(e) => setFilterTitle(e.target.value)} className="!py-1 !px-2 text-xs bg-[var(--card)] border border-[var(--border)] rounded w-full" />
+              </th>
+              <th className="text-left px-3 py-3 text-xs font-semibold text-[var(--muted-foreground)] w-[14%]">
+                <input type="text" placeholder="Versão 🔍" value={filterVersion} onChange={(e) => setFilterVersion(e.target.value)} className="!py-1 !px-2 text-xs bg-[var(--card)] border border-[var(--border)] rounded w-full" />
+              </th>
               <th className="text-left px-3 py-3 text-xs font-semibold text-[var(--muted-foreground)] w-[12%]">
                 <select value={filterCelebration} onChange={(e) => setFilterCelebration(e.target.value)} className="!py-1 !px-2 text-xs bg-[var(--card)] border border-[var(--border)] rounded cursor-pointer w-full">
                   <option value="">Tipo Celeb. ▼</option>
@@ -206,8 +218,12 @@ export default function SetlistPage() {
                   {worshipTypes.map(t => <option key={t} value={t.toUpperCase()}>{t}</option>)}
                 </select>
               </th>
-              <th className="text-left px-3 py-3 text-xs font-semibold text-[var(--muted-foreground)] w-[11%]">Descrição</th>
-              <th className="text-left px-3 py-3 text-xs font-semibold text-[var(--muted-foreground)] w-[5%]">Tom</th>
+              <th className="text-left px-3 py-3 text-xs font-semibold text-[var(--muted-foreground)] w-[11%]">
+                <input type="text" placeholder="Descrição 🔍" value={filterDescription} onChange={(e) => setFilterDescription(e.target.value)} className="!py-1 !px-2 text-xs bg-[var(--card)] border border-[var(--border)] rounded w-full" />
+              </th>
+              <th className="text-left px-3 py-3 text-xs font-semibold text-[var(--muted-foreground)] w-[5%]">
+                <input type="text" placeholder="Tom" value={filterKey} onChange={(e) => setFilterKey(e.target.value)} className="!py-1 !px-2 text-xs bg-[var(--card)] border border-[var(--border)] rounded w-full" />
+              </th>
               <th className="text-center px-3 py-3 text-xs font-semibold text-[var(--muted-foreground)] w-[6%]">
                 <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="!py-1 !px-2 text-xs bg-[var(--card)] border border-[var(--border)] rounded cursor-pointer w-full">
                   <option value="">Status ▼</option>
@@ -220,21 +236,23 @@ export default function SetlistPage() {
           </thead>
           <tbody>
             {filtered.map((item) => (
-              <tr key={item.id} onClick={() => { if (editingId !== item.id) startEdit(item) }} className={`border-b border-[var(--border)] hover:bg-[var(--accent)]/50 cursor-pointer ${item.status === 'OFF' ? 'opacity-40' : ''}`}>
+              <tr key={item.id} onClick={() => { if (editingId !== item.id && !editingId) startEdit(item) }} className={`border-b border-[var(--border)] hover:bg-[var(--accent)]/50 cursor-pointer ${item.status === 'OFF' ? 'opacity-40' : ''} ${editingId === item.id ? 'bg-[var(--accent)]' : ''}`}>
                 {editingId === item.id ? (
                   <>
-                    <td className="px-3 py-2 text-xs">{item.number}</td>
-                    <td className="px-2 py-1.5"><input className="!py-1 text-xs w-full" value={editData.title || ''} onChange={(e) => setEditData(p => ({ ...p, title: e.target.value }))} /></td>
-                    <td className="px-2 py-1.5"><input className="!py-1 text-xs w-full" value={editData.version || ''} onChange={(e) => setEditData(p => ({ ...p, version: e.target.value }))} /></td>
-                    <td className="px-2 py-1.5"><input className="!py-1 text-xs w-full" value={editData.celebration_type || ''} onChange={(e) => setEditData(p => ({ ...p, celebration_type: e.target.value }))} /></td>
-                    <td className="px-2 py-1.5"><input className="!py-1 text-xs w-full" value={editData.vocal_type || ''} onChange={(e) => setEditData(p => ({ ...p, vocal_type: e.target.value }))} /></td>
-                    <td className="px-2 py-1.5"><input className="!py-1 text-xs w-full" value={editData.worship_type || ''} onChange={(e) => setEditData(p => ({ ...p, worship_type: e.target.value }))} /></td>
-                    <td className="px-2 py-1.5"><input className="!py-1 text-xs w-full" value={editData.description || ''} onChange={(e) => setEditData(p => ({ ...p, description: e.target.value }))} /></td>
-                    <td className="px-2 py-1.5"><input className="!py-1 text-xs w-full" value={editData.key || ''} onChange={(e) => setEditData(p => ({ ...p, key: e.target.value }))} /></td>
-                    <td className="text-center px-3 py-2">
-                      <span className="text-xs font-medium text-green-400">{item.status}</span>
+                    <td className="px-3 py-2 text-xs" onClick={(e) => e.stopPropagation()}>{item.number}</td>
+                    <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}><input className="!py-1 text-xs w-full" value={editData.title || ''} onChange={(e) => setEditData(p => ({ ...p, title: e.target.value }))} /></td>
+                    <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}><input className="!py-1 text-xs w-full" value={editData.version || ''} onChange={(e) => setEditData(p => ({ ...p, version: e.target.value }))} /></td>
+                    <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}><input className="!py-1 text-xs w-full" value={editData.celebration_type || ''} onChange={(e) => setEditData(p => ({ ...p, celebration_type: e.target.value }))} /></td>
+                    <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}><input className="!py-1 text-xs w-full" value={editData.vocal_type || ''} onChange={(e) => setEditData(p => ({ ...p, vocal_type: e.target.value }))} /></td>
+                    <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}><input className="!py-1 text-xs w-full" value={editData.worship_type || ''} onChange={(e) => setEditData(p => ({ ...p, worship_type: e.target.value }))} /></td>
+                    <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}><input className="!py-1 text-xs w-full" value={editData.description || ''} onChange={(e) => setEditData(p => ({ ...p, description: e.target.value }))} /></td>
+                    <td className="px-2 py-1.5" onClick={(e) => e.stopPropagation()}><input className="!py-1 text-xs w-full" value={editData.key || ''} onChange={(e) => setEditData(p => ({ ...p, key: e.target.value }))} /></td>
+                    <td className="text-center px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={() => toggleStatus(item)} className={`text-xs font-medium px-2 py-0.5 rounded ${item.status === 'ON' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                        {item.status}
+                      </button>
                     </td>
-                    <td className="px-2 py-1.5 text-center">
+                    <td className="px-2 py-1.5 text-center" onClick={(e) => e.stopPropagation()}>
                       <button onClick={saveEdit} className="p-1.5 text-green-400 hover:bg-green-500/10 rounded"><Check className="w-4 h-4" /></button>
                     </td>
                   </>
@@ -268,14 +286,18 @@ export default function SetlistPage() {
       </div>
 
       {/* Active filters indicator */}
-      {(filterCelebration || filterVocal || filterWorship || filterStatus) && (
+      {(filterCelebration || filterVocal || filterWorship || filterStatus || filterTitle || filterVersion || filterDescription || filterKey) && (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs text-[var(--muted-foreground)]">Filtros:</span>
+          {filterTitle && <span className="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded cursor-pointer" onClick={() => setFilterTitle('')}>Louvor: {filterTitle} ×</span>}
+          {filterVersion && <span className="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded cursor-pointer" onClick={() => setFilterVersion('')}>Versão: {filterVersion} ×</span>}
           {filterCelebration && <span className="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded cursor-pointer" onClick={() => setFilterCelebration('')}>{filterCelebration} ×</span>}
           {filterVocal && <span className="text-xs bg-purple-500/10 text-purple-400 px-2 py-0.5 rounded cursor-pointer" onClick={() => setFilterVocal('')}>{filterVocal} ×</span>}
           {filterWorship && <span className="text-xs bg-orange-500/10 text-orange-400 px-2 py-0.5 rounded cursor-pointer" onClick={() => setFilterWorship('')}>{filterWorship} ×</span>}
+          {filterDescription && <span className="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded cursor-pointer" onClick={() => setFilterDescription('')}>Desc: {filterDescription} ×</span>}
+          {filterKey && <span className="text-xs bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded cursor-pointer" onClick={() => setFilterKey('')}>Tom: {filterKey} ×</span>}
           {filterStatus && <span className="text-xs bg-green-500/10 text-green-400 px-2 py-0.5 rounded cursor-pointer" onClick={() => setFilterStatus('')}>{filterStatus} ×</span>}
-          <button onClick={() => { setFilterCelebration(''); setFilterVocal(''); setFilterWorship(''); setFilterStatus('') }} className="text-xs text-red-400 ml-2">Limpar todos</button>
+          <button onClick={() => { setFilterCelebration(''); setFilterVocal(''); setFilterWorship(''); setFilterStatus(''); setFilterTitle(''); setFilterVersion(''); setFilterDescription(''); setFilterKey('') }} className="text-xs text-red-400 ml-2">Limpar todos</button>
         </div>
       )}
     </div>
