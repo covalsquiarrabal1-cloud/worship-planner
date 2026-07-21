@@ -30,10 +30,12 @@ export default function MemberMusicasPage() {
   const [suggestionMessage, setSuggestionMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
+  const [mySuggestions, setMySuggestions] = useState<{ id: string; link: string | null; message: string | null; created_at: string }[]>([])
   const supabase = createClient()
 
   useEffect(() => {
     loadMemberName()
+    loadMySuggestions()
   }, [])
 
   useEffect(() => {
@@ -49,6 +51,18 @@ export default function MemberMusicasPage() {
       .eq('email', user.email)
       .single()
     if (member?.name) setMemberName(member.name)
+  }
+
+  async function loadMySuggestions() {
+    const res = await fetch('/api/suggestions')
+    if (res.ok) {
+      const data = await res.json()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user && Array.isArray(data)) {
+        const mine = data.filter((s: any) => s.member_email === user.email)
+        setMySuggestions(mine)
+      }
+    }
   }
 
   async function loadSongs() {
@@ -85,6 +99,7 @@ export default function MemberMusicasPage() {
       setSent(true)
       setSuggestionLink('')
       setSuggestionMessage('')
+      loadMySuggestions()
       setTimeout(() => setSent(false), 3000)
     }
     setSending(false)
@@ -189,6 +204,26 @@ export default function MemberMusicasPage() {
           </button>
         )}
       </div>
+
+      {/* === HISTÓRICO DE SUGESTÕES === */}
+      {mySuggestions.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-[var(--muted-foreground)]">Minhas sugestões</h3>
+          {mySuggestions.map((s) => (
+            <div key={s.id} className="card py-3 space-y-1">
+              <p className="text-xs text-[var(--muted-foreground)]">
+                {format(new Date(s.created_at), "dd/MM 'às' HH:mm")}
+              </p>
+              {s.message && <p className="text-sm">{s.message}</p>}
+              {s.link && (
+                <a href={s.link} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-400 hover:underline truncate block">
+                  {s.link.length > 45 ? s.link.slice(0, 45) + '...' : s.link}
+                </a>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Bottom spacer */}
       <div className="h-24" />
