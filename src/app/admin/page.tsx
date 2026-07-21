@@ -50,6 +50,8 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<'mensal' | 'semanal' | 'pessoa'>('mensal')
   const [currentWeek, setCurrentWeek] = useState(1)
+  const [members, setMembers] = useState<{ id: string; name: string }[]>([])
+  const [editingCell, setEditingCell] = useState<{ eventId: string; assignmentId: string; role: string } | null>(null)
   const supabase = createClient()
   const router = useRouter()
 
@@ -58,6 +60,7 @@ export default function AdminPage() {
 
   useEffect(() => {
     loadEvents()
+    loadMembers()
     try {
       const saved = localStorage.getItem(`selectedDates_${month}_${year}`)
       if (saved) {
@@ -84,6 +87,24 @@ export default function AdminPage() {
       setEvents([])
     }
     setLoading(false)
+  }
+
+  async function loadMembers() {
+    const res = await fetch('/api/members')
+    if (res.ok) {
+      const data = await res.json()
+      setMembers(Array.isArray(data) ? data.map((m: any) => ({ id: m.id, name: m.name })) : [])
+    }
+  }
+
+  async function updateAssignment(assignmentId: string, memberId: string) {
+    await fetch('/api/schedule-events/update', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assignment_id: assignmentId, member_id: memberId }),
+    })
+    setEditingCell(null)
+    loadEvents()
   }
 
   // Calendar grid
@@ -125,6 +146,46 @@ export default function AdminPage() {
   function getAssignment(event: ScheduleEvent, role: string): string {
     const a = event.assignments.find(a => a.role === role)
     return a?.member?.name || '-'
+  }
+
+  function getAssignmentData(event: ScheduleEvent, role: string): { id: string; name: string; memberId: string } | null {
+    const a = event.assignments.find(a => a.role === role)
+    if (!a) return null
+    return { id: a.id, name: a.member?.name || '-', memberId: a.member?.id || '' }
+  }
+
+  function renderEditableCell(event: ScheduleEvent, role: string) {
+    const data = getAssignmentData(event, role)
+    if (!data) return <td className="px-3 py-2 text-xs text-[var(--muted-foreground)]">-</td>
+
+    const isEditing = editingCell?.eventId === event.id && editingCell?.role === role
+
+    if (isEditing) {
+      return (
+        <td className="px-1 py-1" onClick={(e) => e.stopPropagation()}>
+          <select
+            autoFocus
+            defaultValue={data.memberId}
+            onChange={(e) => updateAssignment(data.id, e.target.value)}
+            onBlur={() => setEditingCell(null)}
+            className="!py-1 !px-1 text-xs w-full"
+          >
+            {members.map(m => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        </td>
+      )
+    }
+
+    return (
+      <td
+        className="px-3 py-2 text-xs cursor-pointer hover:bg-blue-500/10 rounded"
+        onClick={(e) => { e.stopPropagation(); setEditingCell({ eventId: event.id, assignmentId: data.id, role }) }}
+      >
+        {data.name}
+      </td>
+    )
   }
 
   return (
@@ -292,20 +353,19 @@ export default function AdminPage() {
                 return (
                   <tr
                     key={event.id}
-                    className={`border-b border-[var(--border)] hover:bg-[var(--accent)]/50 cursor-pointer ${showWeekSeparator ? 'border-t-2 border-t-[var(--muted-foreground)]/30' : ''}`}
-                    onClick={() => router.push(`/admin/escala/${event.id}`)}
+                    className={`border-b border-[var(--border)] hover:bg-[var(--accent)]/50 ${showWeekSeparator ? 'border-t-2 border-t-[var(--muted-foreground)]/30' : ''}`}
                   >
                     <td className="px-3 py-2 text-xs text-[var(--muted-foreground)]">{event.week_number}</td>
                     <td className="px-3 py-2 text-xs font-medium">{format(new Date(event.event_date + 'T12:00:00'), 'dd/MM')}</td>
                     <td className="px-3 py-2 text-xs capitalize">{event.day_of_week}</td>
                     <td className="px-3 py-2 text-xs font-semibold text-green-400">{event.scale_type?.name || '-'}</td>
-                    <td className="px-3 py-2 text-xs">{getAssignment(event, 'vocal_1')}</td>
-                    <td className="px-3 py-2 text-xs">{getAssignment(event, 'vocal_2')}</td>
-                    <td className="px-3 py-2 text-xs">{getAssignment(event, 'vocal_3')}</td>
-                    <td className="px-3 py-2 text-xs">{getAssignment(event, 'bateria')}</td>
-                    <td className="px-3 py-2 text-xs">{getAssignment(event, 'guitarra')}</td>
-                    <td className="px-3 py-2 text-xs">{getAssignment(event, 'baixo')}</td>
-                    <td className="px-3 py-2 text-xs">{getAssignment(event, 'teclado')}</td>
+                    {renderEditableCell(event, 'vocal_1')}
+                    {renderEditableCell(event, 'vocal_2')}
+                    {renderEditableCell(event, 'vocal_3')}
+                    {renderEditableCell(event, 'bateria')}
+                    {renderEditableCell(event, 'guitarra')}
+                    {renderEditableCell(event, 'baixo')}
+                    {renderEditableCell(event, 'teclado')}
                   </tr>
                 )
               })}
