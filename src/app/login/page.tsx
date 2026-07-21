@@ -24,13 +24,14 @@ export default function LoginPage() {
         body: JSON.stringify({ email }),
       })
 
-      const data = await res.json()
-
       if (!res.ok) {
-        setError(data.error || 'Erro ao entrar')
+        const data = await res.json().catch(() => null)
+        setError(data?.error || `Erro ${res.status}. Tente novamente.`)
         setLoading(false)
         return
       }
+
+      const data = await res.json()
 
       // Set the session on the client
       await supabase.auth.setSession({
@@ -40,8 +41,8 @@ export default function LoginPage() {
 
       router.push('/')
       router.refresh()
-    } catch {
-      setError('Erro de conexão. Tente novamente.')
+    } catch (err: any) {
+      setError('Erro de conexão: ' + (err?.message || 'verifique sua internet'))
       setLoading(false)
     }
   }
