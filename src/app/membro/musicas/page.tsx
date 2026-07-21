@@ -120,7 +120,7 @@ export default function MemberMusicasPage() {
       ) : (
         <div className="space-y-4">
           {events.map((event) => (
-            <div key={event.id} className="card space-y-2">
+            <div key={event.id} className="card space-y-3">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-xs text-[var(--muted-foreground)] capitalize">
                   {event.day_of_week}, {format(new Date(event.event_date + 'T12:00:00'), 'dd/MM')}
@@ -130,7 +130,7 @@ export default function MemberMusicasPage() {
                 </span>
               </div>
               {event.songs.sort((a, b) => a.order_num - b.order_num).map((song) => (
-                <div key={song.id} className="flex items-center gap-3 bg-[var(--accent)] rounded-lg px-3 py-2.5">
+                <div key={song.id} className="flex items-center gap-3 bg-[var(--accent)] rounded-lg px-3 py-4">
                   <span className="text-xs text-[var(--muted-foreground)] w-5">{song.order_num}.</span>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{song.title}</p>
