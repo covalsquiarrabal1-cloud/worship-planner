@@ -6,98 +6,120 @@ import { createClient } from '@supabase/supabase-js'
 const INTERNAL_PASSWORD = 'worship-planner-internal-2024-secret'
 
 export async function POST(request: Request) {
-  const { email } = await request.json()
+  try {
+    const { email } = await request.json()
 
-  if (!email) {
-    return NextResponse.json({ error: 'E-mail obrigatório' }, { status: 400 })
-  }
+    if (!email) {
+      return NextResponse.json({ error: 'E-mail obrigatório' }, { status: 400 })
+    }
 
-  const normalizedEmail = email.trim().toLowerCase()
-  const serviceClient = await createServiceRoleClient()
+    const normalizedEmail = email.trim().toLowerCase()
+    const serviceClient = await createServiceRoleClient()
 
-  // Check if email exists in members table or profiles table
-  const { data: member } = await serviceClient
-    .from('members')
-    .select('id, name')
-    .ilike('email', normalizedEmail)
-    .single()
-
-  let isAdmin = false
-  if (!member) {
-    const { data: profile } = await serviceClient
-      .from('profiles')
-      .select('id, role')
+    // Check if email exists in members table or profiles table
+    const { data: member } = await serviceClient
+      .from('members')
+      .select('id, name')
       .ilike('email', normalizedEmail)
       .single()
 
-    if (!profile) {
-      return NextResponse.json({ error: 'E-mail não cadastrado' }, { status: 404 })
+    let isAdmin = false
+    if (!member) {
+      const { data: profile } = await serviceClient
+        .from('profiles')
+        .select('id, role')
+        .ilike('email', normalizedEmail)
+        .single()
+
+      if (!profile) {
+        return NextResponse.json({ error: 'E-mail não cadastrado' }, { status: 404 })
+      }
+      isAdmin = profile.role === 'admin'
     }
-    isAdmin = profile.role === 'admin'
-  }
 
-  // Check if auth user exists
-  const { data: existingUsers } = await serviceClient.auth.admin.listUsers()
-  const existingUser = existingUsers?.users?.find(
-    (u) => u.email?.toLowerCase() === normalizedEmail
-  )
+    // Try to sign in directly first
+    const anonClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
 
-  if (!existingUser) {
-    // Create auth user with internal password
-    const { data: newUser, error: createError } = await serviceClient.auth.admin.createUser({
+    let signInResult = await anonClient.auth.signInWithPassword({
       email: normalizedEmail,
       password: INTERNAL_PASSWORD,
-      email_confirm: true,
-      user_metadata: { full_name: member?.name || '' },
     })
 
-    if (createError) {
-      return NextResponse.json({ error: 'Erro ao criar acesso: ' + createError.message }, { status: 500 })
+    // If sign in failed, user might not exist or has different password
+    if (signInResult.error) {
+      // Try to create the user
+      const { data: newUser, error: createError } = await serviceClient.auth.admin.createUser({
+        email: normalizedEmail,
+        password: INTERNAL_PASSWORD,
+        email_confirm: true,
+        user_metadata: { full_name: member?.name || '' },
+      })
+
+      if (createError) {
+        // User exists but with different password - update password
+        if (createError.message.includes('already been registered')) {
+          // Get user by email and update password
+          const { data: userData } = await serviceClient.auth.admin.listUsers({
+            page: 1,
+            perPage: 1,
+          })
+          
+          // Find user by email in a more targeted way
+          const { data: userByEmail } = await serviceClient
+            .from('profiles')
+            .select('id')
+            .ilike('email', normalizedEmail)
+            .single()
+
+          if (userByEmail) {
+            await serviceClient.auth.admin.updateUserById(userByEmail.id, {
+              password: INTERNAL_PASSWORD,
+            })
+          }
+        } else {
+          return NextResponse.json({ error: 'Erro ao criar acesso: ' + createError.message }, { status: 500 })
+        }
+      } else if (newUser) {
+        // Create profile for new user
+        await serviceClient.from('profiles').upsert({
+          id: newUser.user.id,
+          email: normalizedEmail,
+          full_name: member?.name || '',
+          role: isAdmin ? 'admin' : 'member',
+        }, { onConflict: 'id' })
+
+        // Link member to user_id
+        if (member) {
+          await serviceClient
+            .from('members')
+            .update({ user_id: newUser.user.id })
+            .eq('id', member.id)
+        }
+      }
+
+      // Try sign in again
+      signInResult = await anonClient.auth.signInWithPassword({
+        email: normalizedEmail,
+        password: INTERNAL_PASSWORD,
+      })
+
+      if (signInResult.error || !signInResult.data.session) {
+        return NextResponse.json({ error: 'Erro ao autenticar. Tente novamente.' }, { status: 500 })
+      }
     }
 
-    // Create profile
-    await serviceClient.from('profiles').upsert({
-      id: newUser.user.id,
-      email: normalizedEmail,
-      full_name: member?.name || '',
-      role: isAdmin ? 'admin' : 'member',
-    }, { onConflict: 'id' })
-
-    // Link member to user_id
-    if (member) {
-      await serviceClient
-        .from('members')
-        .update({ user_id: newUser.user.id })
-        .eq('id', member.id)
-    }
-  } else {
-    // Ensure password is set to internal password (in case it was different)
-    await serviceClient.auth.admin.updateUserById(existingUser.id, {
-      password: INTERNAL_PASSWORD,
+    return NextResponse.json({
+      success: true,
+      session: {
+        access_token: signInResult.data.session!.access_token,
+        refresh_token: signInResult.data.session!.refresh_token,
+      },
+      name: member?.name || '',
     })
+  } catch (err: any) {
+    return NextResponse.json({ error: 'Erro interno: ' + (err?.message || 'desconhecido') }, { status: 500 })
   }
-
-  // Now sign in using a separate supabase client (anon key, server-side)
-  const anonClient = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-
-  const { data: signInData, error: signInError } = await anonClient.auth.signInWithPassword({
-    email: normalizedEmail,
-    password: INTERNAL_PASSWORD,
-  })
-
-  if (signInError || !signInData.session) {
-    return NextResponse.json({ error: 'Erro ao autenticar: ' + signInError?.message }, { status: 500 })
-  }
-
-  return NextResponse.json({
-    success: true,
-    session: {
-      access_token: signInData.session.access_token,
-      refresh_token: signInData.session.refresh_token,
-    },
-    name: member?.name || '',
-  })
 }

@@ -50,16 +50,16 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white mb-5">
-            <Music className="w-8 h-8 text-black" />
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white mb-6">
+            <Music className="w-10 h-10 text-black" />
           </div>
-          <h1 className="text-2xl font-bold">Worship Planner</h1>
-          <p className="text-[var(--muted-foreground)] text-sm mt-2">Digite seu e-mail para entrar</p>
+          <h1 className="text-2xl font-bold mt-2">Worship Planner</h1>
+          <p className="text-[var(--muted-foreground)] text-sm mt-3">Digite seu e-mail para entrar</p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleLogin} className="space-y-5">
           <div className="relative">
             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[var(--muted-foreground)]" />
             <input
@@ -80,10 +80,10 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-white text-black font-semibold py-3 rounded-xl hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center gap-2 text-sm mt-2 transition-colors"
+            className="w-full bg-white text-black font-semibold py-4 rounded-xl hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center gap-2 text-base transition-colors"
           >
             {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-5 h-5 animate-spin" />
             ) : (
               'Entrar'
             )}
