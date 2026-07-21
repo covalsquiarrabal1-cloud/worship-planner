@@ -299,6 +299,18 @@ export default function AdminPage() {
           >
             Importar Jul/26
           </button>
+          <button
+            onClick={async () => {
+              if (!confirm('Importar louvores da semana 4 de Julho?')) return
+              const res = await fetch('/api/import-louvores', { method: 'POST' })
+              const data = await res.json()
+              if (res.ok) { alert('Importado! ' + data.songsCreated + ' louvores'); loadEvents() }
+              else alert('Erro: ' + data.error)
+            }}
+            className="flex items-center justify-center gap-2 bg-purple-600 text-white py-2.5 rounded-xl text-sm hover:bg-purple-700"
+          >
+            Importar Louvores
+          </button>
         </div>
       </div>
 
