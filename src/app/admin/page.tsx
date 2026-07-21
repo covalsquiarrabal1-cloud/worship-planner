@@ -41,6 +41,14 @@ interface ScheduleEvent {
     role: string
     member: { id: string; name: string } | null
   }[]
+  songs: {
+    id: string
+    order_num: number
+    title: string
+    version: string | null
+    minister: string | null
+    youtube_url: string | null
+  }[]
 }
 
 export default function AdminPage() {
@@ -327,6 +335,12 @@ export default function AdminPage() {
         </div>
       ) : view === 'pessoa' ? (
         <PersonView events={events} />
+      ) : view === 'semanal' ? (
+        <WeeklyView
+          events={events.filter(e => e.week_number === currentWeek)}
+          members={members}
+          onUpdateAssignment={updateAssignment}
+        />
       ) : (
         <div className="card p-0 overflow-x-auto">
           <table className="w-full text-sm">
@@ -346,9 +360,9 @@ export default function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {(view === 'semanal' ? events.filter(e => e.week_number === currentWeek) : events).map((event, idx, arr) => {
+              {events.map((event, idx, arr) => {
                 const prevEvent = idx > 0 ? arr[idx - 1] : null
-                const showWeekSeparator = view === 'mensal' && prevEvent && prevEvent.week_number !== event.week_number
+                const showWeekSeparator = prevEvent && prevEvent.week_number !== event.week_number
 
                 return (
                   <tr
@@ -369,13 +383,6 @@ export default function AdminPage() {
                   </tr>
                 )
               })}
-              {view === 'semanal' && events.filter(e => e.week_number === currentWeek).length === 0 && (
-                <tr>
-                  <td colSpan={11} className="px-3 py-6 text-center text-sm text-[var(--muted-foreground)]">
-                    Nenhum evento na semana {currentWeek}.
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
@@ -476,6 +483,99 @@ function PersonView({ events }: { events: ScheduleEvent[] }) {
           })}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+
+function WeeklyView({ events, members, onUpdateAssignment }: {
+  events: ScheduleEvent[]
+  members: { id: string; name: string }[]
+  onUpdateAssignment: (assignmentId: string, memberId: string) => void
+}) {
+  if (events.length === 0) {
+    return (
+      <div className="card text-center py-8">
+        <p className="text-sm text-[var(--muted-foreground)]">Nenhum evento nesta semana.</p>
+      </div>
+    )
+  }
+
+  const vocalRoles = ['vocal_1', 'vocal_2', 'vocal_3']
+  const instrumentRoles = ['bateria', 'guitarra', 'baixo', 'teclado']
+  const roleLabels: Record<string, string> = {
+    vocal_1: 'Vocal 1', vocal_2: 'Vocal 2', vocal_3: 'Vocal 3',
+    bateria: 'Bateria', guitarra: 'Guitarra', baixo: 'Baixo', teclado: 'Teclado',
+  }
+
+  return (
+    <div className="space-y-6">
+      {events.map((event) => {
+        const vocals = event.assignments.filter(a => vocalRoles.includes(a.role)).sort((a, b) => a.role.localeCompare(b.role))
+        const instruments = event.assignments.filter(a => instrumentRoles.includes(a.role))
+        const songs = (event.songs || []).sort((a, b) => a.order_num - b.order_num)
+
+        return (
+          <div key={event.id} className="card space-y-4">
+            {/* Header */}
+            <div>
+              <span className="text-xs text-[var(--muted-foreground)] capitalize">
+                {event.day_of_week}, {event.event_date.slice(8, 10)}/{event.event_date.slice(5, 7)}
+              </span>
+              <h3 className="text-lg font-bold text-green-400">{event.scale_type?.name || '-'}</h3>
+            </div>
+
+            {/* Escala: Vocais + Músicos side by side */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] mb-1">Vocais</p>
+                {vocals.map(a => (
+                  <div key={a.id} className="text-xs py-1">
+                    <span className="text-[var(--muted-foreground)]">{roleLabels[a.role]}: </span>
+                    <span className="font-medium">{a.member?.name || '-'}</span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] mb-1">Músicos</p>
+                {instruments.map(a => (
+                  <div key={a.id} className="text-xs py-1">
+                    <span className="text-[var(--muted-foreground)]">{roleLabels[a.role] || a.role}: </span>
+                    <span className="font-medium">{a.member?.name || '-'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Louvores */}
+            {songs.length > 0 && (
+              <div>
+                <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] mb-2">Louvores</p>
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-[var(--border)]">
+                      <th className="text-left py-1.5 px-2 text-[var(--muted-foreground)] font-medium w-8">#</th>
+                      <th className="text-left py-1.5 px-2 text-[var(--muted-foreground)] font-medium">Louvor</th>
+                      <th className="text-left py-1.5 px-2 text-[var(--muted-foreground)] font-medium">Versão</th>
+                      <th className="text-left py-1.5 px-2 text-[var(--muted-foreground)] font-medium">Ministro</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {songs.map(song => (
+                      <tr key={song.id} className="border-b border-[var(--border)]/50">
+                        <td className="py-2 px-2 text-[var(--muted-foreground)]">{song.order_num}</td>
+                        <td className="py-2 px-2 font-medium">{song.title}</td>
+                        <td className="py-2 px-2 text-[var(--muted-foreground)]">{song.version || '-'}</td>
+                        <td className="py-2 px-2">{song.minister || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

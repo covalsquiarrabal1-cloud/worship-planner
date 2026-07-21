@@ -17,6 +17,14 @@ interface ScheduleEvent {
     role: string
     member: { id: string; name: string } | null
   }[]
+  songs: {
+    id: string
+    order_num: number
+    title: string
+    version: string | null
+    minister: string | null
+    youtube_url: string | null
+  }[]
 }
 
 export default function MemberSchedulePage() {
@@ -228,6 +236,27 @@ export default function MemberSchedulePage() {
                     {instruments.length === 0 && <p className="text-xs text-[var(--muted-foreground)]">-</p>}
                   </div>
                 </div>
+
+                {/* Louvores */}
+                {event.songs && event.songs.length > 0 && (
+                  <div className="mt-4 pt-3 border-t border-[var(--border)]">
+                    <p className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase mb-2">Louvores</p>
+                    <div className="space-y-1.5">
+                      {[...event.songs].sort((a, b) => a.order_num - b.order_num).map(song => (
+                        <div key={song.id} className="flex items-center gap-2 text-xs bg-[var(--accent)] rounded px-2 py-2">
+                          <span className="text-[var(--muted-foreground)] w-4 shrink-0">{song.order_num}.</span>
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium">{song.title}</span>
+                            {song.minister && <span className="text-[var(--muted-foreground)]"> — {song.minister}</span>}
+                          </div>
+                          {song.youtube_url && (
+                            <a href={song.youtube_url} target="_blank" rel="noopener noreferrer" className="text-red-400 shrink-0">▶</a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })}

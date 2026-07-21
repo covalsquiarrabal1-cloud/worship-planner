@@ -28,7 +28,8 @@ export async function GET(request: Request) {
         id,
         role,
         member:members(id, name)
-      )
+      ),
+      songs(id, order_num, title, version, minister, youtube_url)
     `)
     .gte('event_date', startDate)
     .lte('event_date', endDate)

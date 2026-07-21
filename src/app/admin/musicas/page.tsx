@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Music, ExternalLink, Loader2, Plus, Trash2, X, MessageSquare } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Music, ExternalLink, Loader2, Plus, Trash2, X, MessageSquare, Link2 } from 'lucide-react'
 
 interface SongEvent {
   id: string
@@ -36,6 +36,8 @@ export default function AdminMusicasPage() {
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState<string | null>(null) // event_id
+  const [editingLink, setEditingLink] = useState<string | null>(null) // song_id
+  const [linkValue, setLinkValue] = useState('')
   const [newTitle, setNewTitle] = useState('')
   const [newUrl, setNewUrl] = useState('')
   const [saving, setSaving] = useState(false)
@@ -121,6 +123,17 @@ export default function AdminMusicasPage() {
   async function deleteSuggestion(id: string) {
     await fetch(`/api/suggestions?id=${id}`, { method: 'DELETE' })
     setSuggestions(prev => prev.filter(s => s.id !== id))
+  }
+
+  async function saveLink(songId: string) {
+    await fetch('/api/songs/update', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: songId, youtube_url: linkValue.trim() || null }),
+    })
+    setEditingLink(null)
+    setLinkValue('')
+    loadData()
   }
 
   if (loading) {
