@@ -17,6 +17,7 @@ interface SelectedDay {
   date: string
   dayOfWeek: string
   scaleName: string
+  uid: string
 }
 
 const dayNames: Record<number, string> = {
@@ -85,7 +86,7 @@ export default function GerarEscalaPage() {
           autoName = defaultForDay.scale_name
         }
 
-        return { date: dateStr, dayOfWeek, scaleName: autoName }
+        return { date: dateStr, dayOfWeek, scaleName: autoName, uid: crypto.randomUUID() }
       })
 
       // Override with localStorage saved names if they match
@@ -95,7 +96,7 @@ export default function GerarEscalaPage() {
           const config = JSON.parse(saved)
           if (config.selectedDays && Array.isArray(config.selectedDays) && config.month === month && config.year === year) {
             days.forEach((day) => {
-              const savedDay = config.selectedDays.find((sd: SelectedDay) => sd.date === day.date)
+              const savedDay = config.selectedDays.find((sd: any) => sd.date === day.date)
               if (savedDay && savedDay.scaleName) {
                 day.scaleName = savedDay.scaleName
               }
@@ -110,14 +111,30 @@ export default function GerarEscalaPage() {
     setLoading(false)
   }
 
-  function setDayScaleName(dateStr: string, scaleName: string) {
+  function setDayScaleName(uid: string, scaleName: string) {
     setSelectedDays(prev =>
-      prev.map(d => d.date === dateStr ? { ...d, scaleName } : d)
+      prev.map(d => d.uid === uid ? { ...d, scaleName } : d)
     )
   }
 
-  function removeDay(dateStr: string) {
-    setSelectedDays(prev => prev.filter(d => d.date !== dateStr))
+  function removeDay(uid: string) {
+    setSelectedDays(prev => prev.filter(d => d.uid !== uid))
+  }
+
+  function addExtraCelebration(dateStr: string, dayOfWeek: string) {
+    setSelectedDays(prev => {
+      const newDay: SelectedDay = {
+        date: dateStr,
+        dayOfWeek,
+        scaleName: '',
+        uid: crypto.randomUUID(),
+      }
+      // Insert after the last entry with the same date
+      const lastIndex = prev.reduce((acc, d, i) => d.date === dateStr ? i : acc, -1)
+      const result = [...prev]
+      result.splice(lastIndex + 1, 0, newDay)
+      return result
+    })
   }
 
   function addQuickName() {
@@ -255,7 +272,7 @@ export default function GerarEscalaPage() {
         {selectedDays.map((day) => {
           const dateObj = new Date(day.date + 'T12:00:00')
           return (
-            <div key={day.date} className={`card ${day.scaleName ? 'border-green-500/30' : ''}`}>
+            <div key={day.uid} className={`card ${day.scaleName ? 'border-green-500/30' : ''}`}>
               <div className="flex items-center gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
@@ -268,7 +285,7 @@ export default function GerarEscalaPage() {
                   </div>
                   <select
                     value={day.scaleName}
-                    onChange={(e) => setDayScaleName(day.date, e.target.value)}
+                    onChange={(e) => setDayScaleName(day.uid, e.target.value)}
                   >
                     <option value="">— Selecione o tipo —</option>
                     {scaleNames.map((name) => (
@@ -281,7 +298,7 @@ export default function GerarEscalaPage() {
                       {scaleNames.map((name) => (
                         <button
                           key={name}
-                          onClick={() => setDayScaleName(day.date, name)}
+                          onClick={() => setDayScaleName(day.uid, name)}
                           className="px-3 py-1.5 text-xs rounded-lg bg-[var(--accent)] text-[var(--muted-foreground)] hover:bg-[var(--border)] hover:text-white transition-colors"
                         >
                           {name}
@@ -290,12 +307,22 @@ export default function GerarEscalaPage() {
                     </div>
                   )}
                 </div>
-                <button
-                  onClick={() => removeDay(day.date)}
-                  className="p-2 rounded-lg hover:bg-[var(--accent)] text-[var(--muted-foreground)] shrink-0"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <div className="flex flex-col gap-1 shrink-0">
+                  <button
+                    onClick={() => addExtraCelebration(day.date, day.dayOfWeek)}
+                    className="p-2 rounded-lg hover:bg-[var(--accent)] text-[var(--muted-foreground)]"
+                    title="Adicionar outra celebração neste dia"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => removeDay(day.uid)}
+                    className="p-2 rounded-lg hover:bg-[var(--accent)] text-[var(--muted-foreground)]"
+                    title="Remover"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           )
