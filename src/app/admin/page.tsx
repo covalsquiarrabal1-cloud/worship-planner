@@ -173,11 +173,19 @@ export default function AdminPage() {
         <td className="px-1 py-1" onClick={(e) => e.stopPropagation()}>
           <select
             autoFocus
-            defaultValue={data.memberId}
-            onChange={(e) => updateAssignment(data.id, e.target.value)}
+            defaultValue={data.memberId || '_empty'}
+            onChange={(e) => {
+              if (e.target.value === '_empty') {
+                // Set to empty/no member - we'll handle this by removing the assignment
+                updateAssignment(data.id, '')
+              } else {
+                updateAssignment(data.id, e.target.value)
+              }
+            }}
             onBlur={() => setEditingCell(null)}
             className="!py-1 !px-1 text-xs w-full"
           >
+            <option value="_empty">-</option>
             {members.map(m => (
               <option key={m.id} value={m.id}>{m.name}</option>
             ))}

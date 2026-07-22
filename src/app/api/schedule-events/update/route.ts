@@ -15,8 +15,18 @@ export async function PUT(request: Request) {
   const body = await request.json()
   const { assignment_id, member_id } = body
 
-  if (!assignment_id || !member_id) {
-    return NextResponse.json({ error: 'assignment_id e member_id obrigatórios' }, { status: 400 })
+  if (!assignment_id) {
+    return NextResponse.json({ error: 'assignment_id obrigatório' }, { status: 400 })
+  }
+
+  // If member_id is empty, delete the assignment (set to "-")
+  if (!member_id) {
+    const { error } = await serviceClient
+      .from('schedule_assignments')
+      .delete()
+      .eq('id', assignment_id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true, deleted: true })
   }
 
   const { data, error } = await serviceClient
