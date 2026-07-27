@@ -262,6 +262,25 @@ export default function AdminMusicasPage() {
             {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : '🎵 Gerar Louvores Automaticamente'}
           </button>
 
+          <button
+            onClick={async () => {
+              if (!confirm('ATENÇÃO: Isso vai excluir TODOS os louvores do mês. Tem certeza?')) return
+              const start = format(startOfMonth(currentDate), 'yyyy-MM-dd')
+              const end = format(endOfMonth(currentDate), 'yyyy-MM-dd')
+              const res = await fetch(`/api/songs/delete-all`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ start, end }),
+              })
+              const data = await res.json()
+              if (res.ok) { alert('Todos os louvores excluídos.'); loadData() }
+              else alert('Erro: ' + data.error)
+            }}
+            className="w-full bg-red-600/20 text-red-400 font-medium py-2.5 rounded-xl text-sm hover:bg-red-600/30 flex items-center justify-center gap-2 border border-red-600/30"
+          >
+            🗑 Excluir Todos os Louvores do Mês
+          </button>
+
           {events.length === 0 ? (
             <div className="text-center py-8 text-[var(--muted-foreground)]">
               <p>Nenhum evento neste mês. Gere a escala primeiro.</p>
