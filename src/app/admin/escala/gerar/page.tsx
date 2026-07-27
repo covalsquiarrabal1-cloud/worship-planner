@@ -40,6 +40,7 @@ export default function GerarEscalaPage() {
   const [selectedDays, setSelectedDays] = useState<SelectedDay[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [scaleNames, setScaleNames] = useState<string[]>([])
   const [newQuickName, setNewQuickName] = useState('')
   const supabase = createClient()
@@ -183,6 +184,26 @@ export default function GerarEscalaPage() {
     }
   }
 
+  async function saveChanges() {
+    setSaving(true)
+    try {
+      const res = await fetch('/api/schedule-events/save-changes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month, year, selectedDays }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        alert('Alterações salvas!')
+      } else {
+        alert('Erro: ' + (data.error || 'Erro desconhecido'))
+      }
+    } catch {
+      alert('Erro de conexão')
+    }
+    setSaving(false)
+  }
+
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -227,23 +248,32 @@ export default function GerarEscalaPage() {
       </div>
 
       {/* Generate button at TOP */}
-      <button
-        onClick={generateSchedule}
-        disabled={generating || selectedDays.length === 0}
-        className="w-full bg-white text-black font-semibold py-3 rounded-xl disabled:opacity-40 flex items-center justify-center gap-2 text-sm hover:bg-gray-100 transition-colors"
-      >
-        {generating ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            Gerando...
-          </>
-        ) : (
-          <>
-            <Calendar className="w-4 h-4" />
-            Gerar Escala ({selectedDays.length} dias)
-          </>
-        )}
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={generateSchedule}
+          disabled={generating || selectedDays.length === 0}
+          className="flex-1 bg-white text-black font-semibold py-3 rounded-xl disabled:opacity-40 flex items-center justify-center gap-2 text-sm hover:bg-gray-100 transition-colors"
+        >
+          {generating ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Gerando...
+            </>
+          ) : (
+            <>
+              <Calendar className="w-4 h-4" />
+              Gerar Escala ({selectedDays.length} dias)
+            </>
+          )}
+        </button>
+        <button
+          onClick={saveChanges}
+          disabled={saving || selectedDays.length === 0}
+          className="px-6 bg-green-600 text-white font-semibold py-3 rounded-xl disabled:opacity-40 flex items-center justify-center gap-2 text-sm hover:bg-green-700 transition-colors"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : '💾 Salvar'}
+        </button>
+      </div>
 
       {/* Add new scale name */}
       <div className="card space-y-3">
