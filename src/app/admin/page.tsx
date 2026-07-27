@@ -474,6 +474,10 @@ export default function AdminPage() {
 
 
 function PersonView({ events }: { events: ScheduleEvent[] }) {
+  const [reordering, setReordering] = useState(false)
+  const [orderedNames, setOrderedNames] = useState<string[]>([])
+  const [savingOrder, setSavingOrder] = useState(false)
+
   // Day of week mapping from day_of_week string to index
   const dayMap: Record<string, number> = {
     'domingo': 0,
@@ -487,11 +491,10 @@ function PersonView({ events }: { events: ScheduleEvent[] }) {
   }
 
   const dayLabels = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM']
-  // Map: dayLabels index -> day_of_week number (1=seg, 2=ter, ..., 6=sab, 0=dom)
   const dayLabelToNum = [1, 2, 3, 4, 5, 6, 0]
 
   // Build person stats
-  const personStats: Record<string, { name: string; days: number[] }> = {}
+  const personStats: Record<string, { name: string; memberId: string; days: number[] }> = {}
 
   for (const event of events) {
     const dow = dayMap[event.day_of_week.toLowerCase()] ?? -1
@@ -499,17 +502,69 @@ function PersonView({ events }: { events: ScheduleEvent[] }) {
 
     for (const assignment of event.assignments) {
       const name = assignment.member?.name
-      if (!name) continue
+      const memberId = assignment.member?.id
+      if (!name || !memberId) continue
 
       if (!personStats[name]) {
-        personStats[name] = { name, days: [0, 0, 0, 0, 0, 0, 0] } // indices 0-6 = dom-sab
+        personStats[name] = { name, memberId, days: [0, 0, 0, 0, 0, 0, 0] }
       }
       personStats[name].days[dow]++
     }
   }
 
-  // Convert to array sorted by name
-  const rows = Object.values(personStats).sort((a, b) => a.name.localeCompare(b.name))
+  const rows = Object.values(personStats)
+
+  // Apply custom order if saved
+  useEffect(() => {
+    const saved = localStorage.getItem('memberOrder')
+    if (saved) {
+      setOrderedNames(JSON.parse(saved))
+    }
+  }, [])
+
+  const sortedRows = orderedNames.length > 0
+    ? [...rows].sort((a, b) => {
+        const aIdx = orderedNames.indexOf(a.name)
+        const bIdx = orderedNames.indexOf(b.name)
+        if (aIdx === -1 && bIdx === -1) return a.name.localeCompare(b.name)
+        if (aIdx === -1) return 1
+        if (bIdx === -1) return -1
+        return aIdx - bIdx
+      })
+    : [...rows].sort((a, b) => a.name.localeCompare(b.name))
+
+  function moveRow(name: string, direction: 'up' | 'down') {
+    const currentOrder = sortedRows.map(r => r.name)
+    const idx = currentOrder.indexOf(name)
+    if (idx === -1) return
+    if (direction === 'up' && idx === 0) return
+    if (direction === 'down' && idx === currentOrder.length - 1) return
+
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1
+    const temp = currentOrder[idx]
+    currentOrder[idx] = currentOrder[swapIdx]
+    currentOrder[swapIdx] = temp
+
+    setOrderedNames([...currentOrder])
+  }
+
+  async function saveOrder() {
+    setSavingOrder(true)
+    const currentOrder = sortedRows.map(r => r.name)
+    localStorage.setItem('memberOrder', JSON.stringify(currentOrder))
+
+    // Also save to server
+    const ids = sortedRows.map(r => r.memberId)
+    await fetch('/api/members/reorder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderedIds: ids }),
+    })
+
+    setSavingOrder(false)
+    setReordering(false)
+    alert('Ordem salva!')
+  }
 
   if (rows.length === 0) {
     return (
@@ -520,34 +575,63 @@ function PersonView({ events }: { events: ScheduleEvent[] }) {
   }
 
   return (
-    <div className="card p-0 overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-[var(--border)] bg-[var(--accent)]">
-            <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Nome</th>
-            {dayLabels.map((label) => (
-              <th key={label} className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">{label}</th>
-            ))}
-            <th className="text-center px-3 py-2.5 text-xs font-semibold text-white">Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => {
-            const total = row.days.reduce((sum, v) => sum + v, 0)
-            return (
-              <tr key={row.name} className="border-b border-[var(--border)] hover:bg-[var(--accent)]/50">
-                <td className="px-3 py-2 text-xs font-medium">{row.name}</td>
-                {dayLabelToNum.map((dowNum, idx) => (
-                  <td key={idx} className="text-center px-3 py-2 text-xs">
-                    {row.days[dowNum] > 0 ? row.days[dowNum] : ''}
-                  </td>
-                ))}
-                <td className="text-center px-3 py-2 text-xs font-bold">{total}</td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setReordering(!reordering)}
+          className={`px-4 py-2 rounded-lg text-xs font-medium ${reordering ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+        >
+          {reordering ? 'Cancelar' : '↕ Reordenar'}
+        </button>
+        {reordering && (
+          <button
+            onClick={saveOrder}
+            disabled={savingOrder}
+            className="px-4 py-2 rounded-lg text-xs font-medium bg-green-600 text-white"
+          >
+            {savingOrder ? '...' : '💾 Salvar Ordem'}
+          </button>
+        )}
+      </div>
+
+      <div className="card p-0 overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-[var(--border)] bg-[var(--accent)]">
+              {reordering && <th className="w-12"></th>}
+              <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Nome</th>
+              {dayLabels.map((label) => (
+                <th key={label} className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">{label}</th>
+              ))}
+              <th className="text-center px-3 py-2.5 text-xs font-semibold text-white">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {sortedRows.map((row) => {
+              const total = row.days.reduce((sum, v) => sum + v, 0)
+              return (
+                <tr key={row.name} className="border-b border-[var(--border)] hover:bg-[var(--accent)]/50">
+                  {reordering && (
+                    <td className="px-1 py-1">
+                      <div className="flex flex-col">
+                        <button onClick={() => moveRow(row.name, 'up')} className="p-0.5 text-[var(--muted-foreground)] hover:text-white">▲</button>
+                        <button onClick={() => moveRow(row.name, 'down')} className="p-0.5 text-[var(--muted-foreground)] hover:text-white">▼</button>
+                      </div>
+                    </td>
+                  )}
+                  <td className="px-3 py-2 text-xs font-medium">{row.name}</td>
+                  {dayLabelToNum.map((dowNum, idx) => (
+                    <td key={idx} className="text-center px-3 py-2 text-xs">
+                      {row.days[dowNum] > 0 ? row.days[dowNum] : ''}
+                    </td>
+                  ))}
+                  <td className="text-center px-3 py-2 text-xs font-bold">{total}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
