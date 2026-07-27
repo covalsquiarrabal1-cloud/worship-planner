@@ -158,16 +158,16 @@ export default function MemberSchedulePage() {
       </div>
 
       {/* View Toggle */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
         <button
           onClick={() => { playClick(); setView('mensal') }}
-          className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${view === 'mensal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+          className={`px-6 py-3 rounded-xl text-base font-medium transition-colors ${view === 'mensal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
         >
           Mensal
         </button>
         <button
           onClick={() => { playClick(); setView('semanal') }}
-          className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-colors ${view === 'semanal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+          className={`px-6 py-3 rounded-xl text-base font-medium transition-colors ${view === 'semanal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
         >
           Semanal
         </button>
