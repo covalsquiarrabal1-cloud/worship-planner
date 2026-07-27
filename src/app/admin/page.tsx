@@ -319,6 +319,39 @@ export default function AdminPage() {
           >
             Importar Louvores
           </button>
+          <button
+            onClick={async () => {
+              if (!confirm('Publicar a escala deste mês para os membros?')) return
+              const res = await fetch('/api/schedule-events/publish', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ month, year, publish: true }),
+              })
+              const data = await res.json()
+              if (res.ok) alert('Escala publicada! Os membros já podem ver.')
+              else alert('Erro: ' + data.error)
+            }}
+            className="flex items-center justify-center gap-2 bg-green-600 text-white py-2.5 rounded-xl text-sm hover:bg-green-700"
+          >
+            ✓ Publicar Escala
+          </button>
+          <button
+            onClick={async () => {
+              if (!confirm('ATENÇÃO: Isso vai EXCLUIR toda a escala deste mês (pessoas e louvores). Tem certeza?')) return
+              if (!confirm('Confirma a exclusão? Essa ação não pode ser desfeita.')) return
+              const res = await fetch('/api/schedule-events/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ month, year }),
+              })
+              const data = await res.json()
+              if (res.ok) { alert('Escala excluída.'); loadEvents() }
+              else alert('Erro: ' + data.error)
+            }}
+            className="flex items-center justify-center gap-2 bg-red-600 text-white py-2.5 rounded-xl text-sm hover:bg-red-700"
+          >
+            🗑 Excluir Escala
+          </button>
         </div>
       </div>
 

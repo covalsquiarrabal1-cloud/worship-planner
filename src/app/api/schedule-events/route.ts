@@ -16,13 +16,20 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'start e end são obrigatórios' }, { status: 400 })
   }
 
-  const { data, error } = await serviceClient
+  // Check if user is admin
+  const { data: profile } = await serviceClient
+    .from('profiles').select('role').eq('id', user.id).single()
+  const isAdmin = profile?.role === 'admin'
+
+  // Build query
+  let query = serviceClient
     .from('schedule_events')
     .select(`
       id,
       event_date,
       day_of_week,
       week_number,
+      schedule_id,
       scale_type:scale_types(id, name, type),
       assignments:schedule_assignments(
         id,
@@ -35,6 +42,22 @@ export async function GET(request: Request) {
     .lte('event_date', endDate)
     .order('event_date')
 
+  const { data, error } = await query
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // If not admin, filter to only published schedules
+  if (!isAdmin && data) {
+    const scheduleIds = [...new Set(data.map((e: any) => e.schedule_id))]
+    const { data: schedules } = await serviceClient
+      .from('schedules')
+      .select('id, is_published')
+      .in('id', scheduleIds)
+    
+    const publishedIds = new Set((schedules || []).filter((s: any) => s.is_published).map((s: any) => s.id))
+    const filtered = data.filter((e: any) => publishedIds.has(e.schedule_id))
+    return NextResponse.json(filtered)
+  }
+
   return NextResponse.json(data)
 }
