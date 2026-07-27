@@ -296,13 +296,30 @@ export default function AdminMusicasPage() {
                       </span>
                       <h4 className="font-semibold text-green-400">{event.scale_type?.name || '-'}</h4>
                     </div>
-                    <button
-                      onClick={() => setShowAddForm(showAddForm === event.id ? null : event.id)}
-                      className="p-2 rounded-lg bg-[var(--accent)] hover:bg-[var(--border)]"
-                      title="Adicionar louvor"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      {event.songs.length > 0 && (
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Excluir todos os louvores de ${event.scale_type?.name || 'este dia'}?`)) return
+                            for (const song of event.songs) {
+                              await fetch(`/api/songs?id=${song.id}`, { method: 'DELETE' })
+                            }
+                            loadData()
+                          }}
+                          className="p-2 rounded-lg text-red-400 hover:bg-red-500/10"
+                          title="Excluir louvores deste dia"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setShowAddForm(showAddForm === event.id ? null : event.id)}
+                        className="p-2 rounded-lg bg-[var(--accent)] hover:bg-[var(--border)]"
+                        title="Adicionar louvor"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Songs list */}
