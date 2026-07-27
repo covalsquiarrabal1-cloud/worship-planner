@@ -671,6 +671,18 @@ function WeeklyView({ events, members, onUpdateAssignment }: {
               <h3 className="text-lg font-bold text-green-400">{event.scale_type?.name || '-'}</h3>
             </div>
 
+            {/* Vocais always visible */}
+            {event.assignments.filter(a => a.role.startsWith('vocal_')).length > 0 && (
+              <div className="grid grid-cols-3 gap-2">
+                {event.assignments.filter(a => a.role.startsWith('vocal_')).sort((a, b) => a.role.localeCompare(b.role)).map(a => (
+                  <div key={a.id} className="text-xs py-1">
+                    <span className="text-[var(--muted-foreground)]">{a.role === 'vocal_1' ? 'Vocal 1' : a.role === 'vocal_2' ? 'Vocal 2' : 'Vocal 3'}: </span>
+                    <span className="font-medium">{a.member?.name || '-'}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Louvores table */}
             {songs.length > 0 && (
               <table className="w-full text-xs">

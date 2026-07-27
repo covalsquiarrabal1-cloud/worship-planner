@@ -212,7 +212,19 @@ export default function MemberSchedulePage() {
                   <h4 className="font-bold text-green-400">{event.scale_type?.name || '-'}</h4>
                 </div>
 
-                {/* Louvores first */}
+                {/* Vocais always visible */}
+                {vocals.length > 0 && (
+                  <div className="mb-3 grid grid-cols-3 gap-1">
+                    {vocals.map((a, idx) => (
+                      <div key={idx} className={`text-xs px-2 py-1.5 rounded ${isMe(a.member?.name) ? 'bg-green-500/20 text-green-300 font-bold' : 'bg-[var(--accent)]'}`}>
+                        <span className="text-[var(--muted-foreground)]">{roleLabels[a.role]}: </span>
+                        <span className={isMe(a.member?.name) ? 'text-green-300' : ''}>{a.member?.name || '-'}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Louvores */}
                 {event.songs && event.songs.length > 0 && (
                   <div className="mb-3">
                     <table className="w-full text-xs">
