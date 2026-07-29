@@ -25,6 +25,8 @@ export default function MinistryPage() {
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [showAddMember, setShowAddMember] = useState(false)
+  const [worshipMembers, setWorshipMembers] = useState<{ name: string; email: string }[]>([])
+  const [addMode, setAddMode] = useState<'select' | 'manual'>('select')
 
   const month = currentDate.getMonth() + 1
   const year = currentDate.getFullYear()
@@ -57,6 +59,31 @@ export default function MinistryPage() {
     setNewMemberEmail('')
     setShowAddMember(false)
     loadData()
+  }
+
+  async function addFromWorship(worshipMember: { name: string; email: string }) {
+    if (members.some(m => m.email?.toLowerCase() === worshipMember.email.toLowerCase())) {
+      alert(`${worshipMember.name} já está neste ministério.`)
+      return
+    }
+    await fetch(`/api/ministries/${slug}/members`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: worshipMember.name, email: worshipMember.email }),
+    })
+    loadData()
+  }
+
+  async function loadWorshipMembers() {
+    const res = await fetch('/api/members')
+    if (res.ok) {
+      const data = await res.json()
+      setWorshipMembers(
+        (Array.isArray(data) ? data : [])
+          .filter((m: any) => m.email)
+          .map((m: any) => ({ name: m.name, email: m.email }))
+      )
+    }
   }
 
   async function deleteMember(id: string) {
@@ -118,17 +145,62 @@ export default function MinistryPage() {
 
       {tab === 'membros' ? (
         <div className="space-y-3">
-          <button onClick={() => setShowAddMember(true)} className="flex items-center gap-2 bg-[#1c2128] border border-[#30363d] px-4 py-3 rounded-2xl text-sm hover:border-[#58a6ff]">
+          <button onClick={() => { setShowAddMember(true); loadWorshipMembers() }} className="flex items-center gap-2 bg-[#1c2128] border border-[#30363d] px-4 py-3 rounded-2xl text-sm hover:border-[#58a6ff]">
             <Plus className="w-4 h-4" /> Adicionar Membro
           </button>
           {showAddMember && (
             <div className="card space-y-3">
-              <input placeholder="Nome" value={newMemberName} onChange={e => setNewMemberName(e.target.value)} autoFocus />
-              <input placeholder="E-mail (opcional)" value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)} />
-              <div className="flex gap-2">
-                <button onClick={addMember} className="flex-1 bg-[#58a6ff] text-white py-2 rounded-xl text-sm font-medium">Salvar</button>
-                <button onClick={() => setShowAddMember(false)} className="px-4 py-2 text-[#8b949e] text-sm">Cancelar</button>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setAddMode('select')}
+                  className={`py-2 rounded-xl text-xs font-medium transition-all ${addMode === 'select' ? 'bg-[#58a6ff] text-white' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
+                >
+                  Selecionar do Louvor
+                </button>
+                <button
+                  onClick={() => setAddMode('manual')}
+                  className={`py-2 rounded-xl text-xs font-medium transition-all ${addMode === 'manual' ? 'bg-[#58a6ff] text-white' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
+                >
+                  Cadastro Manual
+                </button>
               </div>
+
+              {addMode === 'select' ? (
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {worshipMembers.length === 0 ? (
+                    <p className="text-xs text-[var(--muted-foreground)] text-center py-3">Carregando...</p>
+                  ) : (
+                    worshipMembers
+                      .filter(wm => !members.some(m => m.email?.toLowerCase() === wm.email.toLowerCase()))
+                      .map(wm => (
+                        <button
+                          key={wm.email}
+                          onClick={() => addFromWorship(wm)}
+                          className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-[#1c2128] border border-[#30363d] hover:border-[#58a6ff] transition-colors text-left"
+                        >
+                          <div>
+                            <p className="text-sm font-medium">{wm.name}</p>
+                            <p className="text-xs text-[var(--muted-foreground)]">{wm.email}</p>
+                          </div>
+                          <Plus className="w-4 h-4 text-[#58a6ff] shrink-0" />
+                        </button>
+                      ))
+                  )}
+                  {worshipMembers.length > 0 && worshipMembers.filter(wm => !members.some(m => m.email?.toLowerCase() === wm.email.toLowerCase())).length === 0 && (
+                    <p className="text-xs text-[var(--muted-foreground)] text-center py-3">Todos já estão neste ministério.</p>
+                  )}
+                </div>
+              ) : (
+                <>
+                  <input placeholder="Nome" value={newMemberName} onChange={e => setNewMemberName(e.target.value)} autoFocus />
+                  <input placeholder="E-mail (obrigatório)" value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)} />
+                  <div className="flex gap-2">
+                    <button onClick={addMember} className="flex-1 bg-[#58a6ff] text-white py-2 rounded-xl text-sm font-medium">Salvar</button>
+                  </div>
+                </>
+              )}
+
+              <button onClick={() => setShowAddMember(false)} className="w-full py-2 text-[#8b949e] text-xs">Cancelar</button>
             </div>
           )}
           {members.map(m => (
