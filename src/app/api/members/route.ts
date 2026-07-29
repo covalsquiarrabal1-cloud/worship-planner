@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { SupabaseClient } from '@supabase/supabase-js'
 
-const INTERNAL_PASSWORD = 'worship-planner-internal-2024-secret'
+const INTERNAL_PASSWORD = 'adoração26'
 
 async function ensureUserAccess(serviceClient: SupabaseClient, email: string, name: string) {
   const normalizedEmail = email.trim().toLowerCase()

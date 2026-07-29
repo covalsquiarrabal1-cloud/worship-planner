@@ -3,7 +3,7 @@ import { createServiceRoleClient } from '@/lib/supabase/server'
 import { createClient } from '@supabase/supabase-js'
 
 // Internal fixed password for email-only login (users never see this)
-const INTERNAL_PASSWORD = 'worship-planner-internal-2024-secret'
+const INTERNAL_PASSWORD = 'adoração26'
 
 export async function POST(request: Request) {
   try {

@@ -14,7 +14,7 @@ for (const line of envContent.split('\n')) {
 }
 
 const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY)
-const INTERNAL_PASSWORD = 'worship-planner-internal-2024-secret'
+const INTERNAL_PASSWORD = 'adoração26'
 
 async function main() {
   console.log('Resetando senhas de todos os usuários...\n')
