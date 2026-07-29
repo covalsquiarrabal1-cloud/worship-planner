@@ -125,6 +125,12 @@ export default function GerarEscalaMinisterioPage() {
         return
       }
 
+      const result = await res.json()
+
+      if (result.conflicts && result.conflicts.length > 0) {
+        alert('⚠️ Escala gerada com avisos:\n\n' + result.conflicts.join('\n'))
+      }
+
       router.push(`/admin/ministerios/${slug}`)
     } catch {
       alert('Erro de conexão')

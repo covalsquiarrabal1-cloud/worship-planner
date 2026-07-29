@@ -126,6 +126,12 @@ export default function LiderGerarEscalaPage() {
         return
       }
 
+      const result = await res.json()
+
+      if (result.conflicts && result.conflicts.length > 0) {
+        alert('⚠️ Escala gerada com avisos:\n\n' + result.conflicts.join('\n'))
+      }
+
       router.push(`/lider/${slug}`)
     } catch {
       alert('Erro de conexão')

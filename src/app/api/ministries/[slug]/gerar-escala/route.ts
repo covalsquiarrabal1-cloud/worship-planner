@@ -49,6 +49,32 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     return NextResponse.json({ error: 'Nenhum membro cadastrado neste ministério' }, { status: 400 })
   }
 
+  // --- Check conflicts with main worship schedule ---
+  // Get all dates we'll be scheduling
+  const allDates = selectedDays.map(d => d.date)
+
+  // Get main schedule events for those dates
+  const { data: mainEvents } = await serviceClient
+    .from('schedule_events')
+    .select(`
+      id, event_date,
+      assignments:schedule_assignments(
+        id, role,
+        member:members(id, name, email)
+      )
+    `)
+    .in('event_date', allDates)
+
+  // Build a map: date -> set of emails that are busy in the main schedule
+  const busyByDate: Record<string, Set<string>> = {}
+  for (const event of mainEvents || []) {
+    if (!busyByDate[event.event_date]) busyByDate[event.event_date] = new Set()
+    for (const assignment of (event.assignments as any[]) || []) {
+      const email = assignment.member?.email?.toLowerCase()
+      if (email) busyByDate[event.event_date].add(email)
+    }
+  }
+
   // Get or create schedule
   const { data: existingSchedule } = await serviceClient
     .from('ministry_schedules')
@@ -78,6 +104,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   // Round-robin assignment
   let memberIndex = 0
   const sortedDays = [...selectedDays].sort((a, b) => a.date.localeCompare(b.date))
+  const conflicts: string[] = []
 
   for (const day of sortedDays) {
     const dateObj = new Date(day.date + 'T12:00:00')
@@ -100,17 +127,46 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
 
     if (eventErr || !event) continue
 
-    // Assign one person per celebration (round-robin)
+    // Assign one person per celebration (round-robin, skipping members busy in main schedule)
     const assignments: { event_id: string; member_id: string; celebration_number: number }[] = []
+    const busyEmails = busyByDate[day.date] || new Set()
 
     for (let c = 1; c <= numCelebrations; c++) {
-      const member = members[memberIndex % members.length]
-      assignments.push({
-        event_id: event.id,
-        member_id: member.id,
-        celebration_number: c,
-      })
-      memberIndex++
+      let assigned = false
+      let attempts = 0
+
+      // Try to find a member not busy in the main schedule
+      while (!assigned && attempts < members.length) {
+        const member = members[memberIndex % members.length]
+        const memberEmail = member.email?.toLowerCase() || ''
+        memberIndex++
+        attempts++
+
+        // Skip if this member is in the main worship schedule for this date
+        if (memberEmail && busyEmails.has(memberEmail)) {
+          const dateFormatted = day.date.slice(8,10) + '/' + day.date.slice(5,7)
+          conflicts.push(`${member.name} já está escalado(a) no louvor dia ${dateFormatted}`)
+          continue
+        }
+
+        assignments.push({
+          event_id: event.id,
+          member_id: member.id,
+          celebration_number: c,
+        })
+        assigned = true
+      }
+
+      // If all members are busy, assign the next in round-robin anyway
+      if (!assigned) {
+        const member = members[memberIndex % members.length]
+        assignments.push({
+          event_id: event.id,
+          member_id: member.id,
+          celebration_number: c,
+        })
+        memberIndex++
+      }
     }
 
     if (assignments.length > 0) {
@@ -118,5 +174,5 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     }
   }
 
-  return NextResponse.json({ success: true, eventsCreated: sortedDays.length })
+  return NextResponse.json({ success: true, eventsCreated: sortedDays.length, conflicts })
 }
