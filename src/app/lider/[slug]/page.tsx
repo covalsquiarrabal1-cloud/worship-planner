@@ -26,6 +26,7 @@ export default function LiderMinistryPage() {
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [showAddMember, setShowAddMember] = useState(false)
   const [publishing, setPublishing] = useState(false)
+  const [isPublished, setIsPublished] = useState(false)
 
   const month = currentDate.getMonth() + 1
   const year = currentDate.getFullYear()
@@ -37,13 +38,20 @@ export default function LiderMinistryPage() {
     const start = format(startOfMonth(currentDate), 'yyyy-MM-dd')
     const end = format(endOfMonth(currentDate), 'yyyy-MM-dd')
 
-    const [membersRes, eventsRes] = await Promise.all([
+    const [membersRes, eventsRes, pubRes] = await Promise.all([
       fetch(`/api/ministries/${slug}/members`),
       fetch(`/api/ministries/${slug}/events?start=${start}&end=${end}`),
+      fetch(`/api/ministries/${slug}/publish-status?month=${month}&year=${year}`),
     ])
 
     if (membersRes.ok) setMembers(await membersRes.json())
     if (eventsRes.ok) setEvents(await eventsRes.json())
+    if (pubRes.ok) {
+      const pubData = await pubRes.json()
+      setIsPublished(pubData.is_published ?? false)
+    } else {
+      setIsPublished(false)
+    }
     setLoading(false)
   }
 
@@ -74,7 +82,9 @@ export default function LiderMinistryPage() {
       body: JSON.stringify({ month, year }),
     })
     if (res.ok) {
-      alert('Escala publicada! Membros podem ver agora.')
+      const data = await res.json()
+      setIsPublished(data.is_published)
+      alert(data.is_published ? 'Escala publicada! Membros podem ver agora.' : 'Escala ocultada.')
     } else {
       const data = await res.json()
       alert('Erro: ' + (data.error || 'Erro desconhecido'))
@@ -187,10 +197,14 @@ export default function LiderMinistryPage() {
             <button
               onClick={togglePublish}
               disabled={publishing || events.length === 0}
-              className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-green-500 transition-colors disabled:opacity-40"
+              className={`flex flex-col items-center justify-center gap-2 border py-5 rounded-2xl transition-colors disabled:opacity-40 ${
+                isPublished
+                  ? 'bg-[#f85149]/10 border-[#f85149]/40 hover:border-[#f85149]'
+                  : 'bg-[#1c2128] border-[#30363d] hover:border-green-500'
+              }`}
             >
-              {publishing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Eye className="w-5 h-5 text-green-400" />}
-              <span className="text-xs font-semibold">PUBLICAR</span>
+              {publishing ? <Loader2 className="w-5 h-5 animate-spin" /> : isPublished ? <EyeOff className="w-5 h-5 text-[#f85149]" /> : <Eye className="w-5 h-5 text-green-400" />}
+              <span className="text-xs font-semibold">{isPublished ? 'OCULTAR' : 'PUBLICAR'}</span>
             </button>
           </div>
 
