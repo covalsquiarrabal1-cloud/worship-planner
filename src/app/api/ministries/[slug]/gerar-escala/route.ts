@@ -66,7 +66,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   } else {
     const { data: newSchedule, error: schedErr } = await serviceClient
       .from('ministry_schedules')
-      .insert({ ministry_id: ministry.id, month, year })
+      .insert({ ministry_id: ministry.id, month, year, is_published: true })
       .select('id')
       .single()
     if (schedErr || !newSchedule) {
