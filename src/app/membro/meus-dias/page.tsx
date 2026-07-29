@@ -17,20 +17,62 @@ interface ScheduleEvent {
     role: string
     member: { id: string; name: string } | null
   }[]
+  songs?: {
+    id: string
+    order_num: number
+    title: string
+    version: string | null
+    minister: string | null
+    youtube_url: string | null
+  }[]
+}
+
+interface MinistryEvent {
+  id: string
+  event_date: string
+  day_of_week: string
+  scale_name: string | null
+  num_celebrations: number
+  ministry_name: string
+  ministry_slug: string
+  assignments: {
+    id: string
+    celebration_number: number
+    member: { id: string; name: string } | null
+  }[]
+}
+
+interface UnifiedDay {
+  date: string
+  dayOfWeek: string
+  type: 'louvor' | 'ministerio'
+  scaleName: string
+  role: string
+  ministryName?: string
+  ministrySlug?: string
+  // For louvor events (expandable details)
+  event?: ScheduleEvent
+}
+
+const ministryIcons: Record<string, string> = {
+  som: '🔊',
+  iluminacao: '💡',
+  projecao: '📽',
+  backstage: '🎭',
 }
 
 export default function MeusDiasPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [myEvents, setMyEvents] = useState<{ event: ScheduleEvent; role: string }[]>([])
+  const [allDays, setAllDays] = useState<UnifiedDay[]>([])
   const [loading, setLoading] = useState(true)
   const [memberName, setMemberName] = useState('')
   const supabase = createClient()
 
   useEffect(() => {
-    loadMyEvents()
+    loadAllEvents()
   }, [currentDate])
 
-  async function loadMyEvents() {
+  async function loadAllEvents() {
     setLoading(true)
 
     const { data: { user } } = await supabase.auth.getUser()
@@ -46,30 +88,56 @@ export default function MeusDiasPage() {
     const name = member?.name || ''
     setMemberName(name)
 
-    if (!name) { setLoading(false); return }
-
-    // Fetch all events for the month via API
     const start = format(startOfMonth(currentDate), 'yyyy-MM-dd')
     const end = format(endOfMonth(currentDate), 'yyyy-MM-dd')
 
-    const res = await fetch(`/api/schedule-events?start=${start}&end=${end}`)
-    if (!res.ok) { setLoading(false); return }
+    // Fetch both in parallel
+    const [worshipRes, ministryRes] = await Promise.all([
+      fetch(`/api/schedule-events?start=${start}&end=${end}`),
+      fetch(`/api/minha-escala-ministerio?start=${start}&end=${end}`),
+    ])
 
-    const events: ScheduleEvent[] = await res.json()
+    const unified: UnifiedDay[] = []
 
-    // Filter events where this member is assigned
-    const myDays: { event: ScheduleEvent; role: string }[] = []
-    for (const event of events) {
-      for (const assignment of event.assignments) {
-        if (assignment.member?.name?.toUpperCase() === name.toUpperCase()) {
-          myDays.push({ event, role: assignment.role })
-          break
+    // 1. Worship schedule events
+    if (worshipRes.ok && name) {
+      const events: ScheduleEvent[] = await worshipRes.json()
+      for (const event of events) {
+        for (const assignment of event.assignments) {
+          if (assignment.member?.name?.toUpperCase() === name.toUpperCase()) {
+            unified.push({
+              date: event.event_date,
+              dayOfWeek: event.day_of_week,
+              type: 'louvor',
+              scaleName: event.scale_type?.name || '-',
+              role: assignment.role,
+              event,
+            })
+            break
+          }
         }
       }
     }
 
-    myDays.sort((a, b) => a.event.event_date.localeCompare(b.event.event_date))
-    setMyEvents(myDays)
+    // 2. Ministry schedule events
+    if (ministryRes.ok) {
+      const ministryEvents: MinistryEvent[] = await ministryRes.json()
+      for (const mEvent of ministryEvents) {
+        unified.push({
+          date: mEvent.event_date,
+          dayOfWeek: mEvent.day_of_week,
+          type: 'ministerio',
+          scaleName: mEvent.scale_name || '-',
+          role: mEvent.ministry_name,
+          ministryName: mEvent.ministry_name,
+          ministrySlug: mEvent.ministry_slug,
+        })
+      }
+    }
+
+    // Sort by date
+    unified.sort((a, b) => a.date.localeCompare(b.date))
+    setAllDays(unified)
     setLoading(false)
   }
 
@@ -89,7 +157,7 @@ export default function MeusDiasPage() {
       <h2 className="text-xl font-bold">Meus Dias</h2>
       {memberName && (
         <p className="text-sm text-[var(--muted-foreground)]">
-          Olá, {memberName}! Aqui estão seus dias de escala.
+          Olá, {memberName}! Aqui estão todos os seus dias de escala.
         </p>
       )}
 
@@ -116,19 +184,23 @@ export default function MeusDiasPage() {
         <div className="flex justify-center py-8">
           <Loader2 className="w-6 h-6 animate-spin" />
         </div>
-      ) : myEvents.length === 0 ? (
+      ) : allDays.length === 0 ? (
         <div className="text-center py-8 text-[var(--muted-foreground)]">
           <CalendarDays className="w-8 h-8 mx-auto mb-2 opacity-50" />
           <p>Nenhuma escala encontrada para este mês.</p>
         </div>
       ) : (
         <div className="space-y-2">
-          {myEvents.map((item, idx) => (
-            <ExpandableDay key={idx} item={item} roleLabels={roleLabels} memberName={memberName} />
+          {allDays.map((item, idx) => (
+            item.type === 'louvor' ? (
+              <ExpandableWorshipDay key={`w-${idx}`} item={item} roleLabels={roleLabels} memberName={memberName} />
+            ) : (
+              <MinistryDayCard key={`m-${idx}`} item={item} />
+            )
           ))}
           <div className="card bg-[var(--accent)] text-center">
             <p className="text-sm">
-              <span className="font-semibold">{myEvents.length}</span> escalações este mês
+              <span className="font-semibold">{allDays.length}</span> escalação{allDays.length > 1 ? 'ões' : ''} este mês
             </p>
           </div>
         </div>
@@ -140,35 +212,69 @@ export default function MeusDiasPage() {
   )
 }
 
-function ExpandableDay({ item, roleLabels, memberName }: {
-  item: { event: any; role: string }
+function MinistryDayCard({ item }: { item: UnifiedDay }) {
+  const icon = ministryIcons[item.ministrySlug || ''] || '🎭'
+
+  return (
+    <div className="card">
+      <div className="flex items-center gap-3">
+        <div className="w-12 h-12 rounded-lg bg-[var(--accent)] flex flex-col items-center justify-center shrink-0">
+          <span className="text-lg font-bold">
+            {format(new Date(item.date + 'T12:00:00'), 'dd')}
+          </span>
+          <span className="text-[10px] text-[var(--muted-foreground)] capitalize">
+            {item.dayOfWeek.slice(0, 3)}
+          </span>
+        </div>
+        <div className="flex-1">
+          <p className="font-medium text-green-400">{item.scaleName}</p>
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">{icon}</span>
+            <span className="text-xs text-[#58a6ff] font-medium">{item.ministryName}</span>
+          </div>
+        </div>
+        <span className="text-xs px-2 py-1 rounded-lg bg-[#58a6ff]/10 text-[#58a6ff] font-medium shrink-0">
+          Ministério
+        </span>
+      </div>
+    </div>
+  )
+}
+
+function ExpandableWorshipDay({ item, roleLabels, memberName }: {
+  item: UnifiedDay
   roleLabels: Record<string, string>
   memberName: string
 }) {
   const [expanded, setExpanded] = useState(false)
 
   const instrumentRoles = ['bateria', 'guitarra', 'baixo', 'teclado']
-  const instruments = (item.event.assignments || []).filter((a: any) => instrumentRoles.includes(a.role))
-  const songs = (item.event.songs || []).sort((a: any, b: any) => a.order_num - b.order_num)
+  const instruments = (item.event?.assignments || []).filter((a: any) => instrumentRoles.includes(a.role))
+  const songs = (item.event?.songs || []).sort((a: any, b: any) => a.order_num - b.order_num)
 
   return (
     <div className="card cursor-pointer" onClick={() => setExpanded(!expanded)}>
       <div className="flex items-center gap-3">
         <div className="w-12 h-12 rounded-lg bg-[var(--accent)] flex flex-col items-center justify-center shrink-0">
           <span className="text-lg font-bold">
-            {format(new Date(item.event.event_date + 'T12:00:00'), 'dd')}
+            {format(new Date(item.date + 'T12:00:00'), 'dd')}
           </span>
           <span className="text-[10px] text-[var(--muted-foreground)] capitalize">
-            {item.event.day_of_week.slice(0, 3)}
+            {item.dayOfWeek.slice(0, 3)}
           </span>
         </div>
         <div className="flex-1">
-          <p className="font-medium text-green-400">{item.event.scale_type?.name || '-'}</p>
-          <p className="text-xs text-[var(--muted-foreground)]">
-            {roleLabels[item.role] || item.role}
-          </p>
+          <p className="font-medium text-green-400">{item.scaleName}</p>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-[var(--muted-foreground)]">🎵 {roleLabels[item.role] || item.role}</span>
+          </div>
         </div>
-        <ChevronDown className={`w-4 h-4 text-[var(--muted-foreground)] transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs px-2 py-1 rounded-lg bg-green-500/10 text-green-400 font-medium">
+            Louvor
+          </span>
+          <ChevronDown className={`w-4 h-4 text-[var(--muted-foreground)] transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        </div>
       </div>
 
       {expanded && (

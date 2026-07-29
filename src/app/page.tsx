@@ -19,7 +19,18 @@ export default async function Home() {
 
   if (profile?.role === 'admin') {
     redirect('/admin')
-  } else {
-    redirect('/membro')
   }
+
+  // Check if user is a ministry leader
+  const { data: leaderMinistries } = await serviceClient
+    .from('ministries')
+    .select('id')
+    .eq('leader_user_id', user.id)
+    .limit(1)
+
+  if (leaderMinistries && leaderMinistries.length > 0) {
+    redirect('/lider')
+  }
+
+  redirect('/membro')
 }

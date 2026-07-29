@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, ArrowLeft, Users } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, ArrowLeft, Users, Eye, EyeOff } from 'lucide-react'
 import Link from 'next/link'
 
 interface MinistryMember { id: string; name: string; email: string | null }
@@ -14,7 +14,7 @@ interface MinistryEvent {
   assignments: { id: string; celebration_number: number; member: { id: string; name: string } | null }[]
 }
 
-export default function MinistryPage() {
+export default function LiderMinistryPage() {
   const params = useParams()
   const slug = params.slug as string
   const [members, setMembers] = useState<MinistryMember[]>([])
@@ -25,6 +25,7 @@ export default function MinistryPage() {
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [showAddMember, setShowAddMember] = useState(false)
+  const [publishing, setPublishing] = useState(false)
 
   const month = currentDate.getMonth() + 1
   const year = currentDate.getFullYear()
@@ -65,9 +66,26 @@ export default function MinistryPage() {
     loadData()
   }
 
+  async function togglePublish() {
+    setPublishing(true)
+    const res = await fetch(`/api/ministries/${slug}/publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month, year }),
+    })
+    if (res.ok) {
+      alert('Escala publicada! Membros podem ver agora.')
+    } else {
+      const data = await res.json()
+      alert('Erro: ' + (data.error || 'Erro desconhecido'))
+    }
+    setPublishing(false)
+  }
+
   async function handleSwapMember(assignmentId: string, newMemberId: string) {
     if (!newMemberId) return
 
+    // Update locally for instant feedback
     setEvents(prev => prev.map(event => ({
       ...event,
       assignments: event.assignments.map(a =>
@@ -77,6 +95,7 @@ export default function MinistryPage() {
       ),
     })))
 
+    // Persist to API
     const res = await fetch(`/api/ministries/${slug}/assignments`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -94,7 +113,7 @@ export default function MinistryPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-5">
       <div className="flex items-center gap-3">
-        <Link href="/admin/ministerios" className="p-2 rounded-xl bg-[#1c2128] border border-[#30363d]">
+        <Link href="/lider" className="p-2 rounded-xl bg-[#1c2128] border border-[#30363d]">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <h2 className="text-xl font-bold capitalize">{slug.replace('-', ' ')}</h2>
@@ -156,14 +175,24 @@ export default function MinistryPage() {
             </button>
           </div>
 
-          {/* Generate button */}
-          <Link
-            href={`/admin/ministerios/${slug}/gerar?month=${month}&year=${year}`}
-            className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-6 rounded-2xl hover:border-[#58a6ff] transition-colors w-full"
-          >
-            <Plus className="w-6 h-6 text-[#58a6ff]" />
-            <span className="text-sm font-semibold">GERAR ESCALA</span>
-          </Link>
+          {/* Actions */}
+          <div className="grid grid-cols-2 gap-3">
+            <Link
+              href={`/lider/${slug}/gerar?month=${month}&year=${year}`}
+              className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-[#58a6ff] transition-colors"
+            >
+              <Plus className="w-5 h-5 text-[#58a6ff]" />
+              <span className="text-xs font-semibold">GERAR ESCALA</span>
+            </Link>
+            <button
+              onClick={togglePublish}
+              disabled={publishing || events.length === 0}
+              className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-green-500 transition-colors disabled:opacity-40"
+            >
+              {publishing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Eye className="w-5 h-5 text-green-400" />}
+              <span className="text-xs font-semibold">PUBLICAR</span>
+            </button>
+          </div>
 
           {/* Events */}
           {events.length === 0 ? (

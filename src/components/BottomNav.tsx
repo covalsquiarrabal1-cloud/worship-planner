@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Calendar, Users, Music, Settings, User, ListMusic, Mic } from 'lucide-react'
+import { Calendar, Users, Music, Settings, User, ListMusic, Mic, Wrench } from 'lucide-react'
 import { playClick } from '@/lib/sounds'
 
 interface NavItem {
@@ -54,6 +54,7 @@ export function MemberBottomNav() {
   const items: NavItem[] = [
     { href: '/membro', icon: <Calendar className="w-7 h-7" />, label: 'Escala' },
     { href: '/membro/meus-dias', icon: <User className="w-7 h-7" />, label: 'Meus Dias' },
+    { href: '/membro/ministerio', icon: <Wrench className="w-7 h-7" />, label: 'Ministério' },
     { href: '/membro/musicas', icon: <Music className="w-7 h-7" />, label: 'Músicas' },
   ]
 

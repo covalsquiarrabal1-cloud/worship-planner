@@ -1,5 +1,49 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { SupabaseClient } from '@supabase/supabase-js'
+
+const INTERNAL_PASSWORD = 'worship-planner-internal-2024-secret'
+
+async function ensureUserAccess(serviceClient: SupabaseClient, email: string, name: string) {
+  // Check if profile already exists for this email
+  const { data: existingProfile } = await serviceClient
+    .from('profiles')
+    .select('id')
+    .ilike('email', email)
+    .single()
+
+  if (existingProfile) return // Already has access
+
+  // Try to create auth user
+  const { data: newUser, error: createError } = await serviceClient.auth.admin.createUser({
+    email,
+    password: INTERNAL_PASSWORD,
+    email_confirm: true,
+    user_metadata: { full_name: name },
+  })
+
+  if (createError && createError.message.includes('already been registered')) {
+    // User exists in auth but no profile - find and create profile
+    const { data: { users } } = await serviceClient.auth.admin.listUsers()
+    const existingUser = users?.find(u => u.email?.toLowerCase() === email.toLowerCase())
+    if (existingUser) {
+      await serviceClient.from('profiles').upsert({
+        id: existingUser.id,
+        email,
+        full_name: name,
+        role: 'member',
+      }, { onConflict: 'id' })
+    }
+  } else if (newUser) {
+    // New user created - create profile
+    await serviceClient.from('profiles').upsert({
+      id: newUser.user.id,
+      email,
+      full_name: name,
+      role: 'member',
+    }, { onConflict: 'id' })
+  }
+}
 
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const supabase = await createServerSupabaseClient()
@@ -46,13 +90,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   const { name, email } = body
   if (!name) return NextResponse.json({ error: 'Nome obrigatório' }, { status: 400 })
 
+  const normalizedEmail = email ? email.trim().toLowerCase() : null
+
+  // Insert ministry member
   const { data, error } = await serviceClient
     .from('ministry_members')
-    .insert({ ministry_id: ministry.id, name, email: email || null })
+    .insert({ ministry_id: ministry.id, name, email: normalizedEmail })
     .select()
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Auto-create login access if email was provided
+  if (normalizedEmail) {
+    await ensureUserAccess(serviceClient, normalizedEmail, name)
+  }
+
   return NextResponse.json(data)
 }
 

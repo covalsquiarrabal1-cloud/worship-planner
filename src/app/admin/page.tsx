@@ -63,6 +63,8 @@ export default function AdminPage() {
   const supabase = createClient()
   const router = useRouter()
 
+  const [isPublished, setIsPublished] = useState(false)
+
   const month = currentDate.getMonth() + 1
   const year = currentDate.getFullYear()
 
@@ -94,6 +96,16 @@ export default function AdminPage() {
     } else {
       setEvents([])
     }
+
+    // Check publish status
+    const pubRes = await fetch(`/api/schedule-events/publish-status?month=${month}&year=${year}`)
+    if (pubRes.ok) {
+      const pubData = await pubRes.json()
+      setIsPublished(pubData.is_published ?? false)
+    } else {
+      setIsPublished(false)
+    }
+
     setLoading(false)
   }
 
@@ -283,23 +295,33 @@ export default function AdminPage() {
           </button>
           <button
             onClick={async () => {
-              if (!confirm('Publicar a escala deste mês para os membros?')) return
+              const newStatus = !isPublished
+              const msg = newStatus
+                ? 'Publicar a escala deste mês para os membros?'
+                : 'Ocultar a escala deste mês? Os membros não poderão mais ver.'
+              if (!confirm(msg)) return
               const res = await fetch('/api/schedule-events/publish', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ month, year, publish: true }),
+                body: JSON.stringify({ month, year, publish: newStatus }),
               })
               const data = await res.json()
-              if (res.ok) alert('Escala publicada! Os membros já podem ver.')
-              else alert('Erro: ' + data.error)
+              if (res.ok) {
+                setIsPublished(newStatus)
+                alert(newStatus ? 'Escala publicada! Os membros já podem ver.' : 'Escala ocultada.')
+              } else {
+                alert('Erro: ' + data.error)
+              }
             }}
-            className="flex flex-col items-center justify-center gap-2 bg-gradient-to-r from-[#238636] to-[#2ea043] py-6 rounded-2xl hover:opacity-90 transition-opacity"
+            className={`flex flex-col items-center justify-center gap-2 py-6 rounded-2xl hover:opacity-90 transition-opacity ${
+              isPublished
+                ? 'bg-gradient-to-r from-[#da3633] to-[#f85149]'
+                : 'bg-gradient-to-r from-[#238636] to-[#2ea043]'
+            }`}
           >
-            <span className="text-xl">✓</span>
-            <span className="text-sm font-semibold">PUBLICAR</span>
+            <span className="text-xl">{isPublished ? '👁️‍🗨️' : '✓'}</span>
+            <span className="text-sm font-semibold">{isPublished ? 'OCULTAR' : 'PUBLICAR'}</span>
           </button>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
           <Link
             href="/admin/escala/manual"
             className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[var(--border)] py-5 rounded-2xl hover:border-[#58a6ff] transition-colors"
