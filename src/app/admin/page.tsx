@@ -329,7 +329,7 @@ export default function AdminPage() {
       </div>
 
       {/* === VIEW TOGGLE === */}
-      <div className="grid grid-cols-3 gap-2 mt-8 pt-4 border-t border-[var(--border)]">
+      <div className="grid grid-cols-3 gap-2" style={{ marginTop: '32px' }}>
         <button
           onClick={() => setView('mensal')}
           className={`py-4 rounded-2xl text-sm font-semibold transition-all ${view === 'mensal' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
