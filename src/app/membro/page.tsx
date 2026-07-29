@@ -158,31 +158,31 @@ export default function MemberSchedulePage() {
       </div>
 
       {/* View Toggle */}
-      <div className="flex items-center gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <button
           onClick={() => { playClick(); setView('mensal') }}
-          className={`px-6 py-3 rounded-xl text-base font-medium transition-colors ${view === 'mensal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+          className={`py-5 rounded-2xl text-sm font-semibold transition-all ${view === 'mensal' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
         >
           Mensal
         </button>
         <button
           onClick={() => { playClick(); setView('semanal') }}
-          className={`px-6 py-3 rounded-xl text-base font-medium transition-colors ${view === 'semanal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+          className={`py-5 rounded-2xl text-sm font-semibold transition-all ${view === 'semanal' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
         >
           Semanal
         </button>
-        {view === 'semanal' && weeks.length > 0 && (
-          <div className="flex items-center gap-2 ml-auto">
-            <button onClick={() => setCurrentWeek(w => Math.max(1, w - 1))} className="p-1.5 rounded bg-[var(--accent)]">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-xs font-medium">Sem {currentWeek}</span>
-            <button onClick={() => setCurrentWeek(w => w + 1)} className="p-1.5 rounded bg-[var(--accent)]">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
       </div>
+      {view === 'semanal' && weeks.length > 0 && (
+        <div className="flex items-center justify-center gap-3">
+          <button onClick={() => setCurrentWeek(w => Math.max(1, w - 1))} className="p-2 rounded-xl bg-[#1c2128] border border-[#30363d]">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-sm font-medium">Sem {currentWeek}</span>
+          <button onClick={() => setCurrentWeek(w => w + 1)} className="p-2 rounded-xl bg-[#1c2128] border border-[#30363d]">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Events */}
       {loading ? (

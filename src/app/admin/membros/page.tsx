@@ -79,10 +79,10 @@ export default function MembrosPage() {
           <button
             key={f.key}
             onClick={() => setFilter(f.key as typeof filter)}
-            className={`px-5 py-2 rounded-full text-sm whitespace-nowrap transition-colors ${
+            className={`px-5 py-3 rounded-2xl text-sm whitespace-nowrap font-semibold transition-all ${
               filter === f.key
-                ? 'bg-white text-black font-medium'
-                : 'bg-[var(--accent)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+                ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20'
+                : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'
             }`}
           >
             {f.label}

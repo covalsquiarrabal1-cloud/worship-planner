@@ -185,22 +185,22 @@ export default function AdminMusicasPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-5">
       {/* Tabs */}
-      <div className="flex items-center gap-2">
+      <div className="grid grid-cols-2 gap-3">
         <button
           onClick={() => setTab('musicas')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'musicas' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+          className={`py-5 rounded-2xl text-sm font-semibold transition-all flex items-center justify-center gap-2 ${tab === 'musicas' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
         >
-          <Music className="w-4 h-4 inline mr-1.5" />
+          <Music className="w-5 h-5" />
           Músicas
         </button>
         <button
           onClick={() => setTab('sugestoes')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors relative ${tab === 'sugestoes' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+          className={`py-5 rounded-2xl text-sm font-semibold transition-all flex items-center justify-center gap-2 relative ${tab === 'sugestoes' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
         >
-          <MessageSquare className="w-4 h-4 inline mr-1.5" />
+          <MessageSquare className="w-5 h-5" />
           Sugestões
           {suggestions.length > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] rounded-full flex items-center justify-center font-bold">
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#f85149] text-white text-[10px] rounded-full flex items-center justify-center font-bold">
               {suggestions.length}
             </span>
           )}
