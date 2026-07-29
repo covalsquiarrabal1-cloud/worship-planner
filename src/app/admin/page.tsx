@@ -57,7 +57,7 @@ export default function AdminPage() {
   const [selectedDates, setSelectedDates] = useState<Date[]>([])
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState<'mensal' | 'semanal' | 'pessoa'>('mensal')
-  const [currentWeek, setCurrentWeek] = useState(1)
+  const [currentWeek, setCurrentWeek] = useState(() => Math.ceil(new Date().getDate() / 7))
   const [members, setMembers] = useState<{ id: string; name: string }[]>([])
   const [editingCell, setEditingCell] = useState<{ eventId: string; assignmentId: string; role: string } | null>(null)
   const supabase = createClient()

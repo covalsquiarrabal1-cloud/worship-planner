@@ -34,7 +34,7 @@ export default function MemberSchedulePage() {
   const [loading, setLoading] = useState(true)
   const [memberName, setMemberName] = useState('')
   const [view, setView] = useState<'mensal' | 'semanal'>('semanal')
-  const [currentWeek, setCurrentWeek] = useState(1)
+  const [currentWeek, setCurrentWeek] = useState(() => Math.ceil(new Date().getDate() / 7))
   const supabase = createClient()
 
   useEffect(() => {
