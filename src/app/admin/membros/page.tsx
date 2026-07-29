@@ -69,7 +69,7 @@ export default function MembrosPage() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2 overflow-x-auto pb-1">
+      <div className="grid grid-cols-4 gap-2">
         {[
           { key: 'all', label: 'Todos' },
           { key: 'male', label: 'Homens' },
@@ -79,7 +79,7 @@ export default function MembrosPage() {
           <button
             key={f.key}
             onClick={() => setFilter(f.key as typeof filter)}
-            className={`px-5 py-3 rounded-2xl text-sm whitespace-nowrap font-semibold transition-all ${
+            className={`py-4 rounded-2xl text-sm whitespace-nowrap font-semibold transition-all ${
               filter === f.key
                 ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20'
                 : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'
