@@ -3,10 +3,12 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react'
+import { Loader2, Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const supabase = createClient()
@@ -18,10 +20,10 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const res = await fetch('/api/login-email', {
+      const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ email: email.trim(), password }),
       })
 
       let data: any = null
@@ -57,7 +59,12 @@ export default function LoginPage() {
         return
       }
 
-      router.push('/')
+      // Check if user needs to set password
+      if (data.mustSetPassword) {
+        router.push('/criar-senha')
+      } else {
+        router.push('/')
+      }
       router.refresh()
     } catch (err: any) {
       setError('Falha na conexão: ' + (err?.message || 'verifique sua internet'))
@@ -69,25 +76,44 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl mb-6 overflow-hidden">
             <img src="/icon-512.png" alt="Worship Planner" className="w-full h-full object-cover rounded-2xl" />
           </div>
           <h1 className="text-2xl font-bold mt-2">Worship Planner</h1>
-          <p className="text-[var(--muted-foreground)] text-sm mt-3">Digite seu e-mail para entrar</p>
+          <p className="text-[var(--muted-foreground)] text-sm mt-3">Entre com seu e-mail e senha</p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleLogin} className="space-y-5">
+        <form onSubmit={handleLogin} className="space-y-4">
           <input
             type="email"
-            placeholder="Digite seu e-mail"
+            placeholder="E-mail"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            className="w-full text-center"
+            className="w-full"
           />
+
+          <div className="relative">
+            <input
+              type={showPassword ? 'text' : 'password'}
+              placeholder="Senha"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+              className="w-full pr-12"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]"
+            >
+              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+            </button>
+          </div>
 
           {error && (
             <p className="text-[var(--destructive)] text-sm text-center bg-red-500/10 border border-red-500/20 px-4 py-3 rounded-lg">{error}</p>
@@ -96,7 +122,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-white text-black font-bold py-6 rounded-2xl hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center gap-2 text-lg transition-all shadow-[0_4px_0_0_#888] hover:shadow-[0_2px_0_0_#888] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px]"
+            className="w-full bg-white text-black font-bold py-5 rounded-2xl hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center gap-2 text-lg transition-all shadow-[0_4px_0_0_#888] hover:shadow-[0_2px_0_0_#888] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px]"
           >
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -105,6 +131,10 @@ export default function LoginPage() {
             )}
           </button>
         </form>
+
+        <p className="text-xs text-[var(--muted-foreground)] text-center mt-6">
+          Primeiro acesso? Use a senha temporária enviada pelo líder.
+        </p>
       </div>
     </div>
   )
