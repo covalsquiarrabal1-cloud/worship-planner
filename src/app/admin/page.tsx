@@ -272,29 +272,15 @@ export default function AdminPage() {
         </div>
 
         {/* Actions - Grid of square buttons */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-3">
           <button
             onClick={handleGerarEscala}
             disabled={selectedDates.length === 0}
-            className="flex flex-col items-center justify-center gap-1.5 bg-white text-black font-semibold py-4 rounded-xl text-xs disabled:opacity-40"
+            className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[var(--border)] py-6 rounded-2xl disabled:opacity-40 hover:border-[#58a6ff] transition-colors"
           >
-            <Plus className="w-5 h-5" />
-            Gerar Escala
+            <Plus className="w-6 h-6 text-[#58a6ff]" />
+            <span className="text-sm font-semibold">GERAR ESCALA</span>
           </button>
-          <Link
-            href="/admin/escala/manual"
-            className="flex flex-col items-center justify-center gap-1.5 bg-[var(--accent)] py-4 rounded-xl text-xs hover:bg-[var(--border)]"
-          >
-            <Calendar className="w-5 h-5" />
-            Escala Manual
-          </Link>
-          <Link
-            href={`/admin/escala/exportar?month=${month}&year=${year}`}
-            className="flex flex-col items-center justify-center gap-1.5 bg-[var(--accent)] py-4 rounded-xl text-xs hover:bg-[var(--border)]"
-          >
-            <FileDown className="w-5 h-5" />
-            Exportar
-          </Link>
           <button
             onClick={async () => {
               if (!confirm('Publicar a escala deste mês para os membros?')) return
@@ -307,14 +293,23 @@ export default function AdminPage() {
               if (res.ok) alert('Escala publicada! Os membros já podem ver.')
               else alert('Erro: ' + data.error)
             }}
-            className="flex flex-col items-center justify-center gap-1.5 bg-green-600 text-white py-4 rounded-xl text-xs hover:bg-green-700"
+            className="flex flex-col items-center justify-center gap-2 bg-gradient-to-r from-[#238636] to-[#2ea043] py-6 rounded-2xl hover:opacity-90 transition-opacity"
           >
-            <span className="text-lg">✓</span>
-            Publicar
+            <span className="text-xl">✓</span>
+            <span className="text-sm font-semibold">PUBLICAR</span>
           </button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <Link
+            href="/admin/escala/manual"
+            className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[var(--border)] py-5 rounded-2xl hover:border-[#58a6ff] transition-colors"
+          >
+            <Calendar className="w-5 h-5 text-[var(--muted-foreground)]" />
+            <span className="text-xs font-medium text-[var(--muted-foreground)]">Escala Manual</span>
+          </Link>
           <button
             onClick={async () => {
-              if (!confirm('ATENÇÃO: Isso vai EXCLUIR toda a escala deste mês. Tem certeza?')) return
+              if (!confirm('ATENÇÃO: Excluir toda a escala deste mês?')) return
               if (!confirm('Confirma a exclusão?')) return
               const res = await fetch('/api/schedule-events/delete', {
                 method: 'POST',
@@ -325,10 +320,10 @@ export default function AdminPage() {
               if (res.ok) { alert('Escala excluída.'); loadEvents() }
               else alert('Erro: ' + data.error)
             }}
-            className="flex flex-col items-center justify-center gap-1.5 bg-red-600 text-white py-4 rounded-xl text-xs hover:bg-red-700"
+            className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[var(--border)] py-5 rounded-2xl hover:border-[#f85149] transition-colors"
           >
             <span className="text-lg">🗑</span>
-            Excluir
+            <span className="text-xs font-medium text-[var(--muted-foreground)]">Excluir</span>
           </button>
         </div>
       </div>
@@ -337,21 +332,21 @@ export default function AdminPage() {
       <div className="grid grid-cols-3 gap-2 mt-4">
         <button
           onClick={() => setView('mensal')}
-          className={`py-5 rounded-xl text-sm font-medium transition-colors ${view === 'mensal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+          className={`py-4 rounded-2xl text-sm font-semibold transition-all ${view === 'mensal' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
         >
-          Visão Mensal
+          Mensal
         </button>
         <button
           onClick={() => setView('semanal')}
-          className={`py-5 rounded-xl text-sm font-medium transition-colors ${view === 'semanal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+          className={`py-4 rounded-2xl text-sm font-semibold transition-all ${view === 'semanal' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
         >
-          Visão Semanal
+          Semanal
         </button>
         <button
           onClick={() => setView('pessoa')}
-          className={`py-5 rounded-xl text-sm font-medium transition-colors ${view === 'pessoa' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+          className={`py-4 rounded-2xl text-sm font-semibold transition-all ${view === 'pessoa' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
         >
-          Visão Pessoa
+          Pessoa
         </button>
       </div>
       {view === 'semanal' && (
@@ -637,12 +632,11 @@ function WeeklyView({ events, members, onUpdateAssignment }: {
 
             {/* Vocais always visible */}
             {event.assignments.filter(a => a.role.startsWith('vocal_')).length > 0 && (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="flex flex-wrap gap-2">
                 {event.assignments.filter(a => a.role.startsWith('vocal_')).sort((a, b) => a.role.localeCompare(b.role)).map(a => (
-                  <div key={a.id} className="text-xs py-1">
-                    <span className="text-[var(--muted-foreground)]">{a.role === 'vocal_1' ? 'Vocal 1' : a.role === 'vocal_2' ? 'Vocal 2' : 'Vocal 3'}: </span>
-                    <span className="font-medium">{a.member?.name || '-'}</span>
-                  </div>
+                  <span key={a.id} className="badge-vocal">
+                    🎤 {a.role === 'vocal_1' ? 'Vocal 1' : a.role === 'vocal_2' ? 'Vocal 2' : 'Vocal 3'} {a.member?.name || '-'}
+                  </span>
                 ))}
               </div>
             )}
@@ -673,15 +667,16 @@ function WeeklyView({ events, members, onUpdateAssignment }: {
 
             {/* Músicos (bottom) */}
             {instruments.length > 0 && (
-              <div className="border-t border-[var(--border)] pt-3">
-                <div className="grid grid-cols-2 gap-2">
-                  {instruments.map(a => (
-                    <div key={a.id} className="text-xs py-1">
-                      <span className="text-[var(--muted-foreground)]">{roleLabels[a.role] || a.role}: </span>
-                      <span className="font-bold">{a.member?.name || '-'}</span>
-                    </div>
-                  ))}
-                </div>
+              <div className="flex flex-wrap gap-2 pt-3 border-t border-[var(--border)]">
+                {instruments.map(a => {
+                  const badgeClass = a.role === 'guitarra' ? 'badge-guitar' : a.role === 'baixo' ? 'badge-bass' : a.role === 'bateria' ? 'badge-drums' : 'badge-keys'
+                  const icon = a.role === 'guitarra' ? '🎸' : a.role === 'baixo' ? '🎸' : a.role === 'bateria' ? '🥁' : '🎹'
+                  return (
+                    <span key={a.id} className={badgeClass}>
+                      {icon} {roleLabels[a.role] || a.role} {a.member?.name || '-'}
+                    </span>
+                  )
+                })}
               </div>
             )}
           </div>

@@ -214,12 +214,11 @@ export default function MemberSchedulePage() {
 
                 {/* Vocais always visible */}
                 {vocals.length > 0 && (
-                  <div className="mb-3 grid grid-cols-3 gap-1">
+                  <div className="flex flex-wrap gap-2 mb-3">
                     {vocals.map((a, idx) => (
-                      <div key={idx} className={`text-xs px-2 py-1.5 rounded ${isMe(a.member?.name) ? 'bg-green-500/20 text-green-300 font-bold' : 'bg-[var(--accent)]'}`}>
-                        <span className="text-[var(--muted-foreground)]">{roleLabels[a.role]}: </span>
-                        <span className={isMe(a.member?.name) ? 'text-green-300' : ''}>{a.member?.name || '-'}</span>
-                      </div>
+                      <span key={idx} className={`badge-vocal ${isMe(a.member?.name) ? '!bg-green-500/20 !text-green-400 font-bold' : ''}`}>
+                        🎤 {roleLabels[a.role]} {a.member?.name || '-'}
+                      </span>
                     ))}
                   </div>
                 )}
@@ -251,14 +250,17 @@ export default function MemberSchedulePage() {
                 )}
 
                 {/* Músicos at bottom */}
-                <div className="border-t border-[var(--border)] pt-2">
-                  <div className="grid grid-cols-2 gap-1">
-                    {instruments.map((a, idx) => (
-                      <div key={idx} className={`text-xs py-0.5 ${isMe(a.member?.name) ? 'text-green-300 font-bold' : ''}`}>
-                        <span className="text-[var(--muted-foreground)]">{roleLabels[a.role] || a.role}: </span>
-                        <span className="font-bold">{a.member?.name || '-'}</span>
-                      </div>
-                    ))}
+                <div className="border-t border-[var(--border)] pt-3">
+                  <div className="flex flex-wrap gap-2">
+                    {instruments.map((a, idx) => {
+                      const badgeClass = a.role === 'guitarra' ? 'badge-guitar' : a.role === 'baixo' ? 'badge-bass' : a.role === 'bateria' ? 'badge-drums' : 'badge-keys'
+                      const icon = a.role === 'guitarra' ? '🎸' : a.role === 'baixo' ? '🎸' : a.role === 'bateria' ? '🥁' : '🎹'
+                      return (
+                        <span key={idx} className={`${badgeClass} ${isMe(a.member?.name) ? '!bg-green-500/20 !text-green-400 font-bold' : ''}`}>
+                          {icon} {roleLabels[a.role] || a.role} {a.member?.name || '-'}
+                        </span>
+                      )
+                    })}
                   </div>
                 </div>
               </div>

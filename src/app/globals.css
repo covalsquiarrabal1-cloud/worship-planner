@@ -1,20 +1,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #f5f5f5;
-  --card: #141414;
-  --card-foreground: #f5f5f5;
-  --border: #2a2a2a;
-  --input: #1a1a1a;
+  --background: #0d1117;
+  --foreground: #f0f6fc;
+  --card: #161b22;
+  --card-foreground: #f0f6fc;
+  --border: #30363d;
+  --input: #0d1117;
   --primary: #ffffff;
   --primary-foreground: #000000;
-  --muted: #1a1a1a;
-  --muted-foreground: #a0a0a0;
-  --accent: #1f1f1f;
-  --accent-foreground: #f5f5f5;
-  --destructive: #ef4444;
-  --radius: 0.625rem;
+  --muted: #21262d;
+  --muted-foreground: #8b949e;
+  --accent: #1c2128;
+  --accent-foreground: #f0f6fc;
+  --destructive: #f85149;
+  --radius: 0.75rem;
 }
 
 * {
@@ -79,8 +79,8 @@ input[type="date"]:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: #555;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.05);
+  border-color: #58a6ff;
+  box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.15);
 }
 
 input::placeholder,
@@ -96,7 +96,7 @@ input[type="checkbox"] {
   width: 20px;
   height: 20px;
   min-width: 20px;
-  border: 2px solid #444;
+  border: 2px solid #30363d;
   border-radius: 5px;
   background: var(--input);
   cursor: pointer;
@@ -105,12 +105,12 @@ input[type="checkbox"] {
 }
 
 input[type="checkbox"]:hover {
-  border-color: #666;
+  border-color: #58a6ff;
 }
 
 input[type="checkbox"]:checked {
-  background: #3b82f6;
-  border-color: #3b82f6;
+  background: #58a6ff;
+  border-color: #58a6ff;
 }
 
 input[type="checkbox"]:checked::after {
@@ -129,7 +129,7 @@ input[type="checkbox"]:checked::after {
 select {
   appearance: none;
   -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23a0a0a0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238b949e' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 12px center;
   padding-right: 40px;
@@ -153,6 +153,70 @@ button {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 16px;
+}
+
+/* ========================
+   BADGES
+   ======================== */
+
+.badge-vocal {
+  background: rgba(187, 128, 9, 0.15);
+  color: #d29922;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-guitar {
+  background: rgba(219, 61, 61, 0.15);
+  color: #f85149;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-bass {
+  background: rgba(56, 139, 253, 0.15);
+  color: #58a6ff;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-drums {
+  background: rgba(163, 113, 247, 0.15);
+  color: #a371f7;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.badge-keys {
+  background: rgba(63, 185, 80, 0.15);
+  color: #3fb950;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 /* ========================
