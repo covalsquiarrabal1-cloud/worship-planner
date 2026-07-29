@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useSearchParams } from 'next/navigation'
 import { format, startOfMonth, endOfMonth } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -9,13 +8,15 @@ import { FileDown, FileSpreadsheet, Loader2, ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface ExportEvent {
+  id: string
   event_date: string
   day_of_week: string
   week_number: number
   scale_type: { name: string } | null
   assignments: {
+    id: string
     role: string
-    member: { name: string } | null
+    member: { id: string; name: string } | null
   }[]
 }
 
@@ -26,7 +27,6 @@ export default function ExportarPage() {
   const year = parseInt(searchParams.get('year') || String(new Date().getFullYear()))
   const [events, setEvents] = useState<ExportEvent[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = createClient()
 
   useEffect(() => {
     loadEvents()
@@ -36,23 +36,13 @@ export default function ExportarPage() {
     const start = format(startOfMonth(new Date(year, month - 1)), 'yyyy-MM-dd')
     const end = format(endOfMonth(new Date(year, month - 1)), 'yyyy-MM-dd')
 
-    const { data } = await supabase
-      .from('schedule_events')
-      .select(`
-        event_date,
-        day_of_week,
-        week_number,
-        scale_type:scale_types(name),
-        assignments:schedule_assignments(
-          role,
-          member:members(name)
-        )
-      `)
-      .gte('event_date', start)
-      .lte('event_date', end)
-      .order('event_date')
-
-    setEvents((data as unknown as ExportEvent[]) || [])
+    const res = await fetch(`/api/schedule-events?start=${start}&end=${end}`)
+    if (res.ok) {
+      const data = await res.json()
+      setEvents(Array.isArray(data) ? data : [])
+    } else {
+      setEvents([])
+    }
     setLoading(false)
   }
 
