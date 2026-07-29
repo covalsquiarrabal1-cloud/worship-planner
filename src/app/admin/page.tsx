@@ -271,54 +271,30 @@ export default function AdminPage() {
           )}
         </div>
 
-        {/* Actions */}
-        <div className="flex flex-col gap-2 lg:w-48">
+        {/* Actions - Grid of square buttons */}
+        <div className="grid grid-cols-3 gap-2">
           <button
             onClick={handleGerarEscala}
             disabled={selectedDates.length === 0}
-            className="flex items-center justify-center gap-2 bg-white text-black font-semibold py-2.5 rounded-xl text-sm disabled:opacity-40"
+            className="flex flex-col items-center justify-center gap-1.5 bg-white text-black font-semibold py-4 rounded-xl text-xs disabled:opacity-40"
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-5 h-5" />
             Gerar Escala
           </button>
           <Link
             href="/admin/escala/manual"
-            className="flex items-center justify-center gap-2 bg-[var(--accent)] py-2.5 rounded-xl text-sm hover:bg-[var(--border)]"
+            className="flex flex-col items-center justify-center gap-1.5 bg-[var(--accent)] py-4 rounded-xl text-xs hover:bg-[var(--border)]"
           >
-            <Calendar className="w-4 h-4" />
+            <Calendar className="w-5 h-5" />
             Escala Manual
           </Link>
           <Link
             href={`/admin/escala/exportar?month=${month}&year=${year}`}
-            className="flex items-center justify-center gap-2 bg-[var(--accent)] py-2.5 rounded-xl text-sm hover:bg-[var(--border)]"
+            className="flex flex-col items-center justify-center gap-1.5 bg-[var(--accent)] py-4 rounded-xl text-xs hover:bg-[var(--border)]"
           >
-            <FileDown className="w-4 h-4" />
+            <FileDown className="w-5 h-5" />
             Exportar
           </Link>
-          <button
-            onClick={async () => {
-              if (!confirm('Importar escala manual de Julho 2026? Isso vai substituir a escala atual.')) return
-              const res = await fetch('/api/import-escala', { method: 'POST' })
-              const data = await res.json()
-              if (res.ok) { alert('Importado! ' + data.eventsCreated + ' eventos'); loadEvents() }
-              else alert('Erro: ' + data.error)
-            }}
-            className="flex items-center justify-center gap-2 bg-orange-600 text-white py-2.5 rounded-xl text-sm hover:bg-orange-700"
-          >
-            Importar Jul/26
-          </button>
-          <button
-            onClick={async () => {
-              if (!confirm('Importar louvores da semana 4 de Julho?')) return
-              const res = await fetch('/api/import-louvores', { method: 'POST' })
-              const data = await res.json()
-              if (res.ok) { alert('Importado! ' + data.songsCreated + ' louvores'); loadEvents() }
-              else alert('Erro: ' + data.error)
-            }}
-            className="flex items-center justify-center gap-2 bg-purple-600 text-white py-2.5 rounded-xl text-sm hover:bg-purple-700"
-          >
-            Importar Louvores
-          </button>
           <button
             onClick={async () => {
               if (!confirm('Publicar a escala deste mês para os membros?')) return
@@ -331,14 +307,15 @@ export default function AdminPage() {
               if (res.ok) alert('Escala publicada! Os membros já podem ver.')
               else alert('Erro: ' + data.error)
             }}
-            className="flex items-center justify-center gap-2 bg-green-600 text-white py-2.5 rounded-xl text-sm hover:bg-green-700"
+            className="flex flex-col items-center justify-center gap-1.5 bg-green-600 text-white py-4 rounded-xl text-xs hover:bg-green-700"
           >
-            ✓ Publicar Escala
+            <span className="text-lg">✓</span>
+            Publicar
           </button>
           <button
             onClick={async () => {
-              if (!confirm('ATENÇÃO: Isso vai EXCLUIR toda a escala deste mês (pessoas e louvores). Tem certeza?')) return
-              if (!confirm('Confirma a exclusão? Essa ação não pode ser desfeita.')) return
+              if (!confirm('ATENÇÃO: Isso vai EXCLUIR toda a escala deste mês. Tem certeza?')) return
+              if (!confirm('Confirma a exclusão?')) return
               const res = await fetch('/api/schedule-events/delete', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -348,45 +325,46 @@ export default function AdminPage() {
               if (res.ok) { alert('Escala excluída.'); loadEvents() }
               else alert('Erro: ' + data.error)
             }}
-            className="flex items-center justify-center gap-2 bg-red-600 text-white py-2.5 rounded-xl text-sm hover:bg-red-700"
+            className="flex flex-col items-center justify-center gap-1.5 bg-red-600 text-white py-4 rounded-xl text-xs hover:bg-red-700"
           >
-            🗑 Excluir Escala
+            <span className="text-lg">🗑</span>
+            Excluir
           </button>
         </div>
       </div>
 
       {/* === VIEW TOGGLE === */}
-      <div className="flex items-center gap-2 flex-wrap">
+      <div className="grid grid-cols-3 gap-2">
         <button
           onClick={() => setView('mensal')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${view === 'mensal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+          className={`py-3 rounded-xl text-xs font-medium transition-colors ${view === 'mensal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
         >
           Visão Mensal
         </button>
         <button
           onClick={() => setView('semanal')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${view === 'semanal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+          className={`py-3 rounded-xl text-xs font-medium transition-colors ${view === 'semanal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
         >
           Visão Semanal
         </button>
         <button
           onClick={() => setView('pessoa')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${view === 'pessoa' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+          className={`py-3 rounded-xl text-xs font-medium transition-colors ${view === 'pessoa' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
         >
-          Visão por Pessoa
+          Visão Pessoa
         </button>
-        {view === 'semanal' && (
-          <div className="flex items-center gap-2 ml-4">
-            <button onClick={() => setCurrentWeek(w => Math.max(1, w - 1))} className="p-1 rounded bg-[var(--accent)]">
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <span className="text-sm font-medium">Semana {currentWeek}</span>
-            <button onClick={() => setCurrentWeek(w => w + 1)} className="p-1 rounded bg-[var(--accent)]">
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-        )}
       </div>
+      {view === 'semanal' && (
+        <div className="flex items-center justify-center gap-3">
+          <button onClick={() => setCurrentWeek(w => Math.max(1, w - 1))} className="p-2 rounded bg-[var(--accent)]">
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-sm font-medium">Semana {currentWeek}</span>
+          <button onClick={() => setCurrentWeek(w => w + 1)} className="p-2 rounded bg-[var(--accent)]">
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* === ESCALA TABLE === */}
       {loading ? (
@@ -453,21 +431,7 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Quick menu */}
-      <div className="grid grid-cols-3 gap-2">
-        <Link href="/admin/membros" className="card flex flex-col items-center gap-1.5 py-3 hover:border-[#444]">
-          <Users className="w-5 h-5" />
-          <span className="text-xs font-medium">Membros</span>
-        </Link>
-        <Link href="/admin/musicas" className="card flex flex-col items-center gap-1.5 py-3 hover:border-[#444]">
-          <Music className="w-5 h-5" />
-          <span className="text-xs font-medium">Músicas</span>
-        </Link>
-        <Link href="/admin/config" className="card flex flex-col items-center gap-1.5 py-3 hover:border-[#444]">
-          <Settings className="w-5 h-5" />
-          <span className="text-xs font-medium">Config</span>
-        </Link>
-      </div>
+      {/* Quick menu removed - available in bottom nav */}
     </div>
   )
 }
