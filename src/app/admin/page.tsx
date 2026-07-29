@@ -337,19 +337,19 @@ export default function AdminPage() {
       <div className="grid grid-cols-3 gap-2">
         <button
           onClick={() => setView('mensal')}
-          className={`py-3 rounded-xl text-xs font-medium transition-colors ${view === 'mensal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+          className={`py-5 rounded-xl text-sm font-medium transition-colors ${view === 'mensal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
         >
           Visão Mensal
         </button>
         <button
           onClick={() => setView('semanal')}
-          className={`py-3 rounded-xl text-xs font-medium transition-colors ${view === 'semanal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+          className={`py-5 rounded-xl text-sm font-medium transition-colors ${view === 'semanal' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
         >
           Visão Semanal
         </button>
         <button
           onClick={() => setView('pessoa')}
-          className={`py-3 rounded-xl text-xs font-medium transition-colors ${view === 'pessoa' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
+          className={`py-5 rounded-xl text-sm font-medium transition-colors ${view === 'pessoa' ? 'bg-white text-black' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}
         >
           Visão Pessoa
         </button>
