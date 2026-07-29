@@ -254,32 +254,35 @@ export default function AdminMusicasPage() {
             </button>
           </div>
 
-          <button
-            onClick={generateSongs}
-            disabled={generating}
-            className="w-full bg-green-600 text-white font-semibold py-3 rounded-xl text-sm hover:bg-green-700 disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : '🎵 Gerar Louvores Automaticamente'}
-          </button>
-
-          <button
-            onClick={async () => {
-              if (!confirm('ATENÇÃO: Isso vai excluir TODOS os louvores do mês. Tem certeza?')) return
-              const start = format(startOfMonth(currentDate), 'yyyy-MM-dd')
-              const end = format(endOfMonth(currentDate), 'yyyy-MM-dd')
-              const res = await fetch(`/api/songs/delete-all`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ start, end }),
-              })
-              const data = await res.json()
-              if (res.ok) { alert('Todos os louvores excluídos.'); loadData() }
-              else alert('Erro: ' + data.error)
-            }}
-            className="w-full bg-red-600/20 text-red-400 font-medium py-2.5 rounded-xl text-sm hover:bg-red-600/30 flex items-center justify-center gap-2 border border-red-600/30"
-          >
-            🗑 Excluir Todos os Louvores do Mês
-          </button>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={generateSongs}
+              disabled={generating}
+              className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-6 rounded-2xl hover:border-[#58a6ff] transition-colors disabled:opacity-50"
+            >
+              {generating ? <Loader2 className="w-6 h-6 animate-spin text-[#58a6ff]" /> : <span className="text-2xl">🎵</span>}
+              <span className="text-xs font-semibold">GERAR LOUVORES</span>
+            </button>
+            <button
+              onClick={async () => {
+                if (!confirm('ATENÇÃO: Isso vai excluir TODOS os louvores do mês. Tem certeza?')) return
+                const start = format(startOfMonth(currentDate), 'yyyy-MM-dd')
+                const end = format(endOfMonth(currentDate), 'yyyy-MM-dd')
+                const res = await fetch(`/api/songs/delete-all`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ start, end }),
+                })
+                const data = await res.json()
+                if (res.ok) { alert('Todos os louvores excluídos.'); loadData() }
+                else alert('Erro: ' + data.error)
+              }}
+              className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-6 rounded-2xl hover:border-[#f85149] transition-colors"
+            >
+              <span className="text-2xl">🗑</span>
+              <span className="text-xs font-semibold">EXCLUIR LOUVORES</span>
+            </button>
+          </div>
 
           {events.length === 0 ? (
             <div className="text-center py-8 text-[var(--muted-foreground)]">
