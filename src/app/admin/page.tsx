@@ -332,31 +332,31 @@ export default function AdminPage() {
       <div className="grid grid-cols-3 gap-2" style={{ marginTop: '32px' }}>
         <button
           onClick={() => setView('mensal')}
-          className={`py-8 rounded-2xl text-sm font-semibold transition-all ${view === 'mensal' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
+          className={`py-6 rounded-2xl text-sm font-semibold transition-all ${view === 'mensal' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
         >
           Mensal
         </button>
         <button
           onClick={() => setView('semanal')}
-          className={`py-8 rounded-2xl text-sm font-semibold transition-all ${view === 'semanal' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
+          className={`py-6 rounded-2xl text-sm font-semibold transition-all ${view === 'semanal' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
         >
           Semanal
         </button>
         <button
           onClick={() => setView('pessoa')}
-          className={`py-8 rounded-2xl text-sm font-semibold transition-all ${view === 'pessoa' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
+          className={`py-6 rounded-2xl text-sm font-semibold transition-all ${view === 'pessoa' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
         >
           Pessoa
         </button>
       </div>
       {view === 'semanal' && (
-        <div className="flex items-center justify-center gap-3">
-          <button onClick={() => setCurrentWeek(w => Math.max(1, w - 1))} className="p-2 rounded bg-[var(--accent)]">
-            <ChevronLeft className="w-4 h-4" />
+        <div className="flex items-center justify-center gap-4 mt-3">
+          <button onClick={() => setCurrentWeek(w => Math.max(1, w - 1))} className="p-4 rounded-2xl bg-[#1c2128] border border-[#30363d]">
+            <ChevronLeft className="w-5 h-5" />
           </button>
-          <span className="text-sm font-medium">Semana {currentWeek}</span>
-          <button onClick={() => setCurrentWeek(w => w + 1)} className="p-2 rounded bg-[var(--accent)]">
-            <ChevronRight className="w-4 h-4" />
+          <span className="text-base font-semibold">Semana {currentWeek}</span>
+          <button onClick={() => setCurrentWeek(w => w + 1)} className="p-4 rounded-2xl bg-[#1c2128] border border-[#30363d]">
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       )}
