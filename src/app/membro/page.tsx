@@ -35,10 +35,12 @@ export default function MemberSchedulePage() {
   const [memberName, setMemberName] = useState('')
   const [view, setView] = useState<'mensal' | 'semanal'>('semanal')
   const [currentWeek, setCurrentWeek] = useState(() => Math.ceil(new Date().getDate() / 7))
+  const [hideOtherMembers, setHideOtherMembers] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
     loadMemberInfo()
+    loadPrivacySetting()
   }, [])
 
   useEffect(() => {
@@ -65,6 +67,16 @@ export default function MemberSchedulePage() {
         .single()
       if (profile?.full_name) setMemberName(profile.full_name)
     }
+  }
+
+  async function loadPrivacySetting() {
+    try {
+      const res = await fetch('/api/app-settings?key=hide_other_members')
+      if (res.ok) {
+        const data = await res.json()
+        setHideOtherMembers(data.value === 'true')
+      }
+    } catch {}
   }
 
   async function loadEvents() {
@@ -202,6 +214,7 @@ export default function MemberSchedulePage() {
           {displayedEvents.map((event) => {
             const { vocals, instruments } = sortedAssignments(event.assignments)
             const imOnThisDay = event.assignments.some(a => isMe(a.member?.name))
+            const shouldHideNames = hideOtherMembers && !imOnThisDay
 
             return (
               <div key={event.id} className={`card ${imOnThisDay ? 'border-green-500/40' : ''}`}>
@@ -212,12 +225,12 @@ export default function MemberSchedulePage() {
                   <h4 className="font-bold text-green-400">{event.scale_type?.name || '-'}</h4>
                 </div>
 
-                {/* Vocais always visible */}
+                {/* Vocais */}
                 {vocals.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
                     {vocals.map((a, idx) => (
                       <span key={idx} className={`badge-vocal ${isMe(a.member?.name) ? '!bg-green-500/20 !text-green-400 font-bold' : ''}`}>
-                        🎤 {roleLabels[a.role]} {a.member?.name || '-'}
+                        🎤 {roleLabels[a.role]} {shouldHideNames ? '••••' : (a.member?.name || '-')}
                       </span>
                     ))}
                   </div>
@@ -241,7 +254,7 @@ export default function MemberSchedulePage() {
                             <td className="py-2 px-1 text-center font-bold">{song.order_num}</td>
                             <td className={`py-2 px-1 font-medium ${song.minister && isMe(song.minister.split(' / ').find(n => isMe(n)) || '') ? 'text-green-300' : ''}`}>{song.title}</td>
                             <td className="py-2 px-1 text-[var(--muted-foreground)]">{song.version || '-'}</td>
-                            <td className={`py-2 px-1 ${song.minister && song.minister.toUpperCase().includes(memberName.toUpperCase()) ? 'text-green-300 font-bold' : ''}`}>{song.minister || '-'}</td>
+                            <td className={`py-2 px-1 ${song.minister && song.minister.toUpperCase().includes(memberName.toUpperCase()) ? 'text-green-300 font-bold' : ''}`}>{shouldHideNames ? '••••' : (song.minister || '-')}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -257,7 +270,7 @@ export default function MemberSchedulePage() {
                       const icon = a.role === 'guitarra' ? '🎸' : a.role === 'baixo' ? '🎸' : a.role === 'bateria' ? '🥁' : '🎹'
                       return (
                         <span key={idx} className={`${badgeClass} ${isMe(a.member?.name) ? '!bg-green-500/20 !text-green-400 font-bold' : ''}`}>
-                          {icon} {roleLabels[a.role] || a.role} {a.member?.name || '-'}
+                          {icon} {roleLabels[a.role] || a.role} {shouldHideNames ? '••••' : (a.member?.name || '-')}
                         </span>
                       )
                     })}
