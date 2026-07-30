@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, ArrowLeft, Users, Eye, EyeOff } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, ArrowLeft, Users, Eye, EyeOff, FileDown } from 'lucide-react'
 import Link from 'next/link'
 
 interface MinistryMember { id: string; name: string; email: string | null; is_blocked: boolean }
@@ -132,6 +132,43 @@ export default function LiderMinistryPage() {
     }
   }
 
+  async function exportPDF() {
+    const { jsPDF } = await import('jspdf')
+    const { default: autoTable } = await import('jspdf-autotable')
+
+    const doc = new jsPDF({ orientation: 'portrait' })
+    const monthName = format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })
+
+    doc.setFontSize(16)
+    doc.text(`${slug.charAt(0).toUpperCase() + slug.slice(1).replace('-', ' ')} - Escala`, 14, 20)
+    doc.setFontSize(11)
+    doc.text(monthName, 14, 28)
+
+    const tableData = events.map(ev => {
+      const membersStr = ev.assignments
+        .sort((a, b) => a.celebration_number - b.celebration_number)
+        .map(a => ev.num_celebrations > 1 ? `C${a.celebration_number}: ${a.member?.name || '-'}` : (a.member?.name || '-'))
+        .join(', ')
+      return [
+        `${ev.event_date.slice(8,10)}/${ev.event_date.slice(5,7)}`,
+        ev.day_of_week,
+        ev.scale_name || '-',
+        membersStr,
+      ]
+    })
+
+    autoTable(doc, {
+      startY: 35,
+      head: [['Data', 'Dia', 'Escala', 'Membros']],
+      body: tableData,
+      theme: 'grid',
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255] },
+    })
+
+    doc.save(`escala-${slug}-${month}-${year}.pdf`)
+  }
+
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
 
   return (
@@ -213,14 +250,22 @@ export default function LiderMinistryPage() {
           </div>
 
           {/* Actions */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <Link
               href={`/lider/${slug}/gerar?month=${month}&year=${year}`}
               className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-[#58a6ff] transition-colors"
             >
               <Plus className="w-5 h-5 text-[#58a6ff]" />
-              <span className="text-xs font-semibold">GERAR ESCALA</span>
+              <span className="text-xs font-semibold">GERAR</span>
             </Link>
+            <button
+              onClick={exportPDF}
+              disabled={events.length === 0}
+              className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-red-400 transition-colors disabled:opacity-40"
+            >
+              <FileDown className="w-5 h-5 text-red-400" />
+              <span className="text-xs font-semibold">PDF</span>
+            </button>
             <button
               onClick={togglePublish}
               disabled={publishing || events.length === 0}
