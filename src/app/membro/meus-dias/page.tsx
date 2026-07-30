@@ -58,7 +58,7 @@ const ministryIcons: Record<string, string> = {
   som: '🔊',
   iluminacao: '💡',
   projecao: '📽',
-  backstage: '🎭',
+  backstage: '🚪',
 }
 
 export default function MeusDiasPage() {

@@ -49,7 +49,7 @@ export default function MinisteriosPage() {
             className="card flex flex-col items-center justify-center py-8 hover:border-[#58a6ff] transition-colors text-center"
           >
             <span className="text-2xl mb-2">
-              {m.slug === 'som' ? '🔊' : m.slug === 'iluminacao' ? '💡' : m.slug === 'projecao' ? '📽' : '🎭'}
+              {m.slug === 'som' ? '🔊' : m.slug === 'iluminacao' ? '💡' : m.slug === 'projecao' ? '📽' : '🚪'}
             </span>
             <span className="font-semibold text-sm">{m.name}</span>
             {m.leader_name && (
