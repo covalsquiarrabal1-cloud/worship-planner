@@ -29,7 +29,7 @@ export default async function Home() {
     .limit(1)
 
   if (leaderMinistries && leaderMinistries.length > 0) {
-    redirect('/lider')
+    redirect('/membro')
   }
 
   redirect('/membro')
