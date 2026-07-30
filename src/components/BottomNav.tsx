@@ -49,14 +49,13 @@ export function AdminBottomNav() {
   )
 }
 
-export function MemberBottomNav() {
+export function MemberBottomNav({ showMusicas = false }: { showMusicas?: boolean }) {
   const pathname = usePathname()
 
   const items: NavItem[] = [
     { href: '/membro', icon: <Calendar className="w-7 h-7" />, label: 'Escala' },
     { href: '/membro/meus-dias', icon: <User className="w-7 h-7" />, label: 'Meus Dias' },
-    { href: '/membro/ministerio', icon: <Wrench className="w-7 h-7" />, label: 'Ministério' },
-    { href: '/membro/musicas', icon: <Music className="w-7 h-7" />, label: 'Músicas' },
+    ...(showMusicas ? [{ href: '/membro/musicas', icon: <Music className="w-7 h-7" />, label: 'Músicas' }] : []),
   ]
 
   return (

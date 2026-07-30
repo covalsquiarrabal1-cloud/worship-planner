@@ -14,14 +14,24 @@ export default async function MemberLayout({
 
   if (!user) redirect('/login')
 
-  // Check if user is a ministry leader
   const serviceClient = await createServiceRoleClient()
+
+  // Check if user is a ministry leader
   const { data: leaderMinistries } = await serviceClient
     .from('ministries')
     .select('id, name, slug')
     .eq('leader_user_id', user.id)
 
   const isLeader = leaderMinistries && leaderMinistries.length > 0
+
+  // Check if user is a worship member (in the main 'members' table)
+  const { data: worshipMember } = await serviceClient
+    .from('members')
+    .select('id')
+    .ilike('email', user.email || '')
+    .single()
+
+  const isWorshipMember = !!worshipMember
 
   return (
     <div className="min-h-screen pb-safe">
@@ -43,7 +53,7 @@ export default async function MemberLayout({
       <main className="px-4 py-4">
         {children}
       </main>
-      <MemberBottomNav />
+      <MemberBottomNav showMusicas={isWorshipMember} />
     </div>
   )
 }
