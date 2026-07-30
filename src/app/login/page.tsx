@@ -11,37 +11,28 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [step, setStep] = useState<'email' | 'password' | 'create-password'>('email')
+  const [firstAccess, setFirstAccess] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const supabase = createClient()
   const router = useRouter()
 
-  // Step 1: Check email
-  const handleCheckEmail = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
 
     try {
-      const res = await fetch('/api/login/check', {
+      // Try login with email + password
+      const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ email: email.trim(), password }),
       })
 
       const data = await res.json()
 
-      if (!res.ok) {
-        setError(data.error || 'Erro')
-        setLoading(false)
-        return
-      }
-
-      if (data.hasPassword) {
-        setStep('password')
-      } else {
-        // First access - auto login with internal and go to create password
+      if (res.ok && data.session) {
         const { error: sessionError } = await supabase.auth.setSession({
           access_token: data.session.access_token,
           refresh_token: data.session.refresh_token,
@@ -51,8 +42,51 @@ export default function LoginPage() {
           setLoading(false)
           return
         }
-        setStep('create-password')
+        router.push('/')
+        router.refresh()
+        return
       }
+
+      // If login failed, check if it's first access
+      if (res.status === 401) {
+        // Try with the check endpoint to see if it's first access
+        const checkRes = await fetch('/api/login/check', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email.trim() }),
+        })
+
+        const checkData = await checkRes.json()
+
+        if (!checkRes.ok) {
+          setError(checkData.error || 'E-mail não cadastrado.')
+          setLoading(false)
+          return
+        }
+
+        if (!checkData.hasPassword) {
+          // First access - set session and show create password
+          const { error: sessionError } = await supabase.auth.setSession({
+            access_token: checkData.session.access_token,
+            refresh_token: checkData.session.refresh_token,
+          })
+          if (sessionError) {
+            setError('Erro ao iniciar sessão.')
+            setLoading(false)
+            return
+          }
+          setFirstAccess(true)
+          setLoading(false)
+          return
+        }
+
+        // Has password but wrong one
+        setError('Senha incorreta.')
+        setLoading(false)
+        return
+      }
+
+      setError(data.error || 'Erro ao entrar.')
       setLoading(false)
     } catch {
       setError('Falha na conexão.')
@@ -60,47 +94,6 @@ export default function LoginPage() {
     }
   }
 
-  // Step 2: Login with password
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-
-    try {
-      const res = await fetch('/api/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim(), password }),
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        setError(data.error || 'Senha incorreta.')
-        setLoading(false)
-        return
-      }
-
-      const { error: sessionError } = await supabase.auth.setSession({
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-      })
-
-      if (sessionError) {
-        setError('Erro ao iniciar sessão.')
-        setLoading(false)
-        return
-      }
-
-      router.push('/')
-      router.refresh()
-    } catch {
-      setError('Falha na conexão.')
-      setLoading(false)
-    }
-  }
-
-  // Step 3: Create password
   const handleCreatePassword = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -141,85 +134,17 @@ export default function LoginPage() {
           </div>
           <h1 className="text-2xl font-bold mt-2">Worship Planner</h1>
           <p className="text-[var(--muted-foreground)] text-sm mt-3">
-            {step === 'email' && 'Digite seu e-mail para entrar'}
-            {step === 'password' && 'Digite sua senha'}
-            {step === 'create-password' && 'Crie sua senha para os próximos acessos'}
+            {firstAccess ? 'Crie sua senha para os próximos acessos' : 'Entre com seu e-mail e senha'}
           </p>
         </div>
 
-        {/* Step: Email */}
-        {step === 'email' && (
-          <form onSubmit={handleCheckEmail} className="space-y-4">
-            <input
-              type="email"
-              placeholder="Digite seu e-mail"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              autoComplete="email"
-              className="w-full text-center"
-              autoFocus
-            />
-
-            {error && (
-              <p className="text-[var(--destructive)] text-sm text-center bg-red-500/10 border border-red-500/20 px-4 py-3 rounded-lg">{error}</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-white text-black font-bold py-5 rounded-2xl hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center gap-2 text-lg transition-all shadow-[0_4px_0_0_#888] hover:shadow-[0_2px_0_0_#888] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px]"
-            >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Continuar'}
-            </button>
-          </form>
-        )}
-
-        {/* Step: Password */}
-        {step === 'password' && (
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div className="card text-center text-sm">
-              <span className="text-[var(--muted-foreground)]">{email}</span>
-              <button type="button" onClick={() => { setStep('email'); setError('') }} className="text-[#58a6ff] ml-2 text-xs">trocar</button>
-            </div>
-
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="Senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                autoComplete="current-password"
-                className="w-full pr-12"
-                autoFocus
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]"
-              >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-
-            {error && (
-              <p className="text-[var(--destructive)] text-sm text-center bg-red-500/10 border border-red-500/20 px-4 py-3 rounded-lg">{error}</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-white text-black font-bold py-5 rounded-2xl hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center gap-2 text-lg transition-all shadow-[0_4px_0_0_#888] hover:shadow-[0_2px_0_0_#888] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px]"
-            >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar'}
-            </button>
-          </form>
-        )}
-
-        {/* Step: Create Password */}
-        {step === 'create-password' && (
+        {/* First Access - Create Password */}
+        {firstAccess ? (
           <form onSubmit={handleCreatePassword} className="space-y-4">
+            <div className="card text-center text-sm">
+              <span className="text-[var(--muted-foreground)]">✅ {email}</span>
+            </div>
+
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -263,6 +188,57 @@ export default function LoginPage() {
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Criar Senha e Entrar'}
             </button>
           </form>
+        ) : (
+          /* Normal Login */
+          <form onSubmit={handleLogin} className="space-y-4">
+            <input
+              type="email"
+              placeholder="E-mail"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              className="w-full"
+              autoFocus
+            />
+
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                className="w-full pr-12"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
+
+            {error && (
+              <p className="text-[var(--destructive)] text-sm text-center bg-red-500/10 border border-red-500/20 px-4 py-3 rounded-lg">{error}</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-white text-black font-bold py-5 rounded-2xl hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center gap-2 text-lg transition-all shadow-[0_4px_0_0_#888] hover:shadow-[0_2px_0_0_#888] hover:translate-y-[2px] active:shadow-none active:translate-y-[4px]"
+            >
+              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar'}
+            </button>
+          </form>
+        )}
+
+        {!firstAccess && (
+          <p className="text-xs text-[var(--muted-foreground)] text-center mt-6">
+            Primeiro acesso? Digite seu e-mail e qualquer senha — o sistema vai pedir para criar uma nova.
+          </p>
         )}
       </div>
     </div>
