@@ -425,6 +425,18 @@ export default function ConfigPage() {
         )}
       </section>
 
+      {/* ========== LÍDERES DOS MINISTÉRIOS ========== */}
+      <section className="space-y-4">
+        <h3 className="font-semibold flex items-center gap-2 text-base">
+          <Users className="w-5 h-5" />
+          Líderes dos Ministérios
+        </h3>
+        <p className="text-sm text-[var(--muted-foreground)]">
+          Defina quem lidera cada ministério. O líder terá acesso ao painel de gestão.
+        </p>
+        <MinistryLeadersEditor />
+      </section>
+
       {/* ========== VERSÍCULO ========== */}
       <section className="space-y-4">
         <h3 className="font-semibold flex items-center gap-2 text-base">
@@ -471,6 +483,104 @@ export default function ConfigPage() {
           <span className="font-medium text-sm">Sair</span>
         </button>
       </section>
+    </div>
+  )
+}
+
+function MinistryLeadersEditor() {
+  const [ministries, setMinistries] = useState<{ id: string; name: string; slug: string; leader_name: string | null }[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editEmail, setEditEmail] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/ministries')
+      .then(r => r.json())
+      .then(data => {
+        setMinistries(Array.isArray(data) ? data : [])
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
+
+  function startEdit(ministry: { id: string; leader_name: string | null }) {
+    setEditing(ministry.id)
+    setEditName(ministry.leader_name || '')
+    setEditEmail('')
+  }
+
+  async function saveLeader(ministryId: string) {
+    setSaving(true)
+    const res = await fetch('/api/ministries/update-leader', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ministryId, leaderName: editName, leaderEmail: editEmail }),
+    })
+    if (res.ok) {
+      setMinistries(prev => prev.map(m => m.id === ministryId ? { ...m, leader_name: editName } : m))
+      setEditing(null)
+    } else {
+      const data = await res.json()
+      alert('Erro: ' + (data.error || 'Erro'))
+    }
+    setSaving(false)
+  }
+
+  if (loading) return <Loader2 className="w-5 h-5 animate-spin" />
+
+  return (
+    <div className="space-y-3">
+      {ministries.map(m => (
+        <div key={m.id} className="card">
+          {editing === m.id ? (
+            <div className="space-y-3">
+              <p className="text-sm font-semibold">{m.name}</p>
+              <input
+                placeholder="Nome do líder"
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                autoFocus
+              />
+              <input
+                placeholder="E-mail do líder (para vincular acesso)"
+                type="email"
+                value={editEmail}
+                onChange={e => setEditEmail(e.target.value)}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={() => saveLeader(m.id)}
+                  disabled={saving}
+                  className="flex-1 bg-[#58a6ff] text-white py-2 rounded-xl text-sm font-medium disabled:opacity-50"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Salvar'}
+                </button>
+                <button onClick={() => setEditing(null)} className="px-4 py-2 text-[#8b949e] text-sm">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold">{m.name}</p>
+                <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+                  {m.leader_name ? `👑 ${m.leader_name}` : 'Sem líder definido'}
+                </p>
+              </div>
+              <button
+                onClick={() => startEdit(m)}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--accent)] hover:bg-[var(--border)] transition-colors"
+              >
+                <Edit2 className="w-3.5 h-3.5 inline mr-1" />
+                Editar
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   )
 }
