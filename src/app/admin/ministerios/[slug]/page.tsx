@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, ArrowLeft, Users } from 'lucide-react'
 import Link from 'next/link'
 
-interface MinistryMember { id: string; name: string; email: string | null }
+interface MinistryMember { id: string; name: string; email: string | null; is_blocked: boolean }
 interface MinistryEvent {
   id: string; event_date: string; day_of_week: string; week_number: number;
   scale_name: string | null; num_celebrations: number;
@@ -66,6 +66,17 @@ export default function MinistryPage() {
     if (!confirm('Remover este membro?')) return
     await fetch(`/api/ministries/${slug}/members?id=${id}`, { method: 'DELETE' })
     loadData()
+  }
+
+  async function toggleMemberStatus(id: string, currentBlocked: boolean) {
+    const res = await fetch(`/api/ministries/${slug}/members/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, is_blocked: !currentBlocked }),
+    })
+    if (res.ok) {
+      setMembers(prev => prev.map(m => m.id === id ? { ...m, is_blocked: !currentBlocked } : m))
+    }
   }
 
   async function handleSwapMember(assignmentId: string, newMemberId: string) {
@@ -135,14 +146,27 @@ export default function MinistryPage() {
             </div>
           )}
           {members.map(m => (
-            <div key={m.id} className="card flex items-center justify-between">
-              <div>
-                <p className="font-medium text-sm">{m.name}</p>
+            <div key={m.id} className={`card flex items-center justify-between ${m.is_blocked ? 'opacity-50' : ''}`}>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-sm">{m.name}</p>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${m.is_blocked ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'}`}>
+                    {m.is_blocked ? 'Inativo' : 'Ativo'}
+                  </span>
+                </div>
                 {m.email && <p className="text-xs text-[var(--muted-foreground)]">{m.email}</p>}
               </div>
-              <button onClick={() => deleteMember(m.id)} className="p-2 text-[#f85149] hover:bg-[#f85149]/10 rounded-xl">
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => toggleMemberStatus(m.id, m.is_blocked)}
+                  className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${m.is_blocked ? 'text-green-400 hover:bg-green-500/10' : 'text-orange-400 hover:bg-orange-500/10'}`}
+                >
+                  {m.is_blocked ? 'Ativar' : 'Inativar'}
+                </button>
+                <button onClick={() => deleteMember(m.id)} className="p-2 text-[#f85149] hover:bg-[#f85149]/10 rounded-xl">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           ))}
         </div>
