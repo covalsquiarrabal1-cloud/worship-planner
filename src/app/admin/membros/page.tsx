@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Search, UserCircle, Guitar, Ban, Crown, Loader2, X } from 'lucide-react'
+import { Plus, Search, UserCircle, Guitar, Ban, Crown, Loader2, X, Trash2 } from 'lucide-react'
 
 interface Member {
   id: string
@@ -32,6 +32,21 @@ export default function MembrosPage() {
     const data = await res.json()
     setMembers(Array.isArray(data) ? data : [])
     setLoading(false)
+  }
+
+  async function toggleMemberBlock(id: string, currentBlocked: boolean) {
+    await fetch('/api/members', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, is_blocked: !currentBlocked }),
+    })
+    setMembers(prev => prev.map(m => m.id === id ? { ...m, is_blocked: !currentBlocked } : m))
+  }
+
+  async function handleDeleteMember(id: string) {
+    if (!confirm('Tem certeza que deseja excluir este membro?')) return
+    await fetch(`/api/members?id=${id}`, { method: 'DELETE' })
+    setMembers(prev => prev.filter(m => m.id !== id))
   }
 
   const filteredMembers = members.filter(m => {
@@ -102,29 +117,50 @@ export default function MembrosPage() {
       ) : (
         <div className="space-y-2">
           {filteredMembers.map((member) => (
-            <button
+            <div
               key={member.id}
-              onClick={() => { setEditingMember(member); setShowForm(true) }}
-              className="card w-full text-left flex items-center gap-4 hover:border-[#444] transition-colors"
+              className={`card flex items-center gap-4 ${member.is_blocked ? 'opacity-50' : ''}`}
             >
-              <UserCircle className={`w-9 h-9 shrink-0 ${member.gender === 'male' ? 'text-blue-400' : 'text-pink-400'}`} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="font-medium truncate">{member.name}</span>
-                  {member.is_leader && <Crown className="w-4 h-4 text-yellow-400 shrink-0" />}
-                  {member.is_blocked && <Ban className="w-4 h-4 text-red-400 shrink-0" />}
-                </div>
-                <div className="flex items-center gap-3 text-xs text-[var(--muted-foreground)]">
-                  {member.is_musician && (
-                    <span className="flex items-center gap-1">
-                      <Guitar className="w-3.5 h-3.5" />
-                      {member.instrument}
+              <button
+                onClick={() => { setEditingMember(member); setShowForm(true) }}
+                className="flex items-center gap-4 flex-1 min-w-0 text-left"
+              >
+                <UserCircle className={`w-9 h-9 shrink-0 ${member.gender === 'male' ? 'text-blue-400' : 'text-pink-400'}`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-medium truncate">{member.name}</span>
+                    {member.is_leader && <Crown className="w-4 h-4 text-yellow-400 shrink-0" />}
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${member.is_blocked ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'}`}>
+                      {member.is_blocked ? 'Inativo' : 'Ativo'}
                     </span>
-                  )}
-                  {member.is_back && <span className="bg-[var(--accent)] px-2 py-0.5 rounded text-xs">Back</span>}
+                  </div>
+                  <div className="flex items-center gap-3 text-xs text-[var(--muted-foreground)]">
+                    {member.is_musician && (
+                      <span className="flex items-center gap-1">
+                        <Guitar className="w-3.5 h-3.5" />
+                        {member.instrument}
+                      </span>
+                    )}
+                    {member.is_back && <span className="bg-[var(--accent)] px-2 py-0.5 rounded text-xs">Back</span>}
+                    {member.email && <span className="truncate">{member.email}</span>}
+                  </div>
                 </div>
+              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => toggleMemberBlock(member.id, member.is_blocked)}
+                  className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${member.is_blocked ? 'text-green-400 hover:bg-green-500/10' : 'text-orange-400 hover:bg-orange-500/10'}`}
+                >
+                  {member.is_blocked ? 'Ativar' : 'Inativar'}
+                </button>
+                <button
+                  onClick={() => handleDeleteMember(member.id)}
+                  className="p-2 text-[#f85149] hover:bg-[#f85149]/10 rounded-xl"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       )}
