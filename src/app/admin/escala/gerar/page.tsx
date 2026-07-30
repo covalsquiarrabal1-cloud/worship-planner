@@ -184,6 +184,32 @@ export default function GerarEscalaPage() {
     }
   }
 
+  async function appendToSchedule() {
+    if (selectedDays.length === 0) return
+    setGenerating(true)
+
+    try {
+      const res = await fetch('/api/gerar-escala', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ month, year, selectedDays, append: true }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        alert('Erro: ' + (data.error || 'Erro desconhecido'))
+        setGenerating(false)
+        return
+      }
+
+      alert('Escala incluída com sucesso!')
+      router.push('/admin')
+    } catch {
+      alert('Erro de conexão')
+      setGenerating(false)
+    }
+  }
+
   async function saveChanges() {
     setSaving(true)
     try {
@@ -274,6 +300,16 @@ export default function GerarEscalaPage() {
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : '💾 Salvar'}
         </button>
       </div>
+
+      {/* Append button */}
+      <button
+        onClick={appendToSchedule}
+        disabled={generating || selectedDays.length === 0}
+        className="w-full bg-[#1c2128] border border-[#58a6ff] text-[#58a6ff] font-semibold py-3 rounded-xl disabled:opacity-40 flex items-center justify-center gap-2 text-sm hover:bg-[#58a6ff]/10 transition-colors"
+      >
+        <Plus className="w-4 h-4" />
+        Incluir na Escala Existente
+      </button>
 
       {/* Add new scale name */}
       <div className="card space-y-3">

@@ -21,10 +21,11 @@ export async function POST(request: Request) {
     .single()
   if (profile?.role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
-  const { month, year, selectedDays } = await request.json() as {
+  const { month, year, selectedDays, append } = await request.json() as {
     month: number
     year: number
     selectedDays: SelectedDay[]
+    append?: boolean
   }
 
   if (!selectedDays || selectedDays.length === 0) {
@@ -62,7 +63,9 @@ export async function POST(request: Request) {
 
   if (existingSchedule) {
     scheduleId = existingSchedule.id
-    await serviceClient.from('schedule_events').delete().eq('schedule_id', scheduleId)
+    if (!append) {
+      await serviceClient.from('schedule_events').delete().eq('schedule_id', scheduleId)
+    }
   } else {
     const { data: newSchedule, error: schedErr } = await serviceClient
       .from('schedules')
