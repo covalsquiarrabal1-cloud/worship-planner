@@ -488,7 +488,7 @@ export default function ConfigPage() {
 }
 
 function MinistryLeadersEditor() {
-  const [ministries, setMinistries] = useState<{ id: string; name: string; slug: string; leader_name: string | null }[]>([])
+  const [ministries, setMinistries] = useState<{ id: string; name: string; slug: string; leader_name: string | null; leader_email: string | null }[]>([])
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
@@ -505,10 +505,10 @@ function MinistryLeadersEditor() {
       .catch(() => setLoading(false))
   }, [])
 
-  function startEdit(ministry: { id: string; leader_name: string | null }) {
+  function startEdit(ministry: { id: string; leader_name: string | null; leader_email: string | null }) {
     setEditing(ministry.id)
     setEditName(ministry.leader_name || '')
-    setEditEmail('')
+    setEditEmail(ministry.leader_email || '')
   }
 
   async function saveLeader(ministryId: string) {
@@ -519,7 +519,7 @@ function MinistryLeadersEditor() {
       body: JSON.stringify({ ministryId, leaderName: editName, leaderEmail: editEmail }),
     })
     if (res.ok) {
-      setMinistries(prev => prev.map(m => m.id === ministryId ? { ...m, leader_name: editName } : m))
+      setMinistries(prev => prev.map(m => m.id === ministryId ? { ...m, leader_name: editName, leader_email: editEmail } : m))
       setEditing(null)
     } else {
       const data = await res.json()
@@ -566,9 +566,14 @@ function MinistryLeadersEditor() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold">{m.name}</p>
-                <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
-                  {m.leader_name ? `👑 ${m.leader_name}` : 'Sem líder definido'}
-                </p>
+                {m.leader_name ? (
+                  <>
+                    <p className="text-xs text-[var(--muted-foreground)] mt-0.5">👑 {m.leader_name}</p>
+                    {m.leader_email && <p className="text-xs text-[#58a6ff] mt-0.5">{m.leader_email}</p>}
+                  </>
+                ) : (
+                  <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Sem líder definido</p>
+                )}
               </div>
               <button
                 onClick={() => startEdit(m)}

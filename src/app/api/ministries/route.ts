@@ -13,7 +13,26 @@ export async function GET() {
     .order('name')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json(data)
+
+  // Enrich with leader email from profiles
+  const leaderIds = (data || []).map((m: any) => m.leader_user_id).filter(Boolean)
+  let leaderEmails: Record<string, string> = {}
+  if (leaderIds.length > 0) {
+    const { data: profiles } = await serviceClient
+      .from('profiles')
+      .select('id, email')
+      .in('id', leaderIds)
+    if (profiles) {
+      leaderEmails = Object.fromEntries(profiles.map(p => [p.id, p.email]))
+    }
+  }
+
+  const enriched = (data || []).map((m: any) => ({
+    ...m,
+    leader_email: m.leader_user_id ? (leaderEmails[m.leader_user_id] || null) : null,
+  }))
+
+  return NextResponse.json(enriched)
 }
 
 export async function POST(request: Request) {
