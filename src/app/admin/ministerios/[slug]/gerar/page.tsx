@@ -66,7 +66,7 @@ export default function GerarEscalaMinisterioPage() {
         date: event.event_date,
         dayOfWeek: event.day_of_week,
         scaleName: event.scale_type?.name || '',
-        numCelebrations: 1,
+        numCelebrations: event.day_of_week?.toLowerCase().includes('domingo') ? 2 : 1,
         uid: crypto.randomUUID(),
         selected: true,
       }))
