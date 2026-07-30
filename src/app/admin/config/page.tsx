@@ -425,6 +425,17 @@ export default function ConfigPage() {
         )}
       </section>
 
+      {/* ========== VERSÍCULO ========== */}
+      <section className="space-y-4">
+        <h3 className="font-semibold flex items-center gap-2 text-base">
+          📖 Versículo do Dia
+        </h3>
+        <p className="text-sm text-[var(--muted-foreground)]">
+          Aparece na tela inicial dos membros e líderes.
+        </p>
+        <VerseEditor />
+      </section>
+
       {/* ========== VISIBILIDADE MEMBROS ========== */}
       <section className="space-y-4">
         <h3 className="font-semibold flex items-center gap-2 text-base">
@@ -460,6 +471,75 @@ export default function ConfigPage() {
           <span className="font-medium text-sm">Sair</span>
         </button>
       </section>
+    </div>
+  )
+}
+
+function VerseEditor() {
+  const [text, setText] = useState('')
+  const [reference, setReference] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/app-settings?key=verse_text').then(r => r.json()),
+      fetch('/api/app-settings?key=verse_reference').then(r => r.json()),
+    ]).then(([textData, refData]) => {
+      setText(textData.value || '')
+      setReference(refData.value || '')
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
+
+  async function save() {
+    setSaving(true)
+    await Promise.all([
+      fetch('/api/app-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'verse_text', value: text }),
+      }),
+      fetch('/api/app-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: 'verse_reference', value: reference }),
+      }),
+    ])
+    setSaving(false)
+    alert('Versículo salvo!')
+  }
+
+  if (loading) return <Loader2 className="w-5 h-5 animate-spin" />
+
+  return (
+    <div className="card space-y-3">
+      <div>
+        <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Texto do versículo</label>
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Seja forte e corajoso! Não se apavore nem desanime..."
+          rows={3}
+          className="w-full resize-none"
+        />
+      </div>
+      <div>
+        <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Referência</label>
+        <input
+          type="text"
+          value={reference}
+          onChange={(e) => setReference(e.target.value)}
+          placeholder="Josué 1:9"
+        />
+      </div>
+      <button
+        onClick={save}
+        disabled={saving}
+        className="bg-white text-black font-semibold px-5 py-2.5 rounded-lg text-sm hover:bg-gray-100 disabled:opacity-50 flex items-center gap-2"
+      >
+        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar Versículo'}
+      </button>
     </div>
   )
 }

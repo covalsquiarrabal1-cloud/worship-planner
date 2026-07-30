@@ -21,9 +21,11 @@ const ministryIcons: Record<string, string> = {
 export default function LiderPage() {
   const [ministries, setMinistries] = useState<Ministry[]>([])
   const [loading, setLoading] = useState(true)
+  const [verse, setVerse] = useState({ text: '', reference: '' })
 
   useEffect(() => {
     loadMyMinistries()
+    loadVerse()
   }, [])
 
   async function loadMyMinistries() {
@@ -33,6 +35,20 @@ export default function LiderPage() {
       setMinistries(Array.isArray(data) ? data : [])
     }
     setLoading(false)
+  }
+
+  async function loadVerse() {
+    try {
+      const [textRes, refRes] = await Promise.all([
+        fetch('/api/app-settings?key=verse_text'),
+        fetch('/api/app-settings?key=verse_reference'),
+      ])
+      if (textRes.ok && refRes.ok) {
+        const textData = await textRes.json()
+        const refData = await refRes.json()
+        if (textData.value) setVerse({ text: textData.value, reference: refData.value || '' })
+      }
+    } catch {}
   }
 
   if (loading) {
@@ -45,6 +61,18 @@ export default function LiderPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {/* Verse */}
+      {verse.text && (
+        <div className="card border-[var(--border)] bg-gradient-to-br from-[var(--card)] to-[var(--accent)]">
+          <p className="text-sm text-[var(--muted-foreground)] italic leading-relaxed">
+            &ldquo;{verse.text}&rdquo;
+          </p>
+          {verse.reference && (
+            <p className="text-xs text-[var(--muted-foreground)] mt-1">{verse.reference}</p>
+          )}
+        </div>
+      )}
+
       <div>
         <h2 className="text-xl font-bold">Seus Ministérios</h2>
         <p className="text-sm text-[var(--muted-foreground)] mt-1">

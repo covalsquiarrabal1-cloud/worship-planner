@@ -36,11 +36,13 @@ export default function MemberSchedulePage() {
   const [view, setView] = useState<'mensal' | 'semanal'>('semanal')
   const [currentWeek, setCurrentWeek] = useState(() => Math.ceil(new Date().getDate() / 7))
   const [hideOtherMembers, setHideOtherMembers] = useState(false)
+  const [verse, setVerse] = useState({ text: '', reference: '' })
   const supabase = createClient()
 
   useEffect(() => {
     loadMemberInfo()
     loadPrivacySetting()
+    loadVerse()
   }, [])
 
   useEffect(() => {
@@ -75,6 +77,22 @@ export default function MemberSchedulePage() {
       if (res.ok) {
         const data = await res.json()
         setHideOtherMembers(data.value === 'true')
+      }
+    } catch {}
+  }
+
+  async function loadVerse() {
+    try {
+      const [textRes, refRes] = await Promise.all([
+        fetch('/api/app-settings?key=verse_text'),
+        fetch('/api/app-settings?key=verse_reference'),
+      ])
+      if (textRes.ok && refRes.ok) {
+        const textData = await textRes.json()
+        const refData = await refRes.json()
+        if (textData.value) {
+          setVerse({ text: textData.value, reference: refData.value || '' })
+        }
       }
     } catch {}
   }
@@ -143,10 +161,16 @@ export default function MemberSchedulePage() {
       {memberName && (
         <div className="card border-[var(--border)] bg-gradient-to-br from-[var(--card)] to-[var(--accent)]">
           <h2 className="text-lg font-bold mb-2">Olá, {memberName}! 👋</h2>
-          <p className="text-sm text-[var(--muted-foreground)] italic leading-relaxed">
-            &ldquo;Seja forte e corajoso! Não se apavore nem desanime, pois o Senhor, o seu Deus, estará com você por onde você andar.&rdquo;
-          </p>
-          <p className="text-xs text-[var(--muted-foreground)] mt-1">Josué 1:9</p>
+          {verse.text && (
+            <>
+              <p className="text-sm text-[var(--muted-foreground)] italic leading-relaxed">
+                &ldquo;{verse.text}&rdquo;
+              </p>
+              {verse.reference && (
+                <p className="text-xs text-[var(--muted-foreground)] mt-1">{verse.reference}</p>
+              )}
+            </>
+          )}
         </div>
       )}
 
