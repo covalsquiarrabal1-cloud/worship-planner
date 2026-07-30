@@ -15,17 +15,17 @@ export function AdminBottomNav() {
   const pathname = usePathname()
 
   const items: NavItem[] = [
-    { href: '/admin', icon: <Calendar className="w-6 h-6" />, label: 'Escalas' },
-    { href: '/admin/membros', icon: <Users className="w-6 h-6" />, label: 'Membros' },
-    { href: '/admin/musicas', icon: <Music className="w-6 h-6" />, label: 'Músicas' },
-    { href: '/admin/ministerios', icon: <Home className="w-6 h-6" />, label: 'Ministérios' },
-    { href: '/admin/relatorios', icon: <BarChart3 className="w-6 h-6" />, label: 'Relatórios' },
-    { href: '/admin/config', icon: <Settings className="w-6 h-6" />, label: 'Config' },
+    { href: '/admin', icon: <Calendar className="w-7 h-7" />, label: 'Escalas' },
+    { href: '/admin/membros', icon: <Users className="w-7 h-7" />, label: 'Membros' },
+    { href: '/admin/musicas', icon: <Music className="w-7 h-7" />, label: 'Músicas' },
+    { href: '/admin/ministerios', icon: <Home className="w-7 h-7" />, label: 'Ministérios' },
+    { href: '/admin/relatorios', icon: <BarChart3 className="w-7 h-7" />, label: 'Relatórios' },
+    { href: '/admin/config', icon: <Settings className="w-7 h-7" />, label: 'Config' },
   ]
 
   return (
     <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, width: '100%', overflow: 'hidden', zIndex: 50 }} className="bg-[#161b22] border-t border-[#30363d]">
-      <div className="max-w-5xl mx-auto flex items-center justify-around py-4">
+      <div className="max-w-5xl mx-auto flex items-center justify-around py-3">
         {items.map((item) => {
           const isActive = pathname === item.href || 
             (item.href !== '/admin' && pathname.startsWith(item.href + '/')) ||
@@ -35,12 +35,12 @@ export function AdminBottomNav() {
               key={item.href}
               href={item.href}
               onClick={() => playClick()}
-              className={`flex flex-col items-center gap-1.5 px-3 py-2 rounded-xl transition-colors ${
-                isActive ? 'text-[#58a6ff]' : 'text-[#8b949e] hover:text-white/70'
+              className={`flex flex-col items-center justify-center gap-1 min-w-[52px] min-h-[52px] px-2 py-1.5 rounded-2xl transition-all active:scale-90 active:bg-[#58a6ff]/20 ${
+                isActive ? 'text-[#58a6ff] bg-[#58a6ff]/10' : 'text-[#8b949e]'
               }`}
             >
               {item.icon}
-              <span className="text-[11px] font-medium">{item.label}</span>
+              <span className="text-[10px] font-medium leading-tight">{item.label}</span>
             </Link>
           )
         })}
@@ -60,7 +60,7 @@ export function MemberBottomNav({ showMusicas = false }: { showMusicas?: boolean
 
   return (
     <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, width: '100%', overflow: 'hidden', zIndex: 50 }} className="bg-[#161b22] border-t border-[#30363d]">
-      <div className="max-w-5xl mx-auto flex items-center justify-around py-5">
+      <div className="max-w-5xl mx-auto flex items-center justify-around py-4">
         {items.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
           return (
@@ -68,12 +68,12 @@ export function MemberBottomNav({ showMusicas = false }: { showMusicas?: boolean
               key={item.href}
               href={item.href}
               onClick={() => playClick()}
-              className={`flex flex-col items-center gap-2 px-6 py-3 rounded-2xl transition-colors ${
-                isActive ? 'text-[#58a6ff] bg-[#58a6ff]/10' : 'text-[#8b949e] hover:text-white/70'
+              className={`flex flex-col items-center justify-center gap-1.5 min-w-[60px] min-h-[56px] px-4 py-2 rounded-2xl transition-all active:scale-90 active:bg-[#58a6ff]/20 ${
+                isActive ? 'text-[#58a6ff] bg-[#58a6ff]/10' : 'text-[#8b949e]'
               }`}
             >
               <span className="w-7 h-7 flex items-center justify-center">{item.icon}</span>
-              <span className="text-sm font-medium">{item.label}</span>
+              <span className="text-xs font-medium">{item.label}</span>
             </Link>
           )
         })}
