@@ -103,6 +103,25 @@ export default function MinistryPage() {
     }
   }
 
+  async function deleteSchedule() {
+    if (!confirm('Excluir toda a escala deste mês?')) return
+    if (!confirm('Tem certeza? Esta ação não pode ser desfeita.')) return
+
+    const res = await fetch(`/api/ministries/${slug}/delete-schedule`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month, year }),
+    })
+
+    if (res.ok) {
+      setEvents([])
+      alert('Escala excluída.')
+    } else {
+      const data = await res.json()
+      alert('Erro: ' + (data.error || 'Erro desconhecido'))
+    }
+  }
+
   async function exportPDF() {
     const { jsPDF } = await import('jspdf')
     const { default: autoTable } = await import('jspdf-autotable')
@@ -222,21 +241,29 @@ export default function MinistryPage() {
           </div>
 
           {/* Actions */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <Link
               href={`/admin/ministerios/${slug}/gerar?month=${month}&year=${year}`}
-              className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-6 rounded-2xl hover:border-[#58a6ff] transition-colors"
+              className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-[#58a6ff] transition-colors"
             >
-              <Plus className="w-6 h-6 text-[#58a6ff]" />
-              <span className="text-sm font-semibold">GERAR ESCALA</span>
+              <Plus className="w-5 h-5 text-[#58a6ff]" />
+              <span className="text-xs font-semibold">GERAR</span>
             </Link>
             <button
               onClick={exportPDF}
               disabled={events.length === 0}
-              className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-6 rounded-2xl hover:border-red-400 transition-colors disabled:opacity-40"
+              className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-red-400 transition-colors disabled:opacity-40"
             >
-              <FileDown className="w-6 h-6 text-red-400" />
-              <span className="text-sm font-semibold">EXPORTAR PDF</span>
+              <FileDown className="w-5 h-5 text-red-400" />
+              <span className="text-xs font-semibold">PDF</span>
+            </button>
+            <button
+              onClick={deleteSchedule}
+              disabled={events.length === 0}
+              className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-[#f85149] transition-colors disabled:opacity-40"
+            >
+              <Trash2 className="w-5 h-5 text-[#f85149]" />
+              <span className="text-xs font-semibold">EXCLUIR</span>
             </button>
           </div>
 

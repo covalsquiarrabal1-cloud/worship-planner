@@ -132,6 +132,25 @@ export default function LiderMinistryPage() {
     }
   }
 
+  async function deleteSchedule() {
+    if (!confirm('Excluir toda a escala deste mês?')) return
+    if (!confirm('Tem certeza? Esta ação não pode ser desfeita.')) return
+
+    const res = await fetch(`/api/ministries/${slug}/delete-schedule`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month, year }),
+    })
+
+    if (res.ok) {
+      setEvents([])
+      alert('Escala excluída.')
+    } else {
+      const data = await res.json()
+      alert('Erro: ' + (data.error || 'Erro desconhecido'))
+    }
+  }
+
   async function exportPDF() {
     const { jsPDF } = await import('jspdf')
     const { default: autoTable } = await import('jspdf-autotable')
@@ -250,7 +269,7 @@ export default function LiderMinistryPage() {
           </div>
 
           {/* Actions */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <Link
               href={`/lider/${slug}/gerar?month=${month}&year=${year}`}
               className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-[#58a6ff] transition-colors"
@@ -266,6 +285,8 @@ export default function LiderMinistryPage() {
               <FileDown className="w-5 h-5 text-red-400" />
               <span className="text-xs font-semibold">PDF</span>
             </button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <button
               onClick={togglePublish}
               disabled={publishing || events.length === 0}
@@ -277,6 +298,14 @@ export default function LiderMinistryPage() {
             >
               {publishing ? <Loader2 className="w-5 h-5 animate-spin" /> : isPublished ? <EyeOff className="w-5 h-5 text-[#f85149]" /> : <Eye className="w-5 h-5 text-green-400" />}
               <span className="text-xs font-semibold">{isPublished ? 'OCULTAR' : 'PUBLICAR'}</span>
+            </button>
+            <button
+              onClick={deleteSchedule}
+              disabled={events.length === 0}
+              className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-[#f85149] transition-colors disabled:opacity-40"
+            >
+              <Trash2 className="w-5 h-5 text-[#f85149]" />
+              <span className="text-xs font-semibold">EXCLUIR</span>
             </button>
           </div>
 
