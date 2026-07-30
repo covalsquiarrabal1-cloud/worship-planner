@@ -18,23 +18,32 @@ export async function GET() {
   // Get all ministries
   const { data: ministries } = await serviceClient
     .from('ministries')
-    .select('id, name, slug')
+    .select('id, name, slug, leader_name')
     .order('name')
 
   // Get worship members count
   const { data: worshipMembers } = await serviceClient
     .from('members')
     .select('id, name, email')
+    .order('name')
 
   // Get ministry members
   const { data: ministryMembers } = await serviceClient
     .from('ministry_members')
     .select('id, name, email, ministry_id')
+    .order('name')
 
-  // Build stats
+  // Build stats with member names
   const ministryStats = (ministries || []).map(m => {
-    const count = (ministryMembers || []).filter(mm => mm.ministry_id === m.id).length
-    return { id: m.id, name: m.name, slug: m.slug, count }
+    const membersList = (ministryMembers || []).filter(mm => mm.ministry_id === m.id)
+    return {
+      id: m.id,
+      name: m.name,
+      slug: m.slug,
+      count: membersList.length,
+      leader_name: m.leader_name,
+      members: membersList.map(mm => mm.name),
+    }
   })
 
   // Total unique members across all (louvor + ministries) by email
@@ -70,6 +79,7 @@ export async function GET() {
 
   return NextResponse.json({
     worshipCount: (worshipMembers || []).length,
+    worshipMembers: (worshipMembers || []).map(m => m.name),
     ministryStats,
     totalUnique: allEmails.size,
     multiArea,
