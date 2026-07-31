@@ -98,40 +98,38 @@ export default function MinisteriosPage() {
       <p className="text-sm text-[var(--muted-foreground)]">Gerencie as escalas de cada ministério.</p>
 
       {groups.map((items, idx) => (
-        <div key={idx} className="rounded-2xl border border-[var(--border)] p-3 space-y-2">
-          {items.map(m => (
-            <Link
-              key={m.id}
-              href={m.slug === 'louvor' ? '/admin' : `/admin/ministerios/${m.slug}`}
-              className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-[#58a6ff]/10 transition-colors"
-            >
-              <span className="text-xl flex-shrink-0">
-                {m.slug === 'louvor' ? '🎵' : getMinistryEmoji(m.slug)}
-              </span>
-              <span className="font-medium text-sm flex-1">{m.name}</span>
-              {m.leader_name && (
-                <span className="text-xs text-[var(--muted-foreground)]">{m.leader_name}</span>
-              )}
-            </Link>
-          ))}
+        <div key={idx} className="rounded-2xl border border-[var(--border)] p-4 bg-[var(--card)]">
+          <div className="grid grid-cols-3 gap-3">
+            {items.map(m => (
+              <Link
+                key={m.id}
+                href={m.slug === 'louvor' ? '/admin' : `/admin/ministerios/${m.slug}`}
+                className="flex flex-col items-center justify-center gap-2 py-3 rounded-xl hover:bg-[#58a6ff]/10 transition-colors text-center"
+              >
+                <span className="text-3xl">
+                  {m.slug === 'louvor' ? '🎵' : getMinistryEmoji(m.slug)}
+                </span>
+                <span className="text-[11px] font-medium leading-tight">{m.name}</span>
+              </Link>
+            ))}
+          </div>
         </div>
       ))}
 
       {ungrouped.length > 0 && (
-        <div className="rounded-2xl border border-[var(--border)] p-3 space-y-2">
-          {ungrouped.map(m => (
-            <Link
-              key={m.id}
-              href={`/admin/ministerios/${m.slug}`}
-              className="flex items-center gap-3 px-3 py-3 rounded-xl hover:bg-[#58a6ff]/10 transition-colors"
-            >
-              <span className="text-xl flex-shrink-0">{getMinistryEmoji(m.slug)}</span>
-              <span className="font-medium text-sm flex-1">{m.name}</span>
-              {m.leader_name && (
-                <span className="text-xs text-[var(--muted-foreground)]">{m.leader_name}</span>
-              )}
-            </Link>
-          ))}
+        <div className="rounded-2xl border border-[var(--border)] p-4 bg-[var(--card)]">
+          <div className="grid grid-cols-3 gap-3">
+            {ungrouped.map(m => (
+              <Link
+                key={m.id}
+                href={`/admin/ministerios/${m.slug}`}
+                className="flex flex-col items-center justify-center gap-2 py-3 rounded-xl hover:bg-[#58a6ff]/10 transition-colors text-center"
+              >
+                <span className="text-3xl">{getMinistryEmoji(m.slug)}</span>
+                <span className="text-[11px] font-medium leading-tight">{m.name}</span>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
     </div>
