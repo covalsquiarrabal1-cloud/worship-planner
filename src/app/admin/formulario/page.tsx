@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, Plus, Trash2, ClipboardList } from 'lucide-react'
+import { Loader2, Plus, Trash2, ClipboardList, Users, ChevronDown, Clock } from 'lucide-react'
 
 interface Ministry {
   id: string
@@ -9,22 +9,63 @@ interface Ministry {
   slug: string
 }
 
+interface MinistryMember {
+  name: string
+  email: string
+  role: string
+}
+
+interface MinistryStat {
+  id: string
+  name: string
+  slug: string
+  total: number
+  members: MinistryMember[]
+}
+
+interface RecentSignup {
+  id: string
+  name: string
+  email: string
+  created_at: string
+  ministry_count: number
+}
+
+interface Stats {
+  totalSignups: number
+  lastSignupDate: string | null
+  ministryStats: MinistryStat[]
+  recentSignups: RecentSignup[]
+}
+
 export default function AdminFormularioPage() {
   const [ministries, setMinistries] = useState<Ministry[]>([])
+  const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState<'visao' | 'gerenciar'>('visao')
   const [showAdd, setShowAdd] = useState(false)
   const [newName, setNewName] = useState('')
   const [newSlug, setNewSlug] = useState('')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [expandedMinistry, setExpandedMinistry] = useState<string | null>(null)
 
-  useEffect(() => { loadMinistries() }, [])
+  useEffect(() => {
+    loadData()
+  }, [])
 
-  async function loadMinistries() {
-    const res = await fetch('/api/ministries')
-    if (res.ok) {
-      const data = await res.json()
+  async function loadData() {
+    const [ministriesRes, statsRes] = await Promise.all([
+      fetch('/api/ministries'),
+      fetch('/api/signup/stats'),
+    ])
+
+    if (ministriesRes.ok) {
+      const data = await ministriesRes.json()
       setMinistries(Array.isArray(data) ? data : [])
+    }
+    if (statsRes.ok) {
+      setStats(await statsRes.json())
     }
     setLoading(false)
   }
@@ -47,19 +88,17 @@ export default function AdminFormularioPage() {
 
   async function addMinistry() {
     if (!newName.trim() || !newSlug.trim()) return
-
     setSaving(true)
     const res = await fetch('/api/ministries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: newName.trim(), slug: newSlug.trim() }),
     })
-
     if (res.ok) {
       setNewName('')
       setNewSlug('')
       setShowAdd(false)
-      loadMinistries()
+      loadData()
     } else {
       const data = await res.json()
       alert(data.error || 'Erro ao adicionar ministério.')
@@ -68,48 +107,45 @@ export default function AdminFormularioPage() {
   }
 
   async function deleteMinistry(id: string, name: string) {
-    if (!confirm(`Tem certeza que deseja excluir "${name}"?\n\nIsso removerá o ministério da lista do formulário.`)) return
-
+    if (!confirm(`Excluir "${name}"?\n\nIsso removerá o ministério da lista do formulário.`)) return
     setDeleting(id)
     const res = await fetch(`/api/ministries?id=${id}`, { method: 'DELETE' })
-
     if (res.ok) {
-      loadMinistries()
+      loadData()
     } else {
       const data = await res.json()
-      alert(data.error || 'Erro ao excluir ministério.')
+      alert(data.error || 'Erro ao excluir.')
     }
     setDeleting(null)
+  }
+
+  function formatDate(dateStr: string) {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
   }
 
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
   }
 
+  const maxCount = stats?.ministryStats?.[0]?.total || 1
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold">Formulário</h2>
-          <p className="text-sm text-[var(--muted-foreground)]">
-            Gerencie os ministérios disponíveis para seleção no formulário público.
-          </p>
+          <p className="text-sm text-[var(--muted-foreground)]">Inscrições e ministérios do formulário público.</p>
         </div>
-        <button
-          onClick={() => setShowAdd(!showAdd)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#58a6ff] text-white text-sm font-semibold hover:bg-[#4c94e0] transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Novo
-        </button>
       </div>
 
       {/* Link do formulário */}
       <div className="card p-4 flex items-center gap-3">
-        <ClipboardList className="w-5 h-5 text-[#58a6ff]" />
-        <div className="flex-1">
-          <p className="text-sm font-medium">Link público do formulário:</p>
-          <p className="text-xs text-[var(--muted-foreground)] break-all">
+        <ClipboardList className="w-5 h-5 text-[#58a6ff] flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium">Link público:</p>
+          <p className="text-xs text-[var(--muted-foreground)] truncate">
             {typeof window !== 'undefined' ? `${window.location.origin}/formulario` : '/formulario'}
           </p>
         </div>
@@ -119,68 +155,196 @@ export default function AdminFormularioPage() {
             navigator.clipboard.writeText(url)
             alert('Link copiado!')
           }}
-          className="px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs font-semibold hover:border-[#58a6ff] transition-colors"
+          className="px-3 py-1.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs font-semibold hover:border-[#58a6ff] transition-colors flex-shrink-0"
         >
           Copiar
         </button>
       </div>
 
-      {/* Adicionar novo */}
-      {showAdd && (
-        <div className="card p-4 space-y-3">
-          <h3 className="font-semibold text-sm">Novo Ministério</h3>
-          <input
-            type="text"
-            placeholder="Nome do ministério"
-            value={newName}
-            onChange={e => handleNameChange(e.target.value)}
-            className="w-full"
-          />
-          <input
-            type="text"
-            placeholder="Slug (gerado automaticamente)"
-            value={newSlug}
-            onChange={e => setNewSlug(e.target.value)}
-            className="w-full text-sm"
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={addMinistry}
-              disabled={saving || !newName.trim()}
-              className="px-4 py-2 rounded-xl bg-[#58a6ff] text-white text-sm font-semibold hover:bg-[#4c94e0] disabled:opacity-50 flex items-center gap-2"
-            >
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Adicionar'}
-            </button>
-            <button
-              onClick={() => { setShowAdd(false); setNewName(''); setNewSlug('') }}
-              className="px-4 py-2 rounded-xl bg-[var(--card)] border border-[var(--border)] text-sm hover:border-[#58a6ff] transition-colors"
-            >
-              Cancelar
-            </button>
+      {/* Tabs */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setTab('visao')}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+            tab === 'visao' ? 'bg-[#58a6ff] text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'
+          }`}
+        >
+          Visão Geral
+        </button>
+        <button
+          onClick={() => setTab('gerenciar')}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+            tab === 'gerenciar' ? 'bg-[#58a6ff] text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'
+          }`}
+        >
+          Gerenciar
+        </button>
+      </div>
+
+      {tab === 'visao' && stats && (
+        <>
+          {/* Resumo */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="card text-center py-5">
+              <p className="text-3xl font-bold text-[#58a6ff]">{stats.totalSignups}</p>
+              <p className="text-xs text-[var(--muted-foreground)] mt-1">Inscrições</p>
+            </div>
+            <div className="card text-center py-5">
+              <p className="text-3xl font-bold text-green-400">{stats.ministryStats.length}</p>
+              <p className="text-xs text-[var(--muted-foreground)] mt-1">Ministérios com inscritos</p>
+            </div>
           </div>
-        </div>
+
+          {stats.lastSignupDate && (
+            <div className="card p-3 flex items-center gap-2 text-sm text-[var(--muted-foreground)]">
+              <Clock className="w-4 h-4" />
+              <span>Última inscrição: {formatDate(stats.lastSignupDate)}</span>
+            </div>
+          )}
+
+          {/* Por ministério */}
+          <section className="space-y-3">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <Users className="w-4 h-4" />
+              Inscritos por Ministério
+            </h3>
+
+            {stats.ministryStats.length === 0 && (
+              <p className="text-sm text-[var(--muted-foreground)] italic">Nenhuma inscrição ainda.</p>
+            )}
+
+            {stats.ministryStats.map(m => (
+              <div key={m.id} className="card overflow-hidden">
+                <button
+                  onClick={() => setExpandedMinistry(prev => prev === m.id ? null : m.id)}
+                  className="w-full"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">{m.name}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-[#58a6ff]">{m.total}</span>
+                      <ChevronDown className={`w-4 h-4 text-[var(--muted-foreground)] transition-transform ${expandedMinistry === m.id ? 'rotate-180' : ''}`} />
+                    </div>
+                  </div>
+                  {/* Barra de proporção */}
+                  <div className="w-full h-2 rounded-full bg-[var(--border)] overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[#58a6ff] transition-all"
+                      style={{ width: `${(m.total / maxCount) * 100}%` }}
+                    />
+                  </div>
+                </button>
+
+                {expandedMinistry === m.id && (
+                  <div className="mt-3 pt-3 border-t border-[var(--border)] space-y-1.5">
+                    {m.members.map((member, i) => (
+                      <div key={i} className="flex items-center justify-between text-xs">
+                        <span className="text-[var(--muted-foreground)]">{member.name}</span>
+                        <span className={`px-2 py-0.5 rounded-full font-semibold ${
+                          member.role === 'lider' ? 'bg-amber-500/20 text-amber-400' : 'bg-[#58a6ff]/20 text-[#58a6ff]'
+                        }`}>
+                          {member.role === 'lider' ? 'Líder' : 'Membro'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </section>
+
+          {/* Inscrições recentes */}
+          {stats.recentSignups.length > 0 && (
+            <section className="space-y-3">
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                Inscrições Recentes
+              </h3>
+
+              {stats.recentSignups.map(s => (
+                <div key={s.id} className="card p-3 flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium">{s.name}</p>
+                    <p className="text-xs text-[var(--muted-foreground)]">{formatDate(s.created_at)}</p>
+                  </div>
+                  <span className="text-xs px-2 py-1 rounded-lg bg-[#58a6ff]/10 text-[#58a6ff] font-semibold">
+                    {s.ministry_count} {s.ministry_count === 1 ? 'ministério' : 'ministérios'}
+                  </span>
+                </div>
+              ))}
+            </section>
+          )}
+        </>
       )}
 
-      {/* Lista de ministérios */}
-      <div className="space-y-2">
-        <p className="text-sm text-[var(--muted-foreground)]">{ministries.length} ministérios cadastrados</p>
-        {ministries.map(m => (
-          <div key={m.id} className="card p-3 flex items-center justify-between">
-            <div>
-              <span className="font-medium text-sm">{m.name}</span>
-              <span className="text-xs text-[var(--muted-foreground)] ml-2">/{m.slug}</span>
-            </div>
+      {tab === 'gerenciar' && (
+        <>
+          <div className="flex justify-end">
             <button
-              onClick={() => deleteMinistry(m.id, m.name)}
-              disabled={deleting === m.id}
-              className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-              title="Excluir"
+              onClick={() => setShowAdd(!showAdd)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#58a6ff] text-white text-sm font-semibold hover:bg-[#4c94e0] transition-colors"
             >
-              {deleting === m.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+              <Plus className="w-4 h-4" />
+              Novo
             </button>
           </div>
-        ))}
-      </div>
+
+          {showAdd && (
+            <div className="card p-4 space-y-3">
+              <h3 className="font-semibold text-sm">Novo Ministério</h3>
+              <input
+                type="text"
+                placeholder="Nome do ministério"
+                value={newName}
+                onChange={e => handleNameChange(e.target.value)}
+                className="w-full"
+              />
+              <input
+                type="text"
+                placeholder="Slug (gerado automaticamente)"
+                value={newSlug}
+                onChange={e => setNewSlug(e.target.value)}
+                className="w-full text-sm"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={addMinistry}
+                  disabled={saving || !newName.trim()}
+                  className="px-4 py-2 rounded-xl bg-[#58a6ff] text-white text-sm font-semibold hover:bg-[#4c94e0] disabled:opacity-50 flex items-center gap-2"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Adicionar'}
+                </button>
+                <button
+                  onClick={() => { setShowAdd(false); setNewName(''); setNewSlug('') }}
+                  className="px-4 py-2 rounded-xl bg-[var(--card)] border border-[var(--border)] text-sm hover:border-[#58a6ff] transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <p className="text-sm text-[var(--muted-foreground)]">{ministries.length} ministérios cadastrados</p>
+            {ministries.map(m => (
+              <div key={m.id} className="card p-3 flex items-center justify-between">
+                <div>
+                  <span className="font-medium text-sm">{m.name}</span>
+                  <span className="text-xs text-[var(--muted-foreground)] ml-2">/{m.slug}</span>
+                </div>
+                <button
+                  onClick={() => deleteMinistry(m.id, m.name)}
+                  disabled={deleting === m.id}
+                  className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                  title="Excluir"
+                >
+                  {deleting === m.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   )
 }
