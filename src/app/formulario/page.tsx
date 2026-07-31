@@ -11,7 +11,7 @@ interface Ministry {
 
 interface SelectedMinistry {
   ministry_id: string
-  role: 'membro' | 'lider'
+  role: 'membro' | 'lider' | 'ambos'
 }
 
 export default function FormularioPage() {
@@ -57,7 +57,21 @@ export default function FormularioPage() {
 
   function setMinistryRole(ministryId: string, role: 'membro' | 'lider') {
     setSelections(prev =>
-      prev.map(s => s.ministry_id === ministryId ? { ...s, role } : s)
+      prev.map(s => {
+        if (s.ministry_id !== ministryId) return s
+        // Toggle: se já está selecionado, deseleciona. Se o outro já está, vira "ambos"
+        if (role === 'membro') {
+          if (s.role === 'membro') return { ...s, role: 'lider' }
+          if (s.role === 'lider') return { ...s, role: 'ambos' }
+          if (s.role === 'ambos') return { ...s, role: 'lider' }
+        }
+        if (role === 'lider') {
+          if (s.role === 'lider') return { ...s, role: 'membro' }
+          if (s.role === 'membro') return { ...s, role: 'ambos' }
+          if (s.role === 'ambos') return { ...s, role: 'membro' }
+        }
+        return s
+      })
     )
   }
 
@@ -207,7 +221,7 @@ export default function FormularioPage() {
                           type="button"
                           onClick={() => setMinistryRole(ministry.id, 'membro')}
                           className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                            selected.role === 'membro'
+                            selected.role === 'membro' || selected.role === 'ambos'
                               ? 'bg-[#58a6ff] text-white'
                               : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'
                           }`}
@@ -218,7 +232,7 @@ export default function FormularioPage() {
                           type="button"
                           onClick={() => setMinistryRole(ministry.id, 'lider')}
                           className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                            selected.role === 'lider'
+                            selected.role === 'lider' || selected.role === 'ambos'
                               ? 'bg-amber-500 text-white'
                               : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'
                           }`}

@@ -17,7 +17,7 @@ export async function POST(request: Request) {
 
     // Validar que cada ministério tem role
     for (const m of ministries) {
-      if (!m.ministry_id || !m.role || !['membro', 'lider'].includes(m.role)) {
+      if (!m.ministry_id || !m.role || !['membro', 'lider', 'ambos'].includes(m.role)) {
         return NextResponse.json({ error: 'Selecione a função para cada ministério.' }, { status: 400 })
       }
     }
@@ -40,12 +40,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: signupError.message }, { status: 500 })
     }
 
-    // Inserir seleções de ministérios
-    const selections = ministries.map((m: { ministry_id: string; role: string }) => ({
-      signup_id: signup.id,
-      ministry_id: m.ministry_id,
-      role: m.role,
-    }))
+    // Inserir seleções de ministérios (se "ambos", cria duas linhas)
+    const selections: { signup_id: string; ministry_id: string; role: string }[] = []
+    for (const m of ministries as { ministry_id: string; role: string }[]) {
+      if (m.role === 'ambos') {
+        selections.push({ signup_id: signup.id, ministry_id: m.ministry_id, role: 'membro' })
+        selections.push({ signup_id: signup.id, ministry_id: m.ministry_id, role: 'lider' })
+      } else {
+        selections.push({ signup_id: signup.id, ministry_id: m.ministry_id, role: m.role })
+      }
+    }
 
     const { error: selectionsError } = await serviceClient
       .from('ministry_signup_selections')
