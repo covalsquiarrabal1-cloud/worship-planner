@@ -115,7 +115,7 @@ export default function MinisteriosPage() {
                   {m.slug === 'louvor' ? '🎵' : getMinistryEmoji(m.slug)}
                 </span>
               </div>
-              <span className="text-[11px] text-center leading-tight font-medium w-[70px] truncate">{m.name}</span>
+              <span className="text-[11px] text-center leading-tight font-medium w-[80px] break-words">{m.name}</span>
             </Link>
           ))}
         </div>
@@ -135,7 +135,7 @@ export default function MinisteriosPage() {
               <div className="w-[77px] h-[77px] rounded-[16px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
                 <span className="text-[35px]">{getMinistryEmoji(m.slug)}</span>
               </div>
-              <span className="text-[11px] text-center leading-tight font-medium w-[70px] truncate">{m.name}</span>
+              <span className="text-[11px] text-center leading-tight font-medium w-[80px] break-words">{m.name}</span>
             </Link>
           ))}
         </div>
