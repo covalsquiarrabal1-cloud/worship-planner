@@ -156,7 +156,7 @@ export default function FormularioPage() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 overflow-hidden">
             <img src="/icon-512.png" alt="Logo" className="w-full h-full object-cover rounded-2xl" />
           </div>
-          <h1 className="text-2xl font-bold">Cadastro de Ministérios</h1>
+          <h1 className="text-2xl font-bold">Ministérios IAC Valparaíso</h1>
           <p className="text-sm text-[var(--muted-foreground)] mt-2">
             Preencha seus dados e selecione os ministérios que você participa.
           </p>
