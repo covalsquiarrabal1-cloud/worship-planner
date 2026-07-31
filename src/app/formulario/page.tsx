@@ -217,34 +217,33 @@ export default function FormularioPage() {
                         className="w-5 h-5 rounded accent-[#58a6ff]"
                       />
                       <span className="font-medium text-sm flex-1">{ministry.name}</span>
+                      {selected && (
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); setMinistryRole(ministry.id, 'membro') }}
+                            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                              selected.role === 'membro' || selected.role === 'ambos'
+                                ? 'bg-[#58a6ff] text-white'
+                                : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'
+                            }`}
+                          >
+                            Membro
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); setMinistryRole(ministry.id, 'lider') }}
+                            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                              selected.role === 'lider' || selected.role === 'ambos'
+                                ? 'bg-amber-500 text-white'
+                                : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'
+                            }`}
+                          >
+                            Líder
+                          </button>
+                        </div>
+                      )}
                     </label>
-
-                    {selected && (
-                      <div className="flex gap-2 mt-2 ml-8">
-                        <button
-                          type="button"
-                          onClick={() => setMinistryRole(ministry.id, 'membro')}
-                          className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                            selected.role === 'membro' || selected.role === 'ambos'
-                              ? 'bg-[#58a6ff] text-white'
-                              : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'
-                          }`}
-                        >
-                          Membro
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setMinistryRole(ministry.id, 'lider')}
-                          className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                            selected.role === 'lider' || selected.role === 'ambos'
-                              ? 'bg-amber-500 text-white'
-                              : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'
-                          }`}
-                        >
-                          Líder
-                        </button>
-                      </div>
-                    )}
                   </div>
                 )
               })}
