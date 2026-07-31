@@ -101,7 +101,7 @@ export default function MinisteriosPage() {
       {groups.map((items, idx) => (
         <div
           key={idx}
-          className="w-[85%] aspect-square rounded-[32px] p-6 grid grid-cols-3 grid-rows-3 place-items-center"
+          className="w-[85%] max-w-[380px] aspect-square rounded-[32px] p-8 grid grid-cols-3 grid-rows-3 place-items-center"
           style={{ background: 'rgba(255, 255, 255, 0.07)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.12)' }}
         >
           {items.map(m => (
@@ -123,7 +123,7 @@ export default function MinisteriosPage() {
 
       {ungrouped.length > 0 && (
         <div
-          className="w-[85%] aspect-square rounded-[32px] p-6 grid grid-cols-3 grid-rows-3 place-items-center"
+          className="w-[85%] max-w-[380px] aspect-square rounded-[32px] p-8 grid grid-cols-3 grid-rows-3 place-items-center"
           style={{ background: 'rgba(255, 255, 255, 0.07)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.12)' }}
         >
           {ungrouped.map(m => (
