@@ -26,6 +26,8 @@ export default function FormularioPage() {
   const [phone, setPhone] = useState('')
   const [birthDate, setBirthDate] = useState('')
   const [selections, setSelections] = useState<SelectedMinistry[]>([])
+  const [otherMinistry, setOtherMinistry] = useState('')
+  const [otherRole, setOtherRole] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -91,8 +93,8 @@ export default function FormularioPage() {
       return
     }
 
-    if (selections.length === 0) {
-      setError('Selecione pelo menos um ministério.')
+    if (selections.length === 0 && !otherMinistry.trim()) {
+      setError('Selecione pelo menos um ministério ou descreva no campo abaixo.')
       return
     }
 
@@ -108,6 +110,8 @@ export default function FormularioPage() {
           phone: phone.trim(),
           birth_date: birthDate,
           ministries: selections,
+          other_ministry: otherMinistry.trim() || null,
+          other_role: otherRole.trim() || null,
         }),
       })
 
@@ -245,6 +249,26 @@ export default function FormularioPage() {
                 )
               })}
             </div>
+          </div>
+
+          {/* Não encontrou seu ministério */}
+          <div className="card p-4 space-y-3">
+            <p className="text-sm font-semibold">Não encontrou seu ministério?</p>
+            <p className="text-xs text-[var(--muted-foreground)]">Descreva qual ministério e sua função.</p>
+            <input
+              type="text"
+              placeholder="Nome do ministério"
+              value={otherMinistry}
+              onChange={e => setOtherMinistry(e.target.value)}
+              className="w-full"
+            />
+            <input
+              type="text"
+              placeholder="Sua função (ex: membro, líder, auxiliar...)"
+              value={otherRole}
+              onChange={e => setOtherRole(e.target.value)}
+              className="w-full"
+            />
           </div>
 
           {/* Erro */}
