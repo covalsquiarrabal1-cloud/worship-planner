@@ -24,7 +24,8 @@ export default function MinistryPage() {
   const [tab, setTab] = useState<'escala' | 'membros'>('escala')
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberEmail, setNewMemberEmail] = useState('')
-  const [newMemberRole, setNewMemberRole] = useState<'membro' | 'lider'>('membro')
+  const [newMemberIsMembro, setNewMemberIsMembro] = useState(true)
+  const [newMemberIsLider, setNewMemberIsLider] = useState(false)
   const [showAddMember, setShowAddMember] = useState(false)
 
   const month = currentDate.getMonth() + 1
@@ -52,14 +53,20 @@ export default function MinistryPage() {
       alert('Nome e e-mail são obrigatórios.')
       return
     }
+    if (!newMemberIsMembro && !newMemberIsLider) {
+      alert('Selecione pelo menos uma função (Membro ou Líder).')
+      return
+    }
+    const role = (newMemberIsMembro && newMemberIsLider) ? 'ambos' : newMemberIsLider ? 'lider' : 'membro'
     await fetch(`/api/ministries/${slug}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newMemberName.trim(), email: newMemberEmail.trim(), role: newMemberRole }),
+      body: JSON.stringify({ name: newMemberName.trim(), email: newMemberEmail.trim(), role }),
     })
     setNewMemberName('')
     setNewMemberEmail('')
-    setNewMemberRole('membro')
+    setNewMemberIsMembro(true)
+    setNewMemberIsLider(false)
     setShowAddMember(false)
     loadData()
   }
@@ -201,9 +208,9 @@ export default function MinistryPage() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => setNewMemberRole('membro')}
+                  onClick={() => setNewMemberIsMembro(!newMemberIsMembro)}
                   className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                    newMemberRole === 'membro'
+                    newMemberIsMembro
                       ? 'bg-[#58a6ff] text-white'
                       : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'
                   }`}
@@ -212,9 +219,9 @@ export default function MinistryPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setNewMemberRole('lider')}
+                  onClick={() => setNewMemberIsLider(!newMemberIsLider)}
                   className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
-                    newMemberRole === 'lider'
+                    newMemberIsLider
                       ? 'bg-amber-500 text-white'
                       : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'
                   }`}
@@ -233,9 +240,14 @@ export default function MinistryPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-sm">{m.name}</p>
-                  {m.role === 'lider' && (
+                  {(m.role === 'lider' || m.role === 'ambos') && (
                     <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-400">
                       Líder
+                    </span>
+                  )}
+                  {(m.role === 'membro' || m.role === 'ambos') && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-[#58a6ff]/10 text-[#58a6ff]">
+                      Membro
                     </span>
                   )}
                   <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${m.is_blocked ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'}`}>

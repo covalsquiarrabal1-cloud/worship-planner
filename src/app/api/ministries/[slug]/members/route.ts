@@ -90,7 +90,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   const { name, email, role } = body
   if (!name) return NextResponse.json({ error: 'Nome obrigatório' }, { status: 400 })
 
-  const memberRole = role === 'lider' ? 'lider' : 'membro'
+  const memberRole = ['membro', 'lider', 'ambos'].includes(role) ? role : 'membro'
   const normalizedEmail = email ? email.trim().toLowerCase() : null
 
   // Insert ministry member
@@ -106,8 +106,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   if (normalizedEmail) {
     await ensureUserAccess(serviceClient, normalizedEmail, name)
 
-    // Se for líder, atualizar role do profile para ministry_leader e setar no ministério
-    if (memberRole === 'lider') {
+    // Se for líder ou ambos, atualizar role do profile para ministry_leader e setar no ministério
+    if (memberRole === 'lider' || memberRole === 'ambos') {
       const { data: existingProfile } = await serviceClient
         .from('profiles')
         .select('id')
