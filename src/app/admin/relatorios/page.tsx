@@ -27,10 +27,36 @@ interface ReportData {
 }
 
 const ministryIcons: Record<string, string> = {
-  som: '🔊',
-  iluminacao: '💡',
-  projecao: '📽',
-  backstage: '🚪',
+  'som': '🔊',
+  'iluminacao': '💡',
+  'projecao': '📽',
+  'backstage': '🚪',
+  'conexao': '🤝',
+  'conexao-alive': '🤝',
+  'excelencia': '⭐',
+  'intercessao': '🙏',
+  'intercessao-alive': '🙏',
+  'centurioes': '🛡️',
+  'servos': '🙌',
+  'fotografia-creative': '📸',
+  'stories': '📱',
+  'profetico': '🔥',
+  'kids': '🧒',
+  'ac-soccer': '⚽',
+  'ac-volei': '🏐',
+  'decoracao': '🎨',
+  'ativadas': '👩',
+  'forja': '🔨',
+  'empoderadas': '👑',
+  'strong-brothers': '💪',
+  'alive': '⚡',
+  'sala-de-cura': '💊',
+  'acao-social': '❤️',
+  'financas': '💰',
+  'bookstore': '📚',
+  'exito': '🎯',
+  'evangelismo': '📢',
+  'membresia': '📋',
 }
 
 export default function RelatoriosPage() {
@@ -122,7 +148,7 @@ export default function RelatoriosPage() {
               className="w-full flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
-                <span className="text-lg">{ministryIcons[m.slug] || '🚪'}</span>
+                <span className="text-lg">{ministryIcons[m.slug] || '⛪'}</span>
                 <div className="text-left">
                   <span className="text-sm font-medium">{m.name}</span>
                   {m.leader_name && (
