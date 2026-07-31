@@ -31,7 +31,7 @@ function getMinistryEmoji(slug: string): string {
     'ac-soccer': '⚽',
     'ac-volei': '🏐',
     'decoracao': '🎨',
-    'ativadas': '💪',
+    'ativadas': '👩',
     'forja': '🔨',
     'empoderadas': '👑',
     'strong-brothers': '💪',
