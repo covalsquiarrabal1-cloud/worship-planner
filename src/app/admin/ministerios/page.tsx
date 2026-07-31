@@ -92,14 +92,8 @@ export default function MinisteriosPage() {
   const allGroupedSlugs = MINISTRY_GROUPS.flat()
   const ungrouped = ministries.filter(m => !allGroupedSlugs.includes(m.slug))
 
-  function getGridCols(count: number) {
-    if (count <= 2) return 'grid-cols-2'
-    if (count <= 3) return 'grid-cols-3'
-    return 'grid-cols-3'
-  }
-
   return (
-    <div className="max-w-sm mx-auto px-4 space-y-5">
+    <div className="flex flex-col items-center px-4 space-y-8 pb-8">
       <div className="text-center pt-2">
         <h2 className="text-lg font-bold">Ministérios</h2>
       </div>
@@ -107,47 +101,43 @@ export default function MinisteriosPage() {
       {groups.map((items, idx) => (
         <div
           key={idx}
-          className="rounded-3xl p-5 flex items-center justify-center"
-          style={{ background: 'rgba(255, 255, 255, 0.06)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
+          className="w-[280px] h-[280px] rounded-[32px] p-6 grid grid-cols-3 grid-rows-3 place-items-center"
+          style={{ background: 'rgba(255, 255, 255, 0.07)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.12)' }}
         >
-          <div className={`grid ${getGridCols(items.length)} gap-5 place-items-center`}>
-            {items.map(m => (
-              <Link
-                key={m.id}
-                href={m.slug === 'louvor' ? '/admin' : `/admin/ministerios/${m.slug}`}
-                className="flex flex-col items-center gap-2 active:scale-90 transition-transform"
-              >
-                <div className="w-[56px] h-[56px] rounded-[14px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
-                  <span className="text-[26px]">
-                    {m.slug === 'louvor' ? '🎵' : getMinistryEmoji(m.slug)}
-                  </span>
-                </div>
-                <span className="text-[10px] text-center leading-tight font-medium w-[60px] truncate">{m.name}</span>
-              </Link>
-            ))}
-          </div>
+          {items.map(m => (
+            <Link
+              key={m.id}
+              href={m.slug === 'louvor' ? '/admin' : `/admin/ministerios/${m.slug}`}
+              className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform"
+            >
+              <div className="w-[52px] h-[52px] rounded-[14px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
+                <span className="text-[24px]">
+                  {m.slug === 'louvor' ? '🎵' : getMinistryEmoji(m.slug)}
+                </span>
+              </div>
+              <span className="text-[9px] text-center leading-tight font-medium w-[56px] truncate">{m.name}</span>
+            </Link>
+          ))}
         </div>
       ))}
 
       {ungrouped.length > 0 && (
         <div
-          className="rounded-3xl p-5 flex items-center justify-center"
-          style={{ background: 'rgba(255, 255, 255, 0.06)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
+          className="w-[280px] h-[280px] rounded-[32px] p-6 grid grid-cols-3 grid-rows-3 place-items-center"
+          style={{ background: 'rgba(255, 255, 255, 0.07)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.12)' }}
         >
-          <div className={`grid ${getGridCols(ungrouped.length)} gap-5 place-items-center`}>
-            {ungrouped.map(m => (
-              <Link
-                key={m.id}
-                href={`/admin/ministerios/${m.slug}`}
-                className="flex flex-col items-center gap-2 active:scale-90 transition-transform"
-              >
-                <div className="w-[56px] h-[56px] rounded-[14px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
-                  <span className="text-[26px]">{getMinistryEmoji(m.slug)}</span>
-                </div>
-                <span className="text-[10px] text-center leading-tight font-medium w-[60px] truncate">{m.name}</span>
-              </Link>
-            ))}
-          </div>
+          {ungrouped.map(m => (
+            <Link
+              key={m.id}
+              href={`/admin/ministerios/${m.slug}`}
+              className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform"
+            >
+              <div className="w-[52px] h-[52px] rounded-[14px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
+                <span className="text-[24px]">{getMinistryEmoji(m.slug)}</span>
+              </div>
+              <span className="text-[9px] text-center leading-tight font-medium w-[56px] truncate">{m.name}</span>
+            </Link>
+          ))}
         </div>
       )}
     </div>
