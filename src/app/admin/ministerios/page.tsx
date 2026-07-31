@@ -93,7 +93,7 @@ export default function MinisteriosPage() {
   const ungrouped = ministries.filter(m => !allGroupedSlugs.includes(m.slug))
 
   return (
-    <div className="flex flex-col items-center px-3 space-y-14 pb-8">
+    <div className="flex flex-col items-center px-3 space-y-20 pb-8">
       <div className="text-center pt-2">
         <h2 className="text-lg font-bold">Ministérios</h2>
       </div>
