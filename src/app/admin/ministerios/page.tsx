@@ -11,6 +11,42 @@ interface Ministry {
   leader_name: string | null
 }
 
+function getMinistryEmoji(slug: string): string {
+  const emojiMap: Record<string, string> = {
+    'som': '🔊',
+    'iluminacao': '💡',
+    'projecao': '📽',
+    'backstage': '🚪',
+    'conexao': '🤝',
+    'conexao-alive': '🤝',
+    'excelencia': '⭐',
+    'intercessao': '🙏',
+    'intercessao-alive': '🙏',
+    'centurioes': '🛡️',
+    'servos': '🙌',
+    'fotografia-creative': '📸',
+    'stories': '📱',
+    'profetico': '🔥',
+    'kids': '🧒',
+    'ac-soccer': '⚽',
+    'ac-volei': '🏐',
+    'decoracao': '🎨',
+    'ativadas': '💪',
+    'forja': '🔨',
+    'empoderadas': '👑',
+    'strong-brothers': '💪',
+    'alive': '⚡',
+    'sala-de-cura': '💊',
+    'acao-social': '❤️',
+    'financas': '💰',
+    'bookstore': '📚',
+    'exito': '🎯',
+    'evangelismo': '📢',
+    'membresia': '📋',
+  }
+  return emojiMap[slug] || '⛪'
+}
+
 export default function MinisteriosPage() {
   const [ministries, setMinistries] = useState<Ministry[]>([])
   const [loading, setLoading] = useState(true)
@@ -49,7 +85,7 @@ export default function MinisteriosPage() {
             className="card flex flex-col items-center justify-center py-8 hover:border-[#58a6ff] transition-colors text-center"
           >
             <span className="text-2xl mb-2">
-              {m.slug === 'som' ? '🔊' : m.slug === 'iluminacao' ? '💡' : m.slug === 'projecao' ? '📽' : '🚪'}
+              {getMinistryEmoji(m.slug)}
             </span>
             <span className="font-semibold text-sm">{m.name}</span>
             {m.leader_name && (
