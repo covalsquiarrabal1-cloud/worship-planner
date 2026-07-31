@@ -101,7 +101,7 @@ export default function MinisteriosPage() {
       {groups.map((items, idx) => (
         <div
           key={idx}
-          className="w-full aspect-square rounded-[32px] p-6 grid grid-cols-3 grid-rows-3 place-items-center"
+          className="w-[85%] aspect-square rounded-[32px] p-6 grid grid-cols-3 grid-rows-3 place-items-center"
           style={{ background: 'rgba(255, 255, 255, 0.07)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.12)' }}
         >
           {items.map(m => (
@@ -110,8 +110,8 @@ export default function MinisteriosPage() {
               href={m.slug === 'louvor' ? '/admin' : `/admin/ministerios/${m.slug}`}
               className="flex flex-col items-center gap-2 active:scale-90 transition-transform"
             >
-              <div className="w-[64px] h-[64px] rounded-[16px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
-                <span className="text-[30px]">
+              <div className="w-[96px] h-[96px] rounded-[20px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
+                <span className="text-[45px]">
                   {m.slug === 'louvor' ? '🎵' : getMinistryEmoji(m.slug)}
                 </span>
               </div>
@@ -123,7 +123,7 @@ export default function MinisteriosPage() {
 
       {ungrouped.length > 0 && (
         <div
-          className="w-full aspect-square rounded-[32px] p-6 grid grid-cols-3 grid-rows-3 place-items-center"
+          className="w-[85%] aspect-square rounded-[32px] p-6 grid grid-cols-3 grid-rows-3 place-items-center"
           style={{ background: 'rgba(255, 255, 255, 0.07)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.12)' }}
         >
           {ungrouped.map(m => (
@@ -132,8 +132,8 @@ export default function MinisteriosPage() {
               href={`/admin/ministerios/${m.slug}`}
               className="flex flex-col items-center gap-2 active:scale-90 transition-transform"
             >
-              <div className="w-[64px] h-[64px] rounded-[16px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
-                <span className="text-[30px]">{getMinistryEmoji(m.slug)}</span>
+              <div className="w-[96px] h-[96px] rounded-[20px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
+                <span className="text-[45px]">{getMinistryEmoji(m.slug)}</span>
               </div>
               <span className="text-[11px] text-center leading-tight font-medium w-[70px] truncate">{m.name}</span>
             </Link>
