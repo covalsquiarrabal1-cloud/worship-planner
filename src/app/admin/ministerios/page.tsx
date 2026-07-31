@@ -101,8 +101,8 @@ export default function MinisteriosPage() {
       {groups.map((items, idx) => (
         <div
           key={idx}
-          className="w-[85%] max-w-[360px] aspect-square rounded-[32px] p-6 flex flex-wrap items-center justify-center content-center gap-5 mb-10"
-          style={{ background: 'rgba(255, 255, 255, 0.07)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.12)' }}
+          className="w-[85%] max-w-[360px] aspect-square rounded-[32px] p-6 flex flex-wrap items-center justify-center content-center gap-5"
+          style={{ background: 'rgba(255, 255, 255, 0.07)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.12)', marginBottom: '60px' }}
         >
           {items.map(m => (
             <Link
@@ -110,8 +110,8 @@ export default function MinisteriosPage() {
               href={m.slug === 'louvor' ? '/admin' : `/admin/ministerios/${m.slug}`}
               className="flex flex-col items-center gap-2 active:scale-90 transition-transform"
             >
-              <div className="w-[70px] h-[70px] rounded-[16px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
-                <span className="text-[32px]">
+              <div className="w-[77px] h-[77px] rounded-[16px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
+                <span className="text-[35px]">
                   {m.slug === 'louvor' ? '🎵' : getMinistryEmoji(m.slug)}
                 </span>
               </div>
@@ -132,8 +132,8 @@ export default function MinisteriosPage() {
               href={`/admin/ministerios/${m.slug}`}
               className="flex flex-col items-center gap-2 active:scale-90 transition-transform"
             >
-              <div className="w-[70px] h-[70px] rounded-[16px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
-                <span className="text-[32px]">{getMinistryEmoji(m.slug)}</span>
+              <div className="w-[77px] h-[77px] rounded-[16px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
+                <span className="text-[35px]">{getMinistryEmoji(m.slug)}</span>
               </div>
               <span className="text-[11px] text-center leading-tight font-medium w-[70px] truncate">{m.name}</span>
             </Link>
