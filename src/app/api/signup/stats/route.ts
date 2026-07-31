@@ -113,10 +113,19 @@ export async function GET() {
     }))
   }
 
+  // Inscrições com "outro ministério" (não encontraram na lista)
+  const { data: otherMinistrySignups } = await serviceClient
+    .from('ministry_signups')
+    .select('id, name, email, other_ministry, other_role, created_at')
+    .not('other_ministry', 'is', null)
+    .neq('other_ministry', '')
+    .order('created_at', { ascending: false })
+
   return NextResponse.json({
     totalSignups: totalSignups || 0,
     lastSignupDate: lastSignup?.created_at || null,
     ministryStats,
     recentSignups: recentWithCount,
+    otherMinistrySignups: otherMinistrySignups || [],
   })
 }

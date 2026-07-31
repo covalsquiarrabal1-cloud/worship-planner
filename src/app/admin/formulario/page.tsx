@@ -31,11 +31,21 @@ interface RecentSignup {
   ministry_count: number
 }
 
+interface OtherMinistrySignup {
+  id: string
+  name: string
+  email: string
+  other_ministry: string
+  other_role: string | null
+  created_at: string
+}
+
 interface Stats {
   totalSignups: number
   lastSignupDate: string | null
   ministryStats: MinistryStat[]
   recentSignups: RecentSignup[]
+  otherMinistrySignups: OtherMinistrySignup[]
 }
 
 export default function AdminFormularioPage() {
@@ -270,6 +280,36 @@ export default function AdminFormularioPage() {
                   <span className="text-xs px-2 py-1 rounded-lg bg-[#58a6ff]/10 text-[#58a6ff] font-semibold">
                     {s.ministry_count} {s.ministry_count === 1 ? 'ministério' : 'ministérios'}
                   </span>
+                </div>
+              ))}
+            </section>
+          )}
+
+          {/* Não encontraram o ministério */}
+          {stats.otherMinistrySignups && stats.otherMinistrySignups.length > 0 && (
+            <section className="space-y-3">
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                <span className="text-base">❓</span>
+                Não encontraram o ministério ({stats.otherMinistrySignups.length})
+              </h3>
+
+              {stats.otherMinistrySignups.map(s => (
+                <div key={s.id} className="card p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium">{s.name}</p>
+                    <p className="text-[10px] text-[var(--muted-foreground)]">{formatDate(s.created_at)}</p>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <span className="text-xs px-2 py-1 rounded-lg bg-purple-500/10 text-purple-400 font-semibold">
+                      {s.other_ministry}
+                    </span>
+                    {s.other_role && (
+                      <span className="text-xs px-2 py-1 rounded-lg bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]">
+                        {s.other_role}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-[var(--muted-foreground)] mt-1">{s.email}</p>
                 </div>
               ))}
             </section>
