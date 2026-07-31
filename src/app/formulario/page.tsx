@@ -222,7 +222,7 @@ export default function FormularioPage() {
                           <button
                             type="button"
                             onClick={(e) => { e.preventDefault(); setMinistryRole(ministry.id, 'membro') }}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                            className={`px-5 py-2 rounded-lg text-xs font-semibold transition-colors ${
                               selected.role === 'membro' || selected.role === 'ambos'
                                 ? 'bg-[#58a6ff] text-white'
                                 : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'
@@ -233,7 +233,7 @@ export default function FormularioPage() {
                           <button
                             type="button"
                             onClick={(e) => { e.preventDefault(); setMinistryRole(ministry.id, 'lider') }}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                            className={`px-5 py-2 rounded-lg text-xs font-semibold transition-colors ${
                               selected.role === 'lider' || selected.role === 'ambos'
                                 ? 'bg-amber-500 text-white'
                                 : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'
