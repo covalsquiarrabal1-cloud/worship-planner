@@ -47,17 +47,25 @@ function getMinistryEmoji(slug: string): string {
   return emojiMap[slug] || '⛪'
 }
 
-// Grupos de ministérios (ordem visual)
-const MINISTRY_GROUPS: string[][] = [
-  ['conexao', 'excelencia', 'centurioes', 'servos'],
-  ['louvor', 'iluminacao', 'som', 'projecao', 'backstage'],
-  ['ac-soccer', 'ac-volei'],
-  ['empoderadas', 'strong-brothers', 'kids'],
-  ['sala-de-cura', 'intercessao', 'profetico', 'evangelismo'],
-  ['decoracao', 'bookstore', 'exito', 'membresia'],
-  ['alive', 'conexao-alive', 'intercessao-alive', 'ativadas', 'forja'],
-  ['fotografia-creative', 'stories'],
-  ['acao-social', 'financas'],
+// Ordem dos ministérios agrupados (separados por null = espaço visual)
+const MINISTRY_ORDER: (string | null)[] = [
+  'conexao', 'excelencia', 'centurioes', 'servos',
+  null,
+  'louvor', 'iluminacao', 'som', 'projecao', 'backstage',
+  null,
+  'ac-soccer', 'ac-volei', 'empoderadas', 'strong-brothers',
+  'kids',
+  null,
+  'sala-de-cura', 'intercessao', 'profetico', 'evangelismo',
+  null,
+  'decoracao', 'bookstore', 'exito', 'membresia',
+  null,
+  'alive', 'conexao-alive', 'intercessao-alive', 'ativadas',
+  'forja',
+  null,
+  'fotografia-creative', 'stories',
+  null,
+  'acao-social', 'financas',
 ]
 
 export default function MinisteriosPage() {
@@ -77,61 +85,69 @@ export default function MinisteriosPage() {
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
 
-  // Montar grupos com dados do banco
-  const groups = MINISTRY_GROUPS.map(slugs => {
-    const items = slugs
-      .map(slug => {
-        if (slug === 'louvor') return { id: 'louvor', name: 'Louvor', slug: 'louvor', leader_name: null } as Ministry
-        return ministries.find(m => m.slug === slug)
-      })
-      .filter(Boolean) as Ministry[]
-    return items
-  }).filter(g => g.length > 0)
+  // Construir lista ordenada com separadores
+  const orderedItems: (Ministry | 'separator')[] = []
+  const usedSlugs = new Set<string>()
 
-  // Ministérios sem grupo
-  const allGroupedSlugs = MINISTRY_GROUPS.flat()
-  const ungrouped = ministries.filter(m => !allGroupedSlugs.includes(m.slug))
+  for (const slug of MINISTRY_ORDER) {
+    if (slug === null) {
+      orderedItems.push('separator')
+    } else if (slug === 'louvor') {
+      orderedItems.push({ id: 'louvor', name: 'Louvor', slug: 'louvor', leader_name: null })
+      usedSlugs.add('louvor')
+    } else {
+      const m = ministries.find(m => m.slug === slug)
+      if (m) {
+        orderedItems.push(m)
+        usedSlugs.add(slug)
+      }
+    }
+  }
+
+  // Adicionar não agrupados
+  const ungrouped = ministries.filter(m => !usedSlugs.has(m.slug))
+  if (ungrouped.length > 0) {
+    orderedItems.push('separator')
+    ungrouped.forEach(m => orderedItems.push(m))
+  }
+
+  // Dividir em seções por separador
+  const sections: Ministry[][] = []
+  let current: Ministry[] = []
+  for (const item of orderedItems) {
+    if (item === 'separator') {
+      if (current.length > 0) sections.push(current)
+      current = []
+    } else {
+      current.push(item)
+    }
+  }
+  if (current.length > 0) sections.push(current)
 
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      <h2 className="text-xl font-bold">Ministérios</h2>
-      <p className="text-sm text-[var(--muted-foreground)]">Gerencie as escalas de cada ministério.</p>
+    <div className="max-w-md mx-auto px-2 space-y-6">
+      <div className="text-center pt-2">
+        <h2 className="text-lg font-bold">Ministérios</h2>
+      </div>
 
-      {groups.map((items, idx) => (
-        <div key={idx} className="rounded-2xl border border-[var(--border)] p-4 bg-[var(--card)]">
-          <div className="grid grid-cols-3 gap-3">
-            {items.map(m => (
-              <Link
-                key={m.id}
-                href={m.slug === 'louvor' ? '/admin' : `/admin/ministerios/${m.slug}`}
-                className="flex flex-col items-center justify-center gap-2 py-3 rounded-xl hover:bg-[#58a6ff]/10 transition-colors text-center"
-              >
-                <span className="text-3xl">
+      {sections.map((section, idx) => (
+        <div key={idx} className="grid grid-cols-4 gap-y-5 gap-x-2 justify-items-center">
+          {section.map(m => (
+            <Link
+              key={m.id}
+              href={m.slug === 'louvor' ? '/admin' : `/admin/ministerios/${m.slug}`}
+              className="flex flex-col items-center gap-1.5 w-[72px] active:scale-90 transition-transform"
+            >
+              <div className="w-[60px] h-[60px] rounded-[16px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
+                <span className="text-[28px]">
                   {m.slug === 'louvor' ? '🎵' : getMinistryEmoji(m.slug)}
                 </span>
-                <span className="text-[11px] font-medium leading-tight">{m.name}</span>
-              </Link>
-            ))}
-          </div>
+              </div>
+              <span className="text-[10px] text-center leading-tight font-medium truncate w-full">{m.name}</span>
+            </Link>
+          ))}
         </div>
       ))}
-
-      {ungrouped.length > 0 && (
-        <div className="rounded-2xl border border-[var(--border)] p-4 bg-[var(--card)]">
-          <div className="grid grid-cols-3 gap-3">
-            {ungrouped.map(m => (
-              <Link
-                key={m.id}
-                href={`/admin/ministerios/${m.slug}`}
-                className="flex flex-col items-center justify-center gap-2 py-3 rounded-xl hover:bg-[#58a6ff]/10 transition-colors text-center"
-              >
-                <span className="text-3xl">{getMinistryEmoji(m.slug)}</span>
-                <span className="text-[11px] font-medium leading-tight">{m.name}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
