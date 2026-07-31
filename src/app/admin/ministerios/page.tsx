@@ -94,64 +94,62 @@ export default function MinisteriosPage() {
 
   function getGridCols(count: number) {
     if (count <= 2) return 'grid-cols-2'
-    if (count <= 4) return 'grid-cols-2'
+    if (count <= 3) return 'grid-cols-3'
     return 'grid-cols-3'
   }
 
   return (
-    <div className="max-w-lg mx-auto px-4 space-y-5">
+    <div className="max-w-sm mx-auto px-4 space-y-5">
       <div className="text-center pt-2">
         <h2 className="text-lg font-bold">Ministérios</h2>
       </div>
 
-      <div className="grid grid-cols-2 gap-5">
-        {groups.map((items, idx) => (
-          <div
-            key={idx}
-            className="rounded-3xl p-4 flex flex-col items-center justify-center aspect-square"
-            style={{ background: 'rgba(255, 255, 255, 0.06)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
-          >
-            <div className={`grid ${getGridCols(items.length)} gap-3 w-full place-items-center`}>
-              {items.map(m => (
-                <Link
-                  key={m.id}
-                  href={m.slug === 'louvor' ? '/admin' : `/admin/ministerios/${m.slug}`}
-                  className="flex flex-col items-center gap-1 active:scale-90 transition-transform"
-                >
-                  <div className="w-[44px] h-[44px] rounded-[12px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-md">
-                    <span className="text-[20px]">
-                      {m.slug === 'louvor' ? '🎵' : getMinistryEmoji(m.slug)}
-                    </span>
-                  </div>
-                  <span className="text-[9px] text-center leading-tight font-medium truncate w-[50px]">{m.name}</span>
-                </Link>
-              ))}
-            </div>
+      {groups.map((items, idx) => (
+        <div
+          key={idx}
+          className="rounded-3xl p-5 flex items-center justify-center"
+          style={{ background: 'rgba(255, 255, 255, 0.06)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
+        >
+          <div className={`grid ${getGridCols(items.length)} gap-5 place-items-center`}>
+            {items.map(m => (
+              <Link
+                key={m.id}
+                href={m.slug === 'louvor' ? '/admin' : `/admin/ministerios/${m.slug}`}
+                className="flex flex-col items-center gap-2 active:scale-90 transition-transform"
+              >
+                <div className="w-[56px] h-[56px] rounded-[14px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
+                  <span className="text-[26px]">
+                    {m.slug === 'louvor' ? '🎵' : getMinistryEmoji(m.slug)}
+                  </span>
+                </div>
+                <span className="text-[10px] text-center leading-tight font-medium w-[60px] truncate">{m.name}</span>
+              </Link>
+            ))}
           </div>
-        ))}
+        </div>
+      ))}
 
-        {ungrouped.length > 0 && (
-          <div
-            className="rounded-3xl p-4 flex flex-col items-center justify-center aspect-square"
-            style={{ background: 'rgba(255, 255, 255, 0.06)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
-          >
-            <div className={`grid ${getGridCols(ungrouped.length)} gap-3 w-full place-items-center`}>
-              {ungrouped.map(m => (
-                <Link
-                  key={m.id}
-                  href={`/admin/ministerios/${m.slug}`}
-                  className="flex flex-col items-center gap-1 active:scale-90 transition-transform"
-                >
-                  <div className="w-[44px] h-[44px] rounded-[12px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-md">
-                    <span className="text-[20px]">{getMinistryEmoji(m.slug)}</span>
-                  </div>
-                  <span className="text-[9px] text-center leading-tight font-medium truncate w-[50px]">{m.name}</span>
-                </Link>
-              ))}
-            </div>
+      {ungrouped.length > 0 && (
+        <div
+          className="rounded-3xl p-5 flex items-center justify-center"
+          style={{ background: 'rgba(255, 255, 255, 0.06)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.1)' }}
+        >
+          <div className={`grid ${getGridCols(ungrouped.length)} gap-5 place-items-center`}>
+            {ungrouped.map(m => (
+              <Link
+                key={m.id}
+                href={`/admin/ministerios/${m.slug}`}
+                className="flex flex-col items-center gap-2 active:scale-90 transition-transform"
+              >
+                <div className="w-[56px] h-[56px] rounded-[14px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
+                  <span className="text-[26px]">{getMinistryEmoji(m.slug)}</span>
+                </div>
+                <span className="text-[10px] text-center leading-tight font-medium w-[60px] truncate">{m.name}</span>
+              </Link>
+            ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
