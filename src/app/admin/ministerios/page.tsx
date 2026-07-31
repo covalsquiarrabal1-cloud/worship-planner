@@ -102,7 +102,7 @@ export default function MinisteriosPage() {
         <div
           key={idx}
           className="w-[85%] max-w-[360px] aspect-square rounded-[32px] p-6 flex flex-wrap items-center justify-center content-center gap-5"
-          style={{ background: 'rgba(255, 255, 255, 0.07)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.12)', marginBottom: '60px' }}
+          style={{ background: 'rgba(255, 255, 255, 0.07)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.12)', marginBottom: '30px' }}
         >
           {items.map(m => (
             <Link
