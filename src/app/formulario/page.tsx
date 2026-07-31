@@ -164,7 +164,7 @@ export default function FormularioPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           {/* Dados pessoais */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <input
               type="text"
               placeholder="Nome completo"
