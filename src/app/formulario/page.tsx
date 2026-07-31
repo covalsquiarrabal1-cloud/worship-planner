@@ -149,7 +149,7 @@ export default function FormularioPage() {
   }
 
   return (
-    <div className="min-h-screen py-8 px-4">
+    <div className="min-h-screen py-8 px-5">
       <div className="max-w-lg mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -208,21 +208,21 @@ export default function FormularioPage() {
               {ministries.map(ministry => {
                 const selected = selections.find(s => s.ministry_id === ministry.id)
                 return (
-                  <div key={ministry.id} className="card p-3">
+                  <div key={ministry.id} className="card p-4">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input
                         type="checkbox"
                         checked={!!selected}
                         onChange={() => toggleMinistry(ministry.id)}
-                        className="w-5 h-5 rounded accent-[#58a6ff]"
+                        className="w-5 h-5 rounded accent-[#58a6ff] flex-shrink-0"
                       />
-                      <span className="font-medium text-sm flex-1">{ministry.name}</span>
+                      <span className="font-medium text-sm flex-1 min-w-0">{ministry.name}</span>
                       {selected && (
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-shrink-0">
                           <button
                             type="button"
                             onClick={(e) => { e.preventDefault(); setMinistryRole(ministry.id, 'membro') }}
-                            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                               selected.role === 'membro' || selected.role === 'ambos'
                                 ? 'bg-[#58a6ff] text-white'
                                 : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'
@@ -233,7 +233,7 @@ export default function FormularioPage() {
                           <button
                             type="button"
                             onClick={(e) => { e.preventDefault(); setMinistryRole(ministry.id, 'lider') }}
-                            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                               selected.role === 'lider' || selected.role === 'ambos'
                                 ? 'bg-amber-500 text-white'
                                 : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'
