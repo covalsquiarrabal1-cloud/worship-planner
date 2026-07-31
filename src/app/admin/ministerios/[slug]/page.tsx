@@ -7,7 +7,7 @@ import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, ArrowLeft, Users, FileDown } from 'lucide-react'
 import Link from 'next/link'
 
-interface MinistryMember { id: string; name: string; email: string | null; is_blocked: boolean }
+interface MinistryMember { id: string; name: string; email: string | null; is_blocked: boolean; role: string }
 interface MinistryEvent {
   id: string; event_date: string; day_of_week: string; week_number: number;
   scale_name: string | null; num_celebrations: number;
@@ -24,6 +24,7 @@ export default function MinistryPage() {
   const [tab, setTab] = useState<'escala' | 'membros'>('escala')
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberEmail, setNewMemberEmail] = useState('')
+  const [newMemberRole, setNewMemberRole] = useState<'membro' | 'lider'>('membro')
   const [showAddMember, setShowAddMember] = useState(false)
 
   const month = currentDate.getMonth() + 1
@@ -54,10 +55,11 @@ export default function MinistryPage() {
     await fetch(`/api/ministries/${slug}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newMemberName.trim(), email: newMemberEmail.trim() }),
+      body: JSON.stringify({ name: newMemberName.trim(), email: newMemberEmail.trim(), role: newMemberRole }),
     })
     setNewMemberName('')
     setNewMemberEmail('')
+    setNewMemberRole('membro')
     setShowAddMember(false)
     loadData()
   }
@@ -197,6 +199,30 @@ export default function MinistryPage() {
               <input placeholder="Nome" value={newMemberName} onChange={e => setNewMemberName(e.target.value)} autoFocus />
               <input placeholder="E-mail (obrigatório)" type="email" value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)} />
               <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNewMemberRole('membro')}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                    newMemberRole === 'membro'
+                      ? 'bg-[#58a6ff] text-white'
+                      : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'
+                  }`}
+                >
+                  Membro
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewMemberRole('lider')}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                    newMemberRole === 'lider'
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'
+                  }`}
+                >
+                  Líder
+                </button>
+              </div>
+              <div className="flex gap-2">
                 <button onClick={addMember} className="flex-1 bg-[#58a6ff] text-white py-2 rounded-xl text-sm font-medium">Salvar</button>
                 <button onClick={() => setShowAddMember(false)} className="px-4 py-2 text-[#8b949e] text-sm">Cancelar</button>
               </div>
@@ -207,6 +233,11 @@ export default function MinistryPage() {
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-sm">{m.name}</p>
+                  {m.role === 'lider' && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-400">
+                      Líder
+                    </span>
+                  )}
                   <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${m.is_blocked ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'}`}>
                     {m.is_blocked ? 'Inativo' : 'Ativo'}
                   </span>

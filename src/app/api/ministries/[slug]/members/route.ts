@@ -87,15 +87,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   }
 
   const body = await request.json()
-  const { name, email } = body
+  const { name, email, role } = body
   if (!name) return NextResponse.json({ error: 'Nome obrigatório' }, { status: 400 })
 
+  const memberRole = role === 'lider' ? 'lider' : 'membro'
   const normalizedEmail = email ? email.trim().toLowerCase() : null
 
   // Insert ministry member
   const { data, error } = await serviceClient
     .from('ministry_members')
-    .insert({ ministry_id: ministry.id, name, email: normalizedEmail })
+    .insert({ ministry_id: ministry.id, name, email: normalizedEmail, role: memberRole })
     .select()
     .single()
 
@@ -104,6 +105,29 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   // Auto-create login access if email was provided
   if (normalizedEmail) {
     await ensureUserAccess(serviceClient, normalizedEmail, name)
+
+    // Se for líder, atualizar role do profile para ministry_leader e setar no ministério
+    if (memberRole === 'lider') {
+      const { data: existingProfile } = await serviceClient
+        .from('profiles')
+        .select('id')
+        .ilike('email', normalizedEmail)
+        .single()
+
+      if (existingProfile) {
+        // Atualizar role para ministry_leader
+        await serviceClient
+          .from('profiles')
+          .update({ role: 'ministry_leader' })
+          .eq('id', existingProfile.id)
+
+        // Setar como líder do ministério
+        await serviceClient
+          .from('ministries')
+          .update({ leader_user_id: existingProfile.id, leader_name: name })
+          .eq('id', ministry.id)
+      }
+    }
   }
 
   return NextResponse.json(data)
