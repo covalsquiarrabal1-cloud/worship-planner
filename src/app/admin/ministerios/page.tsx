@@ -93,7 +93,7 @@ export default function MinisteriosPage() {
   const ungrouped = ministries.filter(m => !allGroupedSlugs.includes(m.slug))
 
   return (
-    <div className="flex flex-col items-center px-3 space-y-20 pb-8">
+    <div className="flex flex-col items-center px-3 pb-8">
       <div className="text-center pt-2">
         <h2 className="text-lg font-bold">Ministérios</h2>
       </div>
@@ -101,7 +101,7 @@ export default function MinisteriosPage() {
       {groups.map((items, idx) => (
         <div
           key={idx}
-          className="w-[85%] max-w-[360px] aspect-square rounded-[32px] p-6 flex flex-wrap items-center justify-center content-center gap-5"
+          className="w-[85%] max-w-[360px] aspect-square rounded-[32px] p-6 flex flex-wrap items-center justify-center content-center gap-5 mb-10"
           style={{ background: 'rgba(255, 255, 255, 0.07)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.12)' }}
         >
           {items.map(m => (
