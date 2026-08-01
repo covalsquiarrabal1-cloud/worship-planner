@@ -24,7 +24,7 @@ export async function GET() {
   // Get worship members count
   const { data: worshipMembers } = await serviceClient
     .from('members')
-    .select('id, name, email')
+    .select('id, name, email, is_leader, is_general_leader')
     .order('name')
 
   // Get ministry members with role
@@ -89,9 +89,15 @@ export async function GET() {
     ms.members.sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }
 
+  // Louvor leaders
+  const worshipLeaders = (worshipMembers || [])
+    .filter(m => m.is_general_leader || m.is_leader)
+    .map(m => ({ name: m.name, role: m.is_general_leader ? 'Líder geral' : 'Líder de equipe' }))
+
   return NextResponse.json({
     worshipCount: (worshipMembers || []).length,
     worshipMembers: (worshipMembers || []).map(m => m.name).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+    worshipLeaders,
     ministryStats,
     totalUnique: allEmails.size,
     multiArea,

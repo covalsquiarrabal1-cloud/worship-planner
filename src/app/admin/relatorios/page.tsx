@@ -21,6 +21,7 @@ interface MultiAreaMember {
 interface ReportData {
   worshipCount: number
   worshipMembers: string[]
+  worshipLeaders: { name: string; role: string }[]
   ministryStats: MinistryStats[]
   totalUnique: number
   multiArea: MultiAreaMember[]
@@ -124,7 +125,12 @@ export default function RelatoriosPage() {
           >
             <div className="flex items-center gap-3">
               <span className="text-lg">🎵</span>
-              <span className="text-sm font-medium">Louvor</span>
+              <div className="text-left">
+                <span className="text-sm font-medium">Louvor</span>
+                {data.worshipLeaders && data.worshipLeaders.length > 0 && (
+                  <p className="text-[10px] text-[var(--muted-foreground)]">Líder: {data.worshipLeaders.map(l => l.name).join(', ')}</p>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-sm font-bold text-[#58a6ff]">{data.worshipCount}</span>
@@ -133,6 +139,9 @@ export default function RelatoriosPage() {
           </button>
           {expandedArea === 'louvor' && (
             <div className="mt-3 pt-3 border-t border-[var(--border)] space-y-1">
+              {data.worshipLeaders && data.worshipLeaders.map((leader, i) => (
+                <p key={`leader-${i}`} className="text-xs font-medium text-yellow-400 py-0.5">👑 {leader.name} ({leader.role})</p>
+              ))}
               {data.worshipMembers.map((name, i) => (
                 <p key={i} className="text-xs text-[var(--muted-foreground)] py-0.5">{name}</p>
               ))}
