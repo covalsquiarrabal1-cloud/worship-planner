@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, Plus, Trash2, ClipboardList, Users, ChevronDown, Clock } from 'lucide-react'
+import { Loader2, Plus, Trash2, ClipboardList, Users, ChevronDown, Clock, Pencil } from 'lucide-react'
 
 interface Ministry {
   id: string
@@ -60,6 +60,10 @@ export default function AdminFormularioPage() {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [expandedMinistry, setExpandedMinistry] = useState<string | null>(null)
+  const [editingMinistry, setEditingMinistry] = useState<string | null>(null)
+  const [editMinistryName, setEditMinistryName] = useState('')
+  const [editMinistrySlug, setEditMinistrySlug] = useState('')
+  const [editMinistryGroup, setEditMinistryGroup] = useState('')
 
   useEffect(() => {
     loadData()
@@ -129,6 +133,31 @@ export default function AdminFormularioPage() {
       alert(data.error || 'Erro ao excluir.')
     }
     setDeleting(null)
+  }
+
+  function startEditMinistry(m: Ministry) {
+    setEditingMinistry(m.id)
+    setEditMinistryName(m.name)
+    setEditMinistrySlug(m.slug)
+    setEditMinistryGroup((m as any).group_name || 'Outros')
+  }
+
+  async function saveEditMinistry() {
+    if (!editingMinistry || !editMinistryName.trim()) return
+    setSaving(true)
+    const res = await fetch('/api/ministries', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: editingMinistry, name: editMinistryName.trim(), slug: editMinistrySlug.trim(), group_name: editMinistryGroup }),
+    })
+    if (res.ok) {
+      setEditingMinistry(null)
+      loadData()
+    } else {
+      const data = await res.json()
+      alert(data.error || 'Erro ao salvar.')
+    }
+    setSaving(false)
   }
 
   function formatDate(dateStr: string) {
@@ -410,24 +439,64 @@ export default function AdminFormularioPage() {
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-4">
             <p className="text-sm text-[var(--muted-foreground)]">{ministries.length} ministérios cadastrados</p>
-            {ministries.map(m => (
-              <div key={m.id} className="card p-3 flex items-center justify-between">
-                <div>
-                  <span className="font-medium text-sm">{m.name}</span>
-                  <span className="text-xs text-[var(--muted-foreground)] ml-2">/{m.slug}</span>
+            {['Integração', 'Culto', 'Esporte', 'Comunidade', 'Espiritual', 'Operacional', 'Alive', 'Comunicação', 'Administrativo', 'Outros'].map(group => {
+              const groupMinistries = ministries.filter(m => (m as any).group_name === group || (!((m as any).group_name) && group === 'Outros'))
+              if (groupMinistries.length === 0) return null
+              return (
+                <div key={group} className="space-y-2">
+                  <h4 className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">{group} ({groupMinistries.length})</h4>
+                  {groupMinistries.map(m => (
+                    <div key={m.id} className="card p-3">
+                      {editingMinistry === m.id ? (
+                        <div className="space-y-3">
+                          <input value={editMinistryName} onChange={e => setEditMinistryName(e.target.value)} placeholder="Nome" />
+                          <input value={editMinistrySlug} onChange={e => setEditMinistrySlug(e.target.value)} placeholder="Slug" className="text-sm" />
+                          <select value={editMinistryGroup} onChange={e => setEditMinistryGroup(e.target.value)} className="w-full">
+                            <option value="Integração">Integração</option>
+                            <option value="Culto">Culto</option>
+                            <option value="Esporte">Esporte</option>
+                            <option value="Comunidade">Comunidade</option>
+                            <option value="Espiritual">Espiritual</option>
+                            <option value="Operacional">Operacional</option>
+                            <option value="Alive">Alive</option>
+                            <option value="Comunicação">Comunicação</option>
+                            <option value="Administrativo">Administrativo</option>
+                            <option value="Outros">Outros</option>
+                          </select>
+                          <div className="flex gap-2">
+                            <button onClick={saveEditMinistry} disabled={saving} className="flex-1 bg-[#58a6ff] text-white py-2 rounded-xl text-sm font-medium">
+                              {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Salvar'}
+                            </button>
+                            <button onClick={() => setEditingMinistry(null)} className="px-4 py-2 text-[#8b949e] text-sm">Cancelar</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="font-medium text-sm">{m.name}</span>
+                            <span className="text-xs text-[var(--muted-foreground)] ml-2">/{m.slug}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => startEditMinistry(m)} className="p-2 rounded-lg text-[#58a6ff] hover:bg-[#58a6ff]/10 transition-colors">
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => deleteMinistry(m.id, m.name)}
+                              disabled={deleting === m.id}
+                              className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                            >
+                              {deleting === m.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-                <button
-                  onClick={() => deleteMinistry(m.id, m.name)}
-                  disabled={deleting === m.id}
-                  className="p-2 rounded-lg text-red-400 hover:bg-red-500/10 transition-colors disabled:opacity-50"
-                  title="Excluir"
-                >
-                  {deleting === m.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </>
       )}

@@ -82,3 +82,27 @@ export async function DELETE(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }
+
+export async function PUT(request: Request) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+  const serviceClient = await createServiceRoleClient()
+  const { data: profile } = await serviceClient
+    .from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+
+  const body = await request.json()
+  const { id, name, slug, group_name } = body
+
+  if (!id || !name || !slug) return NextResponse.json({ error: 'ID, nome e slug obrigatórios' }, { status: 400 })
+
+  const { error } = await serviceClient
+    .from('ministries')
+    .update({ name, slug, group_name: group_name || 'Outros' })
+    .eq('id', id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
+}
