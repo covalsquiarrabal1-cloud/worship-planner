@@ -7,7 +7,7 @@ const BASE = 'https://cdn.jsdelivr.net/gh/shuding/fluentui-emoji-unicode/assets'
 const MINISTRY_ICON_MAP: Record<string, string> = {
   'som': '🔊',
   'iluminacao': '💡',
-  'projecao': '📽️',
+  'projecao': '🖥️',
   'backstage': '🚪',
   'conexao': '🤝',
   'conexao-alive': '🤝',
@@ -35,8 +35,8 @@ const MINISTRY_ICON_MAP: Record<string, string> = {
   'exito': '🎯',
   'evangelismo': '📢',
   'membresia': '📋',
-  'louvor': '🎵',
-  'ac-casais': '💑',
+  'louvor': '🎶',
+  'ac-casais': '👫',
 }
 
 export function getMinistryIcon3D(slug: string): string {

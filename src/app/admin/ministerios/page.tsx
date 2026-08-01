@@ -16,7 +16,7 @@ function getMinistryEmoji(slug: string): string {
   const emojiMap: Record<string, string> = {
     'som': '🔊',
     'iluminacao': '💡',
-    'projecao': '📽',
+    'projecao': '🖥️',
     'backstage': '🚪',
     'conexao': '🤝',
     'conexao-alive': '🤝',
@@ -44,6 +44,8 @@ function getMinistryEmoji(slug: string): string {
     'exito': '🎯',
     'evangelismo': '📢',
     'membresia': '📋',
+    'louvor': '🎶',
+    'ac-casais': '👫',
   }
   return emojiMap[slug] || '⛪'
 }
