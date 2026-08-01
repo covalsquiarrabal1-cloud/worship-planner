@@ -13,6 +13,7 @@ interface MinistryMember {
   name: string
   email: string
   role: string
+  status: string
 }
 
 interface MinistryStat {
@@ -245,10 +246,28 @@ export default function AdminFormularioPage() {
 
           {/* Por ministério */}
           <section className="space-y-3">
-            <h3 className="font-semibold text-sm flex items-center gap-2">
-              <Users className="w-4 h-4" />
-              Inscritos por Ministério
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-sm flex items-center gap-2">
+                <Users className="w-4 h-4" />
+                Inscritos por Ministério
+              </h3>
+              <button
+                onClick={async () => {
+                  if (!confirm('Inserir TODOS os pendentes em seus ministérios?\n\nIsso vai criar acesso e cadastrar cada pessoa.')) return
+                  const res = await fetch('/api/signup/promote-all', { method: 'POST' })
+                  if (res.ok) {
+                    const data = await res.json()
+                    alert(`Pronto! ${data.inserted} inseridos de ${data.total} pendentes.${data.errors > 0 ? ` (${data.errors} erros)` : ''}`)
+                    loadData()
+                  } else {
+                    alert('Erro ao processar.')
+                  }
+                }}
+                className="px-3 py-1.5 rounded-lg bg-green-500/20 text-green-400 text-xs font-semibold hover:bg-green-500/30 transition-colors"
+              >
+                Inserir Todos
+              </button>
+            </div>
 
             {stats.ministryStats.length === 0 && (
               <p className="text-sm text-[var(--muted-foreground)] italic">Nenhuma inscrição ainda.</p>
@@ -279,41 +298,83 @@ export default function AdminFormularioPage() {
                 {expandedMinistry === m.id && (
                   <div className="mt-3 pt-3 border-t border-[var(--border)] space-y-1.5">
                     {m.members.map((member, i) => (
-                      <div key={i} className="flex items-center justify-between text-xs">
-                        <span className="text-[var(--muted-foreground)]">{member.name}</span>
-                        <button
-                          onClick={async () => {
-                            const newRole = member.role === 'lider' ? 'membro' : 'lider'
-                            const res = await fetch('/api/signup/update-role', {
-                              method: 'PUT',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                signup_email: member.email,
-                                ministry_id: m.id,
-                                old_role: member.role,
-                                new_role: newRole,
-                              }),
-                            })
-                            if (res.ok) {
-                              setStats(prev => {
-                                if (!prev) return prev
-                                return {
-                                  ...prev,
-                                  ministryStats: prev.ministryStats.map(ms =>
-                                    ms.id === m.id
-                                      ? { ...ms, members: ms.members.map((mb, idx) => idx === i ? { ...mb, role: newRole } : mb) }
-                                      : ms
-                                  ),
-                                }
+                      <div key={i} className="flex items-center justify-between text-xs gap-2">
+                        <span className={`flex-1 ${member.status === 'inserido' ? 'text-green-400' : 'text-[var(--muted-foreground)]'}`}>
+                          {member.status === 'inserido' && '✓ '}{member.name}
+                        </span>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <button
+                            onClick={async () => {
+                              const newRole = member.role === 'lider' ? 'membro' : 'lider'
+                              const res = await fetch('/api/signup/update-role', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  signup_email: member.email,
+                                  ministry_id: m.id,
+                                  old_role: member.role,
+                                  new_role: newRole,
+                                }),
                               })
-                            }
-                          }}
-                          className={`px-2 py-0.5 rounded-full font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
-                            member.role === 'lider' ? 'bg-amber-500/20 text-amber-400' : 'bg-[#58a6ff]/20 text-[#58a6ff]'
-                          }`}
-                        >
-                          {member.role === 'lider' ? 'Líder' : 'Membro'}
-                        </button>
+                              if (res.ok) {
+                                setStats(prev => {
+                                  if (!prev) return prev
+                                  return {
+                                    ...prev,
+                                    ministryStats: prev.ministryStats.map(ms =>
+                                      ms.id === m.id
+                                        ? { ...ms, members: ms.members.map((mb, idx) => idx === i ? { ...mb, role: newRole } : mb) }
+                                        : ms
+                                    ),
+                                  }
+                                })
+                              }
+                            }}
+                            className={`px-2 py-0.5 rounded-full font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
+                              member.role === 'lider' ? 'bg-amber-500/20 text-amber-400' : 'bg-[#58a6ff]/20 text-[#58a6ff]'
+                            }`}
+                          >
+                            {member.role === 'lider' ? 'Líder' : 'Membro'}
+                          </button>
+                          {member.status !== 'inserido' ? (
+                            <button
+                              onClick={async () => {
+                                const res = await fetch('/api/signup/promote', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    signup_email: member.email,
+                                    signup_name: member.name,
+                                    ministry_id: m.id,
+                                    role: member.role,
+                                  }),
+                                })
+                                if (res.ok) {
+                                  setStats(prev => {
+                                    if (!prev) return prev
+                                    return {
+                                      ...prev,
+                                      ministryStats: prev.ministryStats.map(ms =>
+                                        ms.id === m.id
+                                          ? { ...ms, members: ms.members.map((mb, idx) => idx === i ? { ...mb, status: 'inserido' } : mb) }
+                                          : ms
+                                      ),
+                                    }
+                                  })
+                                } else {
+                                  alert('Erro ao inserir membro.')
+                                }
+                              }}
+                              className="px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-semibold hover:bg-green-500/30 transition-colors"
+                            >
+                              Inserir
+                            </button>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full bg-green-500/10 text-green-500 font-semibold">
+                              Inserido
+                            </span>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>

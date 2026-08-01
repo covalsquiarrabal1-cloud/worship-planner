@@ -31,6 +31,7 @@ export async function GET() {
     .from('ministry_signup_selections')
     .select(`
       role,
+      status,
       ministry:ministries(id, name, slug),
       signup:ministry_signups(id, name, email)
     `)
@@ -42,7 +43,7 @@ export async function GET() {
     name: string
     slug: string
     total: number
-    members: { name: string; email: string; role: string }[]
+    members: { name: string; email: string; role: string; status: string }[]
   }> = {}
 
   if (selections) {
@@ -70,6 +71,7 @@ export async function GET() {
           name: signup.name,
           email: signup.email,
           role: sel.role,
+          status: (sel as any).status || 'pendente',
         })
       }
     }
