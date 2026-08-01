@@ -89,10 +89,10 @@ export async function GET() {
     ms.members.sort((a, b) => a.localeCompare(b, 'pt-BR'))
   }
 
-  // Louvor leaders
+  // Louvor leaders - apenas líder geral
   const worshipLeaders = (worshipMembers || [])
-    .filter(m => m.is_general_leader || m.is_leader)
-    .map(m => ({ name: m.name, role: m.is_general_leader ? 'Líder geral' : 'Líder de equipe' }))
+    .filter(m => m.is_general_leader)
+    .map(m => ({ name: m.name, role: 'Líder' }))
 
   return NextResponse.json({
     worshipCount: (worshipMembers || []).length,

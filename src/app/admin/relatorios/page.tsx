@@ -140,7 +140,7 @@ export default function RelatoriosPage() {
           {expandedArea === 'louvor' && (
             <div className="mt-3 pt-3 border-t border-[var(--border)] space-y-1">
               {data.worshipLeaders && data.worshipLeaders.map((leader, i) => (
-                <p key={`leader-${i}`} className="text-xs font-medium text-yellow-400 py-0.5">👑 {leader.name} ({leader.role})</p>
+                <p key={`leader-${i}`} className="text-xs font-medium text-yellow-400 py-0.5">👑 {leader.name} (Líder)</p>
               ))}
               {data.worshipMembers.map((name, i) => (
                 <p key={i} className="text-xs text-[var(--muted-foreground)] py-0.5">{name}</p>
