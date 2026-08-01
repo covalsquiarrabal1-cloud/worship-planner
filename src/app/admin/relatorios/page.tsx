@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, Users, BarChart3, ArrowLeft, ChevronDown } from 'lucide-react'
+import { Loader2, Users, BarChart3, ArrowLeft, ChevronDown, Search } from 'lucide-react'
 import Link from 'next/link'
 
 interface MinistryStats {
@@ -64,6 +64,14 @@ export default function RelatoriosPage() {
   const [data, setData] = useState<ReportData | null>(null)
   const [loading, setLoading] = useState(true)
   const [expandedArea, setExpandedArea] = useState<string | null>(null)
+  const [tab, setTab] = useState<'visao' | 'cadastro'>('visao')
+  const [cadastro, setCadastro] = useState<any[]>([])
+  const [cadastroLoading, setCadastroLoading] = useState(false)
+  const [search, setSearch] = useState('')
+  const [expandedPerson, setExpandedPerson] = useState<string | null>(null)
+  const [editingPerson, setEditingPerson] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editEmail, setEditEmail] = useState('')
 
   useEffect(() => {
     fetch('/api/relatorios')
@@ -71,6 +79,32 @@ export default function RelatoriosPage() {
       .then(d => { setData(d); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
+
+  async function loadCadastro() {
+    setCadastroLoading(true)
+    const res = await fetch('/api/relatorios/cadastro')
+    if (res.ok) setCadastro(await res.json())
+    setCadastroLoading(false)
+  }
+
+  function handleTabChange(newTab: 'visao' | 'cadastro') {
+    setTab(newTab)
+    if (newTab === 'cadastro' && cadastro.length === 0) loadCadastro()
+  }
+
+  async function saveEdit(oldEmail: string) {
+    const res = await fetch('/api/relatorios/cadastro', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ old_email: oldEmail, new_name: editName, new_email: editEmail }),
+    })
+    if (res.ok) {
+      setEditingPerson(null)
+      loadCadastro()
+    } else {
+      alert('Erro ao salvar.')
+    }
+  }
 
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
@@ -97,6 +131,25 @@ export default function RelatoriosPage() {
           <p className="text-sm text-[var(--muted-foreground)]">Visão geral dos membros</p>
         </div>
       </div>
+
+      {/* Tabs */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => handleTabChange('visao')}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${tab === 'visao' ? 'bg-[#58a6ff] text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
+        >
+          Visão Geral
+        </button>
+        <button
+          onClick={() => handleTabChange('cadastro')}
+          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${tab === 'cadastro' ? 'bg-[#58a6ff] text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
+        >
+          Cadastro
+        </button>
+      </div>
+
+      {tab === 'visao' && data && (
+      <>
 
       {/* Resumo Geral */}
       <div className="grid grid-cols-2 gap-3">
@@ -221,6 +274,89 @@ export default function RelatoriosPage() {
       )}
 
       <div className="h-24" />
+      </>
+      )}
+
+      {tab === 'cadastro' && (
+        <div className="space-y-4">
+          {/* Busca */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
+            <input
+              type="text"
+              placeholder="Buscar por nome..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-10"
+            />
+          </div>
+
+          {cadastroLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm text-[var(--muted-foreground)]">{cadastro.length} pessoas cadastradas</p>
+              {cadastro
+                .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+                .map((person, idx) => (
+                <div key={idx} className="card overflow-hidden">
+                  {editingPerson === person.email ? (
+                    <div className="space-y-3 p-1">
+                      <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nome" />
+                      <input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="E-mail" type="email" />
+                      <div className="flex gap-2">
+                        <button onClick={() => saveEdit(person.email)} className="flex-1 bg-[#58a6ff] text-white py-2 rounded-xl text-sm font-medium">Salvar</button>
+                        <button onClick={() => setEditingPerson(null)} className="px-4 py-2 text-[#8b949e] text-sm">Cancelar</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => setExpandedPerson(prev => prev === person.email ? null : person.email)}
+                        className="w-full flex items-center justify-between"
+                      >
+                        <div className="text-left">
+                          <p className="text-sm font-medium">{person.name}</p>
+                          <p className="text-xs text-[var(--muted-foreground)]">{person.email}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-[#58a6ff] font-semibold">{person.ministries.length} min.</span>
+                          <ChevronDown className={`w-4 h-4 text-[var(--muted-foreground)] transition-transform ${expandedPerson === person.email ? 'rotate-180' : ''}`} />
+                        </div>
+                      </button>
+                      {expandedPerson === person.email && (
+                        <div className="mt-3 pt-3 border-t border-[var(--border)] space-y-2">
+                          {person.phone && <p className="text-xs text-[var(--muted-foreground)]">📱 {person.phone}</p>}
+                          {person.birth_date && <p className="text-xs text-[var(--muted-foreground)]">🎂 {new Date(person.birth_date).toLocaleDateString('pt-BR')}</p>}
+                          <div className="space-y-1">
+                            {person.ministries.map((m: any, i: number) => (
+                              <div key={i} className="flex items-center justify-between text-xs">
+                                <span>{m.ministry_name}</span>
+                                <span className={`px-2 py-0.5 rounded-full font-semibold ${
+                                  m.role === 'lider' || m.role === 'ambos' ? 'bg-amber-500/20 text-amber-400' : 'bg-[#58a6ff]/20 text-[#58a6ff]'
+                                }`}>
+                                  {m.role === 'ambos' ? 'Membro + Líder' : m.role === 'lider' ? 'Líder' : 'Membro'}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                          <button
+                            onClick={() => { setEditingPerson(person.email); setEditName(person.name); setEditEmail(person.email) }}
+                            className="mt-2 text-xs text-[#58a6ff] hover:underline"
+                          >
+                            ✏️ Editar nome/email
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   )
 }
