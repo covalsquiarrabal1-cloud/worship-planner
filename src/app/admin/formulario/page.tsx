@@ -56,6 +56,7 @@ export default function AdminFormularioPage() {
   const [showAdd, setShowAdd] = useState(false)
   const [newName, setNewName] = useState('')
   const [newSlug, setNewSlug] = useState('')
+  const [newGroup, setNewGroup] = useState('Outros')
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState<string | null>(null)
   const [expandedMinistry, setExpandedMinistry] = useState<string | null>(null)
@@ -102,11 +103,12 @@ export default function AdminFormularioPage() {
     const res = await fetch('/api/ministries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newName.trim(), slug: newSlug.trim() }),
+      body: JSON.stringify({ name: newName.trim(), slug: newSlug.trim(), group_name: newGroup }),
     })
     if (res.ok) {
       setNewName('')
       setNewSlug('')
+      setNewGroup('Outros')
       setShowAdd(false)
       loadData()
     } else {
@@ -374,6 +376,22 @@ export default function AdminFormularioPage() {
                 onChange={e => setNewSlug(e.target.value)}
                 className="w-full text-sm"
               />
+              <select
+                value={newGroup}
+                onChange={e => setNewGroup(e.target.value)}
+                className="w-full"
+              >
+                <option value="Integração">Integração</option>
+                <option value="Culto">Culto</option>
+                <option value="Esporte">Esporte</option>
+                <option value="Comunidade">Comunidade</option>
+                <option value="Espiritual">Espiritual</option>
+                <option value="Operacional">Operacional</option>
+                <option value="Alive">Alive</option>
+                <option value="Comunicação">Comunicação</option>
+                <option value="Administrativo">Administrativo</option>
+                <option value="Outros">Outros</option>
+              </select>
               <div className="flex gap-2">
                 <button
                   onClick={addMinistry}

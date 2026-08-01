@@ -9,6 +9,7 @@ interface Ministry {
   name: string
   slug: string
   leader_name: string | null
+  group_name: string | null
 }
 
 function getMinistryEmoji(slug: string): string {
@@ -47,18 +48,8 @@ function getMinistryEmoji(slug: string): string {
   return emojiMap[slug] || '⛪'
 }
 
-// Grupos de ministérios
-const MINISTRY_GROUPS: string[][] = [
-  ['conexao', 'excelencia', 'centurioes', 'servos'],
-  ['louvor', 'iluminacao', 'som', 'projecao', 'backstage'],
-  ['ac-soccer', 'ac-volei'],
-  ['empoderadas', 'strong-brothers', 'kids'],
-  ['sala-de-cura', 'intercessao', 'profetico', 'evangelismo'],
-  ['decoracao', 'bookstore', 'exito', 'membresia'],
-  ['alive', 'conexao-alive', 'intercessao-alive', 'ativadas', 'forja'],
-  ['fotografia-creative', 'stories'],
-  ['acao-social', 'financas'],
-]
+// Ordem preferida dos grupos
+const GROUP_ORDER = ['Integração', 'Culto', 'Esporte', 'Comunidade', 'Espiritual', 'Operacional', 'Alive', 'Comunicação', 'Administrativo', 'Outros']
 
 export default function MinisteriosPage() {
   const [ministries, setMinistries] = useState<Ministry[]>([])
@@ -77,20 +68,31 @@ export default function MinisteriosPage() {
 
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
 
-  // Montar grupos com dados do banco
-  const groups = MINISTRY_GROUPS.map(slugs => {
-    const items = slugs
-      .map(slug => {
-        if (slug === 'louvor') return { id: 'louvor', name: 'Louvor', slug: 'louvor', leader_name: null } as Ministry
-        return ministries.find(m => m.slug === slug)
-      })
-      .filter(Boolean) as Ministry[]
-    return items
-  }).filter(g => g.length > 0)
+  // Agrupar por group_name do banco
+  const groupMap: Record<string, Ministry[]> = {}
+  
+  // Adicionar Louvor no grupo Culto
+  const louvorItem = { id: 'louvor', name: 'Louvor', slug: 'louvor', leader_name: null, group_name: 'Culto' } as Ministry
+  groupMap['Culto'] = [louvorItem]
 
-  // Ministérios sem grupo
-  const allGroupedSlugs = MINISTRY_GROUPS.flat()
-  const ungrouped = ministries.filter(m => !allGroupedSlugs.includes(m.slug))
+  for (const m of ministries) {
+    const group = m.group_name || 'Outros'
+    if (!groupMap[group]) groupMap[group] = []
+    groupMap[group].push(m)
+  }
+
+  // Ordenar grupos
+  const groups = GROUP_ORDER
+    .filter(g => groupMap[g] && groupMap[g].length > 0)
+    .map(g => groupMap[g])
+
+  // Grupos que não estão na ordem predefinida
+  const extraGroups = Object.keys(groupMap)
+    .filter(g => !GROUP_ORDER.includes(g))
+    .map(g => groupMap[g])
+    .filter(g => g.length > 0)
+
+  const allGroups = [...groups, ...extraGroups]
 
   return (
     <div className="flex flex-col items-center px-3 pb-8">
@@ -98,7 +100,7 @@ export default function MinisteriosPage() {
         <h2 className="text-lg font-bold">Ministérios</h2>
       </div>
 
-      {groups.map((items, idx) => (
+      {allGroups.map((items, idx) => (
         <div
           key={idx}
           className="w-[85%] max-w-[360px] aspect-square rounded-[32px] p-6 flex flex-wrap items-center justify-center content-center gap-5"
@@ -120,26 +122,6 @@ export default function MinisteriosPage() {
           ))}
         </div>
       ))}
-
-      {ungrouped.length > 0 && (
-        <div
-          className="w-[85%] max-w-[360px] aspect-square rounded-[32px] p-6 flex flex-wrap items-center justify-center content-center gap-5"
-          style={{ background: 'rgba(255, 255, 255, 0.07)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255, 255, 255, 0.12)' }}
-        >
-          {ungrouped.map(m => (
-            <Link
-              key={m.id}
-              href={`/admin/ministerios/${m.slug}`}
-              className="flex flex-col items-center gap-2 active:scale-90 transition-transform"
-            >
-              <div className="w-[77px] h-[77px] rounded-[16px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
-                <span className="text-[35px]">{getMinistryEmoji(m.slug)}</span>
-              </div>
-              <span className="text-[11px] text-center leading-tight font-medium w-[80px] break-words">{m.name}</span>
-            </Link>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

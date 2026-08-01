@@ -46,13 +46,13 @@ export async function POST(request: Request) {
   if (profile?.role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const body = await request.json()
-  const { name, slug, leader_name } = body
+  const { name, slug, leader_name, group_name } = body
 
   if (!name || !slug) return NextResponse.json({ error: 'Nome e slug obrigatórios' }, { status: 400 })
 
   const { data, error } = await serviceClient
     .from('ministries')
-    .insert({ name, slug, leader_name })
+    .insert({ name, slug, leader_name, group_name: group_name || 'Outros' })
     .select()
     .single()
 
