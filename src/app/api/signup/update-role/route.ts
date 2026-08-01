@@ -19,25 +19,36 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
   }
 
-  // Encontrar o signup pelo email
-  const { data: signup } = await serviceClient
+  // Encontrar TODOS os signups desse email
+  const { data: signups } = await serviceClient
     .from('ministry_signups')
     .select('id')
     .ilike('email', signup_email)
-    .limit(1)
-    .single()
 
-  if (!signup) return NextResponse.json({ error: 'Inscrição não encontrada' }, { status: 404 })
+  if (!signups || signups.length === 0) {
+    return NextResponse.json({ error: 'Inscrição não encontrada' }, { status: 404 })
+  }
 
-  // Atualizar o role na seleção
-  const { error } = await serviceClient
+  const signupIds = signups.map(s => s.id)
+
+  // Atualizar o role na seleção (match por signup_ids + ministry_id + old_role)
+  const { error, count } = await serviceClient
     .from('ministry_signup_selections')
     .update({ role: new_role })
-    .eq('signup_id', signup.id)
+    .in('signup_id', signupIds)
     .eq('ministry_id', ministry_id)
     .eq('role', old_role)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Se não atualizou nenhuma linha, tenta sem o filtro old_role (caso já tenha sido alterado)
+  if (count === 0) {
+    await serviceClient
+      .from('ministry_signup_selections')
+      .update({ role: new_role })
+      .in('signup_id', signupIds)
+      .eq('ministry_id', ministry_id)
+  }
 
   return NextResponse.json({ success: true })
 }
