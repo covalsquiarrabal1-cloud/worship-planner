@@ -159,3 +159,61 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }
+
+export async function PUT(request: Request, { params }: { params: Promise<{ slug: string }> }) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+  const { slug } = await params
+  const serviceClient = await createServiceRoleClient()
+
+  const { data: ministry } = await serviceClient
+    .from('ministries').select('id, leader_user_id').eq('slug', slug).single()
+  if (!ministry) return NextResponse.json({ error: 'Ministério não encontrado' }, { status: 404 })
+
+  const { data: profile } = await serviceClient
+    .from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin' && ministry.leader_user_id !== user.id) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  }
+
+  const body = await request.json()
+  const { id, name, email, role } = body
+  if (!id || !name) return NextResponse.json({ error: 'ID e nome obrigatórios' }, { status: 400 })
+
+  const memberRole = ['membro', 'lider', 'ambos'].includes(role) ? role : 'membro'
+  const normalizedEmail = email ? email.trim().toLowerCase() : null
+
+  const { error } = await serviceClient
+    .from('ministry_members')
+    .update({ name: name.trim(), email: normalizedEmail, role: memberRole })
+    .eq('id', id)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Se for líder ou ambos, atualizar acesso
+  if (normalizedEmail && (memberRole === 'lider' || memberRole === 'ambos')) {
+    await ensureUserAccess(serviceClient, normalizedEmail, name.trim())
+
+    const { data: existingProfile } = await serviceClient
+      .from('profiles')
+      .select('id')
+      .ilike('email', normalizedEmail)
+      .single()
+
+    if (existingProfile) {
+      await serviceClient
+        .from('profiles')
+        .update({ role: 'ministry_leader' })
+        .eq('id', existingProfile.id)
+
+      await serviceClient
+        .from('ministries')
+        .update({ leader_user_id: existingProfile.id, leader_name: name.trim() })
+        .eq('id', ministry.id)
+    }
+  }
+
+  return NextResponse.json({ success: true })
+}
