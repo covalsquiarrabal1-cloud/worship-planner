@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServiceRoleClient } from '@/lib/supabase/server'
+import { capitalizeName } from '@/lib/utils'
 
 export async function POST(request: Request) {
   try {
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
     const { data: signup, error: signupError } = await serviceClient
       .from('ministry_signups')
       .insert({
-        name: name.trim(),
+        name: capitalizeName(name),
         email: email.trim().toLowerCase(),
         phone: phone.trim(),
         birth_date,

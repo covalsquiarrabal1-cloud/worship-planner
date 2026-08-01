@@ -105,7 +105,7 @@ export default function FormularioPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: name.trim(),
+          name: name.trim().toLowerCase().split(/\s+/).map((w, i) => i > 0 && ['de','da','do','das','dos','e','em','na','no','nas','nos'].includes(w) ? w : w.charAt(0).toUpperCase() + w.slice(1)).join(' '),
           email: email.trim(),
           phone: phone.trim(),
           birth_date: birthDate,
