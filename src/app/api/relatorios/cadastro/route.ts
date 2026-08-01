@@ -23,6 +23,11 @@ export async function GET() {
     .from('ministries')
     .select('id, name')
 
+  // Buscar membros do louvor
+  const { data: worshipMembers } = await serviceClient
+    .from('members')
+    .select('id, name, email, is_leader, is_general_leader')
+
   // Buscar dados do formulário (telefone, data nascimento)
   const { data: signups } = await serviceClient
     .from('ministry_signups')
@@ -40,11 +45,34 @@ export async function GET() {
     ministries: { ministry_id: string; ministry_name: string; role: string; member_id: string }[]
   }> = {}
 
+  // Adicionar membros do louvor primeiro
+  for (const wm of worshipMembers || []) {
+    if (!wm.email) continue
+    const key = wm.email.toLowerCase()
+    if (!peopleMap[key]) {
+      const signup = (signups || []).find(s => s.email?.toLowerCase() === key)
+      peopleMap[key] = {
+        name: wm.name,
+        email: wm.email,
+        phone: signup?.phone || null,
+        birth_date: signup?.birth_date || null,
+        ministries: [],
+      }
+    }
+    const role = wm.is_general_leader ? 'lider' : wm.is_leader ? 'lider' : 'membro'
+    peopleMap[key].ministries.push({
+      ministry_id: 'louvor',
+      ministry_name: 'Louvor',
+      role,
+      member_id: wm.id,
+    })
+  }
+
+  // Adicionar membros dos ministérios
   for (const mm of ministryMembers || []) {
     if (!mm.email) continue
     const key = mm.email.toLowerCase()
     if (!peopleMap[key]) {
-      // Buscar telefone e data do formulário
       const signup = (signups || []).find(s => s.email?.toLowerCase() === key)
       peopleMap[key] = {
         name: mm.name,
