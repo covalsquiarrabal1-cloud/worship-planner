@@ -28,7 +28,7 @@ const MINISTRY_ICON_MAP: Record<string, string> = {
   'empoderadas': '👑',
   'strong-brothers': '💪',
   'alive': '⚡',
-  'sala-de-cura': '💊',
+  'sala-de-cura': '❤️‍🩹',
   'acao-social': '❤️',
   'financas': '💰',
   'bookstore': '📚',

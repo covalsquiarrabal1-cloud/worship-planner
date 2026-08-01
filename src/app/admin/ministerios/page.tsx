@@ -37,7 +37,7 @@ function getMinistryEmoji(slug: string): string {
     'empoderadas': '👑',
     'strong-brothers': '💪',
     'alive': '⚡',
-    'sala-de-cura': '💊',
+    'sala-de-cura': '❤️‍🩹',
     'acao-social': '❤️',
     'financas': '💰',
     'bookstore': '📚',
