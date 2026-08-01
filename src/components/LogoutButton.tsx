@@ -9,6 +9,7 @@ export function LogoutButton() {
   const router = useRouter()
 
   async function handleLogout() {
+    if (!confirm('Deseja sair do aplicativo?')) return
     await supabase.auth.signOut()
     router.push('/login')
     router.refresh()
