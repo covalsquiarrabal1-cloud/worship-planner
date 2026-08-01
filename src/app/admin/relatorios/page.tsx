@@ -325,24 +325,44 @@ export default function RelatoriosPage() {
                         </div>
                       </button>
                       {expandedPerson === person.email && (
-                        <div className="mt-3 pt-3 border-t border-[var(--border)] space-y-2">
-                          {person.phone && <p className="text-xs text-[var(--muted-foreground)]">📱 {person.phone}</p>}
-                          {person.birth_date && <p className="text-xs text-[var(--muted-foreground)]">🎂 {new Date(person.birth_date).toLocaleDateString('pt-BR')}</p>}
-                          <div className="space-y-1">
-                            {person.ministries.map((m: any, i: number) => (
-                              <div key={i} className="flex items-center justify-between text-xs">
-                                <span>{m.ministry_name}</span>
-                                <span className={`px-2 py-0.5 rounded-full font-semibold ${
-                                  m.role === 'lider' || m.role === 'ambos' ? 'bg-amber-500/20 text-amber-400' : 'bg-[#58a6ff]/20 text-[#58a6ff]'
-                                }`}>
-                                  {m.role === 'ambos' ? 'Membro + Líder' : m.role === 'lider' ? 'Líder' : 'Membro'}
-                                </span>
-                              </div>
-                            ))}
+                        <div className="mt-3 pt-3 border-t border-[var(--border)] space-y-3">
+                          {/* Dados pessoais */}
+                          <div className="bg-[var(--accent)] rounded-xl p-3 space-y-2">
+                            <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider">Dados Pessoais</p>
+                            <div className="grid grid-cols-2 gap-2">
+                              {person.phone && (
+                                <div className="flex items-center gap-2 text-xs text-[var(--foreground)]">
+                                  <span>📱</span> {person.phone}
+                                </div>
+                              )}
+                              {person.birth_date && (
+                                <div className="flex items-center gap-2 text-xs text-[var(--foreground)]">
+                                  <span>🎂</span> {new Date(person.birth_date).toLocaleDateString('pt-BR')}
+                                </div>
+                              )}
+                            </div>
                           </div>
+
+                          {/* Ministérios */}
+                          <div className="bg-[var(--accent)] rounded-xl p-3 space-y-2">
+                            <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider">Ministérios</p>
+                            <div className="space-y-1.5">
+                              {person.ministries.map((m: any, i: number) => (
+                                <div key={i} className="flex items-center justify-between bg-[var(--card)] rounded-lg px-3 py-2">
+                                  <span className="text-xs font-medium">{m.ministry_name}</span>
+                                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                                    m.role === 'lider' || m.role === 'ambos' ? 'bg-amber-500/20 text-amber-400' : 'bg-[#58a6ff]/20 text-[#58a6ff]'
+                                  }`}>
+                                    {m.role === 'ambos' ? 'Membro + Líder' : m.role === 'lider' ? 'Líder' : 'Membro'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
                           <button
                             onClick={() => { setEditingPerson(person.email); setEditName(person.name); setEditEmail(person.email) }}
-                            className="mt-2 text-xs text-[#58a6ff] hover:underline"
+                            className="w-full py-2 rounded-xl bg-[#58a6ff]/10 text-[#58a6ff] text-xs font-semibold hover:bg-[#58a6ff]/20 transition-colors"
                           >
                             ✏️ Editar nome/email
                           </button>
