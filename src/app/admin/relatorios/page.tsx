@@ -122,18 +122,18 @@ export default function RelatoriosPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 mb-2">
         <Link href="/admin" className="p-2 rounded-xl bg-[#1c2128] border border-[#30363d]">
           <ArrowLeft className="w-5 h-5" />
         </Link>
         <div>
           <h2 className="text-xl font-bold">Relatórios</h2>
-          <p className="text-sm text-[var(--muted-foreground)]">Visão geral dos membros</p>
+          <p className="text-sm text-[var(--muted-foreground)] mt-1">Visão geral dos membros</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 mt-4">
         <button
           onClick={() => handleTabChange('visao')}
           className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${tab === 'visao' ? 'bg-[#58a6ff] text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
