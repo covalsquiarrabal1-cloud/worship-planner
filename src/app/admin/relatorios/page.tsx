@@ -133,16 +133,16 @@ export default function RelatoriosPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-3">
         <button
           onClick={() => handleTabChange('visao')}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${tab === 'visao' ? 'bg-[#58a6ff] text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
+          className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${tab === 'visao' ? 'bg-[#58a6ff] text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
         >
           Visão Geral
         </button>
         <button
           onClick={() => handleTabChange('cadastro')}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${tab === 'cadastro' ? 'bg-[#58a6ff] text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
+          className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors ${tab === 'cadastro' ? 'bg-[#58a6ff] text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
         >
           Cadastro
         </button>
