@@ -48,6 +48,11 @@ function getMinistryEmoji(slug: string): string {
   return emojiMap[slug] || '⛪'
 }
 
+function getMinistryIcon3D(slug: string): string {
+  const emoji = getMinistryEmoji(slug)
+  return `https://cdn.jsdelivr.net/gh/shuding/fluentui-emoji-unicode/assets/${encodeURIComponent(emoji)}_3d.png`
+}
+
 // Ordem preferida dos grupos
 const GROUP_ORDER = ['Integração', 'Culto', 'Esporte', 'Comunidade', 'Espiritual', 'Operacional', 'Alive', 'Comunicação', 'Administrativo', 'Outros']
 
@@ -113,9 +118,11 @@ export default function MinisteriosPage() {
               className="flex flex-col items-center gap-2 active:scale-90 transition-transform"
             >
               <div className="w-[77px] h-[77px] rounded-[16px] bg-[#1c2128] border border-[#30363d] flex items-center justify-center shadow-lg">
-                <span className="text-[35px]">
-                  {m.slug === 'louvor' ? '🎵' : getMinistryEmoji(m.slug)}
-                </span>
+                <img
+                  src={m.slug === 'louvor' ? getMinistryIcon3D('louvor') : getMinistryIcon3D(m.slug)}
+                  alt={m.name}
+                  className="w-[48px] h-[48px] object-contain"
+                />
               </div>
               <span className="text-[11px] text-center leading-tight font-medium w-[80px] break-words">{m.name}</span>
             </Link>
