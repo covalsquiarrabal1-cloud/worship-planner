@@ -79,11 +79,19 @@ export async function GET() {
 
   const multiArea = Object.values(emailAreas)
     .filter(e => e.areas.length > 1)
-    .sort((a, b) => b.areas.length - a.areas.length)
+    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+
+  // Ordenar ministérios por quantidade de membros (maior → menor)
+  ministryStats.sort((a, b) => b.count - a.count)
+
+  // Ordenar membros dentro de cada ministério alfabeticamente
+  for (const ms of ministryStats) {
+    ms.members.sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  }
 
   return NextResponse.json({
     worshipCount: (worshipMembers || []).length,
-    worshipMembers: (worshipMembers || []).map(m => m.name),
+    worshipMembers: (worshipMembers || []).map(m => m.name).sort((a, b) => a.localeCompare(b, 'pt-BR')),
     ministryStats,
     totalUnique: allEmails.size,
     multiArea,
