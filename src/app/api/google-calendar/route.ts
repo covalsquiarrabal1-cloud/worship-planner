@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient } from '@/lib/supabase/server'
-import { google } from 'googleapis'
-import path from 'path'
-import fs from 'fs'
 
 export async function GET(request: Request) {
   const supabase = await createServerSupabaseClient()
@@ -14,38 +11,79 @@ export async function GET(request: Request) {
   const year = parseInt(searchParams.get('year') || String(new Date().getFullYear()))
 
   try {
-    // Carregar credenciais
-    const keyPath = path.resolve(process.cwd(), process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || '')
-    const keyFile = JSON.parse(fs.readFileSync(keyPath, 'utf-8'))
+    const calendarId = process.env.GOOGLE_CALENDAR_ID || 'valparaiso@igrejaamorecuidado.net'
+    const apiKey = process.env.GOOGLE_API_KEY
 
-    const auth = new google.auth.GoogleAuth({
-      credentials: keyFile,
-      scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
-    })
-
-    const calendar = google.calendar({ version: 'v3', auth })
-
-    // Buscar eventos do mês
+    // Datas do mês
     const timeMin = new Date(year, month - 1, 1).toISOString()
     const timeMax = new Date(year, month, 0, 23, 59, 59).toISOString()
 
-    const response = await calendar.events.list({
-      calendarId: process.env.GOOGLE_CALENDAR_ID,
-      timeMin,
-      timeMax,
-      singleEvents: true,
-      orderBy: 'startTime',
-    })
+    let events: any[] = []
 
-    const events = (response.data.items || []).map(event => ({
-      id: event.id,
-      title: event.summary || 'Sem título',
-      date: event.start?.dateTime || event.start?.date || '',
-      endDate: event.end?.dateTime || event.end?.date || '',
-      location: event.location || null,
-      description: event.description || null,
-      allDay: !event.start?.dateTime,
-    }))
+    if (apiKey) {
+      // Abordagem 1: API pública com API key (agenda pública)
+      const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`)
+      url.searchParams.set('key', apiKey)
+      url.searchParams.set('timeMin', timeMin)
+      url.searchParams.set('timeMax', timeMax)
+      url.searchParams.set('singleEvents', 'true')
+      url.searchParams.set('orderBy', 'startTime')
+
+      const response = await fetch(url.toString())
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('Google Calendar API Error:', errorData)
+        return NextResponse.json(
+          { error: 'Erro ao acessar agenda: ' + (errorData.error?.message || response.statusText) },
+          { status: 500 }
+        )
+      }
+
+      const data = await response.json()
+      events = (data.items || []).map((event: any) => ({
+        id: event.id,
+        title: event.summary || 'Sem título',
+        date: event.start?.dateTime || event.start?.date || '',
+        endDate: event.end?.dateTime || event.end?.date || '',
+        location: event.location || null,
+        description: event.description || null,
+        allDay: !event.start?.dateTime,
+      }))
+    } else {
+      // Abordagem 2: Conta de serviço (fallback)
+      const { google } = await import('googleapis')
+      const path = await import('path')
+      const fs = await import('fs')
+
+      const keyPath = path.resolve(process.cwd(), process.env.GOOGLE_SERVICE_ACCOUNT_KEY_PATH || '')
+      const keyFile = JSON.parse(fs.readFileSync(keyPath, 'utf-8'))
+
+      const auth = new google.auth.GoogleAuth({
+        credentials: keyFile,
+        scopes: ['https://www.googleapis.com/auth/calendar.readonly'],
+      })
+
+      const calendar = google.calendar({ version: 'v3', auth })
+
+      const response = await calendar.events.list({
+        calendarId,
+        timeMin,
+        timeMax,
+        singleEvents: true,
+        orderBy: 'startTime',
+      })
+
+      events = (response.data.items || []).map((event: any) => ({
+        id: event.id,
+        title: event.summary || 'Sem título',
+        date: event.start?.dateTime || event.start?.date || '',
+        endDate: event.end?.dateTime || event.end?.date || '',
+        location: event.location || null,
+        description: event.description || null,
+        allDay: !event.start?.dateTime,
+      }))
+    }
 
     return NextResponse.json(events)
   } catch (error: any) {

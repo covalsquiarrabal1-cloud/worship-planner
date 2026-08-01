@@ -29,6 +29,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import GoogleCalendarSection from '@/components/GoogleCalendarSection'
 
 interface ScheduleEvent {
   id: string
@@ -447,6 +448,9 @@ export default function AdminPage() {
           </table>
         </div>
       )}
+
+      {/* Google Calendar Section */}
+      <GoogleCalendarSection month={month} year={year} />
 
       {/* Quick menu removed - available in bottom nav */}
     </div>
