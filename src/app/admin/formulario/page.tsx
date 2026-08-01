@@ -204,10 +204,10 @@ export default function AdminFormularioPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-3">
         <button
           onClick={() => setTab('visao')}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+          className={`flex-1 py-6 rounded-xl text-sm font-semibold transition-colors text-center ${
             tab === 'visao' ? 'bg-[#58a6ff] text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'
           }`}
         >
@@ -215,7 +215,7 @@ export default function AdminFormularioPage() {
         </button>
         <button
           onClick={() => setTab('gerenciar')}
-          className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+          className={`flex-1 py-6 rounded-xl text-sm font-semibold transition-colors text-center ${
             tab === 'gerenciar' ? 'bg-[#58a6ff] text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'
           }`}
         >
