@@ -250,11 +250,39 @@ export default function AdminFormularioPage() {
                     {m.members.map((member, i) => (
                       <div key={i} className="flex items-center justify-between text-xs">
                         <span className="text-[var(--muted-foreground)]">{member.name}</span>
-                        <span className={`px-2 py-0.5 rounded-full font-semibold ${
-                          member.role === 'lider' ? 'bg-amber-500/20 text-amber-400' : 'bg-[#58a6ff]/20 text-[#58a6ff]'
-                        }`}>
+                        <button
+                          onClick={async () => {
+                            const newRole = member.role === 'lider' ? 'membro' : 'lider'
+                            const res = await fetch('/api/signup/update-role', {
+                              method: 'PUT',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                signup_email: member.email,
+                                ministry_id: m.id,
+                                old_role: member.role,
+                                new_role: newRole,
+                              }),
+                            })
+                            if (res.ok) {
+                              setStats(prev => {
+                                if (!prev) return prev
+                                return {
+                                  ...prev,
+                                  ministryStats: prev.ministryStats.map(ms =>
+                                    ms.id === m.id
+                                      ? { ...ms, members: ms.members.map((mb, idx) => idx === i ? { ...mb, role: newRole } : mb) }
+                                      : ms
+                                  ),
+                                }
+                              })
+                            }
+                          }}
+                          className={`px-2 py-0.5 rounded-full font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
+                            member.role === 'lider' ? 'bg-amber-500/20 text-amber-400' : 'bg-[#58a6ff]/20 text-[#58a6ff]'
+                          }`}
+                        >
                           {member.role === 'lider' ? 'Líder' : 'Membro'}
-                        </span>
+                        </button>
                       </div>
                     ))}
                   </div>
