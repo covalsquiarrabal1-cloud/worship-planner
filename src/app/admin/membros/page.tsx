@@ -1,13 +1,14 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Plus, Search, UserCircle, Guitar, Ban, Crown, Loader2, X, Trash2 } from 'lucide-react'
+import { Plus, Search, UserCircle, Guitar, Ban, Crown, Loader2, X, Trash2, Star } from 'lucide-react'
 
 interface Member {
   id: string
   name: string
   gender: 'male' | 'female'
   is_leader: boolean
+  is_general_leader: boolean
   is_back: boolean
   is_blocked: boolean
   is_musician: boolean
@@ -129,6 +130,7 @@ export default function MembrosPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
                     <span className="font-medium truncate">{member.name}</span>
+                    {member.is_general_leader && <Star className="w-4 h-4 text-purple-400 shrink-0" />}
                     {member.is_leader && <Crown className="w-4 h-4 text-yellow-400 shrink-0" />}
                     <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0 ${member.is_blocked ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'}`}>
                       {member.is_blocked ? 'Inativo' : 'Ativo'}
@@ -194,6 +196,7 @@ function MemberForm({
     name: member?.name || '',
     gender: member?.gender || 'male',
     is_leader: member?.is_leader || false,
+    is_general_leader: member?.is_general_leader || false,
     is_back: member?.is_back || false,
     is_blocked: member?.is_blocked || false,
     is_musician: member?.is_musician || false,
@@ -362,6 +365,15 @@ function MemberForm({
           <div>
             <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-3">Funções</label>
             <div className="bg-[var(--accent)] rounded-lg divide-y divide-[var(--border)]">
+              <label className="flex items-center gap-4 cursor-pointer px-4 py-3.5">
+                <input
+                  type="checkbox"
+                  checked={form.is_general_leader}
+                  onChange={(e) => setForm({ ...form, is_general_leader: e.target.checked })}
+                />
+                <span className="text-sm">Líder geral</span>
+              </label>
+
               <label className="flex items-center gap-4 cursor-pointer px-4 py-3.5">
                 <input
                   type="checkbox"
