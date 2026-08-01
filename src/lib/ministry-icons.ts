@@ -36,7 +36,7 @@ const MINISTRY_ICON_MAP: Record<string, string> = {
   'evangelismo': '📢',
   'membresia': '📋',
   'louvor': '🎶',
-  'ac-casais': '👫',
+  'ac-casais': '💒',
 }
 
 export function getMinistryIcon3D(slug: string): string {

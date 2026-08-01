@@ -45,7 +45,7 @@ function getMinistryEmoji(slug: string): string {
     'evangelismo': '📢',
     'membresia': '📋',
     'louvor': '🎶',
-    'ac-casais': '👫',
+    'ac-casais': '💒',
   }
   return emojiMap[slug] || '⛪'
 }
