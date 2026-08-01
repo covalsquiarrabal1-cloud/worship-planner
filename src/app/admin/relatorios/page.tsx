@@ -346,9 +346,9 @@ export default function RelatoriosPage() {
                           {/* Ministérios */}
                           <div className="bg-[var(--accent)] rounded-xl p-3 space-y-2">
                             <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider">Ministérios</p>
-                            <div className="space-y-1.5">
+                            <div className="divide-y divide-[var(--border)]">
                               {person.ministries.map((m: any, i: number) => (
-                                <div key={i} className="flex items-center justify-between bg-[var(--card)] rounded-lg px-3 py-2">
+                                <div key={i} className="flex items-center justify-between px-3 py-2.5">
                                   <span className="text-xs font-medium">{m.ministry_name}</span>
                                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
                                     m.role === 'lider' || m.role === 'ambos' ? 'bg-amber-500/20 text-amber-400' : 'bg-[#58a6ff]/20 text-[#58a6ff]'
