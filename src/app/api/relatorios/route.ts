@@ -27,21 +27,25 @@ export async function GET() {
     .select('id, name, email')
     .order('name')
 
-  // Get ministry members
+  // Get ministry members with role
   const { data: ministryMembers } = await serviceClient
     .from('ministry_members')
-    .select('id, name, email, ministry_id')
+    .select('id, name, email, ministry_id, role')
+    .eq('is_blocked', false)
     .order('name')
 
-  // Build stats with member names
+  // Build stats with member names and roles
   const ministryStats = (ministries || []).map(m => {
     const membersList = (ministryMembers || []).filter(mm => mm.ministry_id === m.id)
+    // Determinar líder a partir dos membros cadastrados
+    const leaders = membersList.filter(mm => mm.role === 'lider' || mm.role === 'ambos')
+    const leaderName = leaders.length > 0 ? leaders.map(l => l.name).join(', ') : m.leader_name
     return {
       id: m.id,
       name: m.name,
       slug: m.slug,
       count: membersList.length,
-      leader_name: m.leader_name,
+      leader_name: leaderName,
       members: membersList.map(mm => mm.name),
     }
   })
