@@ -512,14 +512,43 @@ function CadastroSection({
             .map((person, idx) => (
             <div key={idx} className="card overflow-hidden">
               {editingPerson === person.email ? (
-                <div className="space-y-3 p-1">
-                  <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nome" />
-                  <input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="E-mail" type="email" />
-                  <div className="flex gap-2">
-                    <button onClick={() => saveEdit(person.email)} className="flex-1 bg-[#58a6ff] text-white py-2 rounded-xl text-sm font-medium">Salvar</button>
-                    <button onClick={() => setEditingPerson(null)} className="px-4 py-2 text-[#8b949e] text-sm">Cancelar</button>
-                  </div>
-                </div>
+                <EditPersonForm
+                  person={person}
+                  roles={roles}
+                  personRoles={personRoles[person.email] || []}
+                  onSave={async (data) => {
+                    const res = await fetch('/api/relatorios/cadastro/register', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(data),
+                    })
+                    if (res.ok) {
+                      // Update roles
+                      await fetch('/api/person-roles/assign', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: data.new_email || data.old_email, role_ids: data.role_ids }),
+                      })
+                      setEditingPerson(null)
+                      onReload()
+                    } else {
+                      const d = await res.json()
+                      alert(d.error || 'Erro ao salvar')
+                    }
+                  }}
+                  onCancel={() => setEditingPerson(null)}
+                  onDelete={async () => {
+                    if (!confirm(`Excluir cadastro de "${person.name}"? Isso não pode ser desfeito.`)) return
+                    const res = await fetch(`/api/relatorios/cadastro/register?email=${encodeURIComponent(person.email)}`, { method: 'DELETE' })
+                    if (res.ok) {
+                      setEditingPerson(null)
+                      onReload()
+                    } else {
+                      const d = await res.json()
+                      alert(d.error || 'Erro ao excluir')
+                    }
+                  }}
+                />
               ) : (
                 <>
                   <button
@@ -558,37 +587,18 @@ function CadastroSection({
                         </div>
                       </div>
 
-                      {/* Funções - editável */}
+                      {/* Funções */}
                       <div className="bg-[var(--accent)] rounded-xl p-3 space-y-2">
                         <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider">Funções</p>
                         <div className="flex flex-wrap gap-1.5">
-                          {roles.map((role) => {
-                            const hasRole = personRoles[person.email]?.some((r: PersonRole) => r.id === role.id)
-                            return (
-                              <button
-                                key={role.id}
-                                onClick={async () => {
-                                  const currentRoleIds = (personRoles[person.email] || []).map((r: PersonRole) => r.id)
-                                  const newRoleIds = hasRole
-                                    ? currentRoleIds.filter((id: string) => id !== role.id)
-                                    : [...currentRoleIds, role.id]
-                                  await fetch('/api/person-roles/assign', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ email: person.email, role_ids: newRoleIds }),
-                                  })
-                                  loadPersonRoles(person.email)
-                                }}
-                                className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${
-                                  hasRole
-                                    ? 'bg-purple-500/20 text-purple-400 ring-1 ring-purple-500/40'
-                                    : 'bg-[var(--card)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
-                                }`}
-                              >
-                                {hasRole ? '✓ ' : ''}{role.name}
-                              </button>
-                            )
-                          })}
+                          {personRoles[person.email] && personRoles[person.email].length > 0
+                            ? personRoles[person.email].map((role: PersonRole) => (
+                                <span key={role.id} className="text-xs px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-400 font-medium">
+                                  {role.name}
+                                </span>
+                              ))
+                            : <span className="text-xs text-[var(--muted-foreground)] italic">Nenhuma função</span>
+                          }
                         </div>
                       </div>
 
@@ -610,10 +620,13 @@ function CadastroSection({
                       </div>
 
                       <button
-                        onClick={() => { setEditingPerson(person.email); setEditName(person.name); setEditEmail(person.email) }}
+                        onClick={() => {
+                          setEditingPerson(person.email)
+                          if (!personRoles[person.email]) loadPersonRoles(person.email)
+                        }}
                         className="w-full py-2 rounded-xl bg-[#58a6ff]/10 text-[#58a6ff] text-xs font-semibold hover:bg-[#58a6ff]/20 transition-colors"
                       >
-                        ✏️ Editar nome/email
+                        ✏️ Editar cadastro
                       </button>
                     </div>
                   )}
@@ -624,5 +637,113 @@ function CadastroSection({
         </div>
       )}
     </>
+  )
+}
+
+function EditPersonForm({ person, roles, personRoles, onSave, onCancel, onDelete }: {
+  person: any
+  roles: PersonRole[]
+  personRoles: PersonRole[]
+  onSave: (data: any) => void
+  onCancel: () => void
+  onDelete: () => void
+}) {
+  const [name, setName] = useState(person.name || '')
+  const [email, setEmail] = useState(person.email || '')
+  const [phone, setPhone] = useState(person.phone || '')
+  const [birthDate, setBirthDate] = useState(person.birth_date ? person.birth_date.substring(0, 10) : '')
+  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>(personRoles.map(r => r.id))
+  const [saving, setSaving] = useState(false)
+
+  function toggleRole(roleId: string) {
+    setSelectedRoleIds(prev =>
+      prev.includes(roleId) ? prev.filter(id => id !== roleId) : [...prev, roleId]
+    )
+  }
+
+  async function handleSave() {
+    if (!name.trim() || !email.trim()) {
+      alert('Nome e e-mail são obrigatórios')
+      return
+    }
+    setSaving(true)
+    await onSave({
+      old_email: person.email,
+      new_name: name.trim(),
+      new_email: email.trim().toLowerCase(),
+      phone: phone.trim() || null,
+      birth_date: birthDate || null,
+      role_ids: selectedRoleIds,
+    })
+    setSaving(false)
+  }
+
+  return (
+    <div className="space-y-4 p-1">
+      <div className="space-y-3">
+        <div>
+          <label className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider block mb-1">Nome</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="Nome completo" />
+        </div>
+        <div>
+          <label className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider block mb-1">E-mail</label>
+          <input value={email} onChange={e => setEmail(e.target.value)} placeholder="E-mail" type="email" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider block mb-1">Telefone</label>
+            <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Telefone" type="tel" />
+          </div>
+          <div>
+            <label className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider block mb-1">Nascimento</label>
+            <input value={birthDate} onChange={e => setBirthDate(e.target.value)} type="date" />
+          </div>
+        </div>
+
+        {/* Funções */}
+        <div>
+          <label className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider block mb-2">Funções</label>
+          <div className="flex flex-wrap gap-2">
+            {roles.map(role => (
+              <button
+                key={role.id}
+                type="button"
+                onClick={() => toggleRole(role.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  selectedRoleIds.includes(role.id)
+                    ? 'bg-purple-500/20 text-purple-400 ring-1 ring-purple-500/40'
+                    : 'bg-[var(--accent)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+                }`}
+              >
+                {selectedRoleIds.includes(role.id) ? '✓ ' : ''}{role.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-2">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex-1 bg-[#58a6ff] text-white py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 flex items-center justify-center gap-2"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+          Salvar
+        </button>
+        <button onClick={onCancel} className="px-4 py-2.5 text-[#8b949e] text-sm rounded-xl hover:bg-[var(--accent)]">
+          Cancelar
+        </button>
+      </div>
+
+      {/* Delete */}
+      <button
+        onClick={onDelete}
+        className="w-full py-2 rounded-xl bg-red-500/10 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition-colors"
+      >
+        🗑️ Excluir cadastro
+      </button>
+    </div>
   )
 }
