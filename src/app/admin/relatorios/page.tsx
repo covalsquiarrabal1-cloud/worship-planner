@@ -558,19 +558,39 @@ function CadastroSection({
                         </div>
                       </div>
 
-                      {/* Funções */}
-                      {personRoles[person.email] && personRoles[person.email].length > 0 && (
-                        <div className="bg-[var(--accent)] rounded-xl p-3 space-y-2">
-                          <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider">Funções</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {personRoles[person.email].map((role: PersonRole) => (
-                              <span key={role.id} className="text-xs px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-400 font-medium">
-                                {role.name}
-                              </span>
-                            ))}
-                          </div>
+                      {/* Funções - editável */}
+                      <div className="bg-[var(--accent)] rounded-xl p-3 space-y-2">
+                        <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider">Funções</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {roles.map((role) => {
+                            const hasRole = personRoles[person.email]?.some((r: PersonRole) => r.id === role.id)
+                            return (
+                              <button
+                                key={role.id}
+                                onClick={async () => {
+                                  const currentRoleIds = (personRoles[person.email] || []).map((r: PersonRole) => r.id)
+                                  const newRoleIds = hasRole
+                                    ? currentRoleIds.filter((id: string) => id !== role.id)
+                                    : [...currentRoleIds, role.id]
+                                  await fetch('/api/person-roles/assign', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ email: person.email, role_ids: newRoleIds }),
+                                  })
+                                  loadPersonRoles(person.email)
+                                }}
+                                className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-colors ${
+                                  hasRole
+                                    ? 'bg-purple-500/20 text-purple-400 ring-1 ring-purple-500/40'
+                                    : 'bg-[var(--card)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+                                }`}
+                              >
+                                {hasRole ? '✓ ' : ''}{role.name}
+                              </button>
+                            )
+                          })}
                         </div>
-                      )}
+                      </div>
 
                       {/* Ministérios */}
                       <div className="bg-[var(--accent)] rounded-xl p-3 space-y-2">
