@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   } else {
     const { error } = await serviceClient
       .from('ministry_signups')
-      .insert({ name: capitalizedName, email: normalizedEmail, phone: phone || null, birth_date: birth_date || null, status: 'approved' })
+      .insert({ name: capitalizedName, email: normalizedEmail, phone: phone || null, birth_date: birth_date || null })
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }
@@ -90,7 +90,7 @@ export async function PUT(request: Request) {
   } else {
     await serviceClient
       .from('ministry_signups')
-      .insert({ name: capitalizedName, email: normalizedNewEmail, phone: phone || null, birth_date: birth_date || null, status: 'approved' })
+      .insert({ name: capitalizedName, email: normalizedNewEmail, phone: phone || null, birth_date: birth_date || null })
   }
 
   // Update members (louvor)
