@@ -15,6 +15,7 @@ export function AdminBottomNav() {
   const pathname = usePathname()
 
   const items: NavItem[] = [
+    { href: '/admin/dashboard', icon: <BarChart3 className="w-7 h-7" />, label: 'Dashboard' },
     { href: '/admin', icon: <Calendar className="w-7 h-7" />, label: 'Escalas' },
     { href: '/admin/membros', icon: <Users className="w-7 h-7" />, label: 'Membros' },
     { href: '/admin/musicas', icon: <Music className="w-7 h-7" />, label: 'Músicas' },
