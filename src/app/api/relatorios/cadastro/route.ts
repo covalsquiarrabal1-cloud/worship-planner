@@ -90,6 +90,21 @@ export async function GET() {
     })
   }
 
+  // Adicionar pessoas do ministry_signups que não estão em nenhum ministério
+  for (const signup of signups || []) {
+    if (!signup.email) continue
+    const key = signup.email.toLowerCase()
+    if (!peopleMap[key]) {
+      peopleMap[key] = {
+        name: signup.name,
+        email: signup.email,
+        phone: signup.phone || null,
+        birth_date: signup.birth_date || null,
+        ministries: [],
+      }
+    }
+  }
+
   // Ordenar alfabeticamente
   const people = Object.values(peopleMap).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
 
