@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, Users, BarChart3, ArrowLeft, ChevronDown, Search } from 'lucide-react'
+import { Loader2, Users, BarChart3, ArrowLeft, ChevronDown, Search, Plus, X } from 'lucide-react'
 import Link from 'next/link'
 
 interface MinistryStats {
@@ -279,104 +279,330 @@ export default function RelatoriosPage() {
 
       {tab === 'cadastro' && (
         <div className="space-y-4">
-          {/* Busca */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
-            <input
-              type="text"
-              placeholder="Buscar por nome..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full pl-10"
-            />
-          </div>
-
-          {cadastroLoading ? (
-            <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-sm text-[var(--muted-foreground)]">{cadastro.length} pessoas cadastradas</p>
-              {cadastro
-                .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-                .map((person, idx) => (
-                <div key={idx} className="card overflow-hidden">
-                  {editingPerson === person.email ? (
-                    <div className="space-y-3 p-1">
-                      <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nome" />
-                      <input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="E-mail" type="email" />
-                      <div className="flex gap-2">
-                        <button onClick={() => saveEdit(person.email)} className="flex-1 bg-[#58a6ff] text-white py-2 rounded-xl text-sm font-medium">Salvar</button>
-                        <button onClick={() => setEditingPerson(null)} className="px-4 py-2 text-[#8b949e] text-sm">Cancelar</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <button
-                        onClick={() => setExpandedPerson(prev => prev === person.email ? null : person.email)}
-                        className="w-full flex items-center justify-between"
-                      >
-                        <div className="text-left">
-                          <p className="text-sm font-medium">{person.name}</p>
-                          <p className="text-xs text-[var(--muted-foreground)]">{person.email}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-[#58a6ff] font-semibold">{person.ministries.length} {person.ministries.length === 1 ? 'Ministério' : 'Ministérios'}</span>
-                          <ChevronDown className={`w-4 h-4 text-[var(--muted-foreground)] transition-transform ${expandedPerson === person.email ? 'rotate-180' : ''}`} />
-                        </div>
-                      </button>
-                      {expandedPerson === person.email && (
-                        <div className="mt-3 pt-3 border-t border-[var(--border)] space-y-3">
-                          {/* Dados pessoais */}
-                          <div className="bg-[var(--accent)] rounded-xl p-3 space-y-2">
-                            <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider">Dados Pessoais</p>
-                            <div className="grid grid-cols-2 gap-2">
-                              {person.phone && (
-                                <div className="flex items-center gap-2 text-xs text-[var(--foreground)]">
-                                  <span>📱</span> {person.phone}
-                                </div>
-                              )}
-                              {person.birth_date && (
-                                <div className="flex items-center gap-2 text-xs text-[var(--foreground)]">
-                                  <span>🎂</span> {new Date(person.birth_date).toLocaleDateString('pt-BR')}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Ministérios */}
-                          <div className="bg-[var(--accent)] rounded-xl p-3 space-y-2">
-                            <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider">Ministérios</p>
-                            <div className="divide-y divide-[var(--border)]">
-                              {person.ministries.map((m: any, i: number) => (
-                                <div key={i} className="flex items-center justify-between px-3 py-2.5">
-                                  <span className="text-xs font-medium">{m.ministry_name}</span>
-                                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                                    m.role === 'lider' || m.role === 'ambos' ? 'bg-amber-500/20 text-amber-400' : 'bg-[#58a6ff]/20 text-[#58a6ff]'
-                                  }`}>
-                                    {m.role === 'ambos' ? 'Membro + Líder' : m.role === 'lider' ? 'Líder' : 'Membro'}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          <button
-                            onClick={() => { setEditingPerson(person.email); setEditName(person.name); setEditEmail(person.email) }}
-                            className="w-full py-2 rounded-xl bg-[#58a6ff]/10 text-[#58a6ff] text-xs font-semibold hover:bg-[#58a6ff]/20 transition-colors"
-                          >
-                            ✏️ Editar nome/email
-                          </button>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          {/* Botão cadastrar */}
+          <CadastroSection
+            cadastro={cadastro}
+            cadastroLoading={cadastroLoading}
+            search={search}
+            setSearch={setSearch}
+            expandedPerson={expandedPerson}
+            setExpandedPerson={setExpandedPerson}
+            editingPerson={editingPerson}
+            setEditingPerson={setEditingPerson}
+            editName={editName}
+            setEditName={setEditName}
+            editEmail={editEmail}
+            setEditEmail={setEditEmail}
+            saveEdit={saveEdit}
+            onReload={loadCadastro}
+          />
         </div>
       )}
 
     </div>
+  )
+}
+
+
+interface CadastroSectionProps {
+  cadastro: any[]
+  cadastroLoading: boolean
+  search: string
+  setSearch: (s: string) => void
+  expandedPerson: string | null
+  setExpandedPerson: (s: string | null) => void
+  editingPerson: string | null
+  setEditingPerson: (s: string | null) => void
+  editName: string
+  setEditName: (s: string) => void
+  editEmail: string
+  setEditEmail: (s: string) => void
+  saveEdit: (oldEmail: string) => void
+  onReload: () => void
+}
+
+interface PersonRole {
+  id: string
+  name: string
+}
+
+function CadastroSection({
+  cadastro, cadastroLoading, search, setSearch,
+  expandedPerson, setExpandedPerson,
+  editingPerson, setEditingPerson,
+  editName, setEditName, editEmail, setEditEmail,
+  saveEdit, onReload,
+}: CadastroSectionProps) {
+  const [showForm, setShowForm] = useState(false)
+  const [roles, setRoles] = useState<PersonRole[]>([])
+  const [form, setForm] = useState({ name: '', email: '', phone: '', birth_date: '', role_ids: [] as string[] })
+  const [saving, setSaving] = useState(false)
+  const [personRoles, setPersonRoles] = useState<Record<string, PersonRole[]>>({})
+
+  useEffect(() => {
+    fetch('/api/person-roles').then(r => r.json()).then(d => { if (Array.isArray(d)) setRoles(d) })
+  }, [])
+
+  async function loadPersonRoles(email: string) {
+    const res = await fetch(`/api/person-roles/assign?email=${encodeURIComponent(email)}`)
+    if (res.ok) {
+      const data = await res.json()
+      const roleNames = data.map((d: any) => d.person_roles).filter(Boolean)
+      setPersonRoles(prev => ({ ...prev, [email]: roleNames }))
+    }
+  }
+
+  async function handleSubmit() {
+    if (!form.name.trim() || !form.email.trim()) {
+      alert('Nome e e-mail são obrigatórios')
+      return
+    }
+    setSaving(true)
+
+    try {
+      // 1. Cadastrar na tabela ministry_signups (dados pessoais)
+      const signupRes = await fetch('/api/relatorios/cadastro/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          email: form.email.trim().toLowerCase(),
+          phone: form.phone.trim() || null,
+          birth_date: form.birth_date || null,
+        }),
+      })
+
+      if (!signupRes.ok) {
+        const data = await signupRes.json()
+        alert(data.error || 'Erro ao cadastrar')
+        setSaving(false)
+        return
+      }
+
+      // 2. Atribuir funções
+      if (form.role_ids.length > 0) {
+        await fetch('/api/person-roles/assign', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: form.email.trim().toLowerCase(), role_ids: form.role_ids }),
+        })
+      }
+
+      setForm({ name: '', email: '', phone: '', birth_date: '', role_ids: [] })
+      setShowForm(false)
+      onReload()
+    } catch {
+      alert('Erro de conexão')
+    }
+
+    setSaving(false)
+  }
+
+  function toggleRole(roleId: string) {
+    setForm(prev => ({
+      ...prev,
+      role_ids: prev.role_ids.includes(roleId)
+        ? prev.role_ids.filter(id => id !== roleId)
+        : [...prev.role_ids, roleId],
+    }))
+  }
+
+  return (
+    <>
+      {/* Botão cadastrar + busca */}
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
+          <input
+            type="text"
+            placeholder="Buscar por nome..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-10"
+          />
+        </div>
+        <button
+          onClick={() => setShowForm(!showForm)}
+          className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 shrink-0 transition-colors ${
+            showForm ? 'bg-red-500/20 text-red-400' : 'bg-white text-black hover:bg-gray-100'
+          }`}
+        >
+          {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+          {showForm ? 'Fechar' : 'Cadastrar'}
+        </button>
+      </div>
+
+      {/* Formulário de cadastro */}
+      {showForm && (
+        <div className="card space-y-4">
+          <h4 className="text-sm font-semibold">Nova Pessoa</h4>
+
+          <div className="space-y-3">
+            <input
+              type="text"
+              placeholder="Nome completo *"
+              value={form.name}
+              onChange={e => setForm({ ...form, name: e.target.value })}
+            />
+            <input
+              type="email"
+              placeholder="E-mail *"
+              value={form.email}
+              onChange={e => setForm({ ...form, email: e.target.value })}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <input
+                type="tel"
+                placeholder="Telefone"
+                value={form.phone}
+                onChange={e => setForm({ ...form, phone: e.target.value })}
+              />
+              <input
+                type="date"
+                placeholder="Data de nascimento"
+                value={form.birth_date}
+                onChange={e => setForm({ ...form, birth_date: e.target.value })}
+              />
+            </div>
+
+            {/* Seleção de funções */}
+            <div>
+              <label className="text-xs font-medium text-[var(--muted-foreground)] mb-2 block">Função(ões)</label>
+              <div className="flex flex-wrap gap-2">
+                {roles.map(role => (
+                  <button
+                    key={role.id}
+                    type="button"
+                    onClick={() => toggleRole(role.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      form.role_ids.includes(role.id)
+                        ? 'bg-[#58a6ff] text-white'
+                        : 'bg-[var(--accent)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+                    }`}
+                  >
+                    {role.name}
+                  </button>
+                ))}
+              </div>
+              <Link href="/admin/funcoes" className="text-[10px] text-[#58a6ff] mt-2 inline-block">
+                Gerenciar funções →
+              </Link>
+            </div>
+          </div>
+
+          <button
+            onClick={handleSubmit}
+            disabled={saving || !form.name.trim() || !form.email.trim()}
+            className="w-full bg-white text-black font-semibold py-3 rounded-xl disabled:opacity-40 flex items-center justify-center gap-2 text-sm hover:bg-gray-100 transition-colors"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            Cadastrar Pessoa
+          </button>
+        </div>
+      )}
+
+      {/* Lista de cadastrados */}
+      {cadastroLoading ? (
+        <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-sm text-[var(--muted-foreground)]">{cadastro.length} pessoas cadastradas</p>
+          {cadastro
+            .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+            .map((person, idx) => (
+            <div key={idx} className="card overflow-hidden">
+              {editingPerson === person.email ? (
+                <div className="space-y-3 p-1">
+                  <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nome" />
+                  <input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="E-mail" type="email" />
+                  <div className="flex gap-2">
+                    <button onClick={() => saveEdit(person.email)} className="flex-1 bg-[#58a6ff] text-white py-2 rounded-xl text-sm font-medium">Salvar</button>
+                    <button onClick={() => setEditingPerson(null)} className="px-4 py-2 text-[#8b949e] text-sm">Cancelar</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      const next = expandedPerson === person.email ? null : person.email
+                      setExpandedPerson(next)
+                      if (next && !personRoles[person.email]) loadPersonRoles(person.email)
+                    }}
+                    className="w-full flex items-center justify-between"
+                  >
+                    <div className="text-left">
+                      <p className="text-sm font-medium">{person.name}</p>
+                      <p className="text-xs text-[var(--muted-foreground)]">{person.email}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-[#58a6ff] font-semibold">{person.ministries.length} {person.ministries.length === 1 ? 'Ministério' : 'Ministérios'}</span>
+                      <ChevronDown className={`w-4 h-4 text-[var(--muted-foreground)] transition-transform ${expandedPerson === person.email ? 'rotate-180' : ''}`} />
+                    </div>
+                  </button>
+                  {expandedPerson === person.email && (
+                    <div className="mt-3 pt-3 border-t border-[var(--border)] space-y-3">
+                      {/* Dados pessoais */}
+                      <div className="bg-[var(--accent)] rounded-xl p-3 space-y-2">
+                        <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider">Dados Pessoais</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {person.phone && (
+                            <div className="flex items-center gap-2 text-xs text-[var(--foreground)]">
+                              <span>📱</span> {person.phone}
+                            </div>
+                          )}
+                          {person.birth_date && (
+                            <div className="flex items-center gap-2 text-xs text-[var(--foreground)]">
+                              <span>🎂</span> {new Date(person.birth_date).toLocaleDateString('pt-BR')}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Funções */}
+                      {personRoles[person.email] && personRoles[person.email].length > 0 && (
+                        <div className="bg-[var(--accent)] rounded-xl p-3 space-y-2">
+                          <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider">Funções</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {personRoles[person.email].map((role: PersonRole) => (
+                              <span key={role.id} className="text-xs px-2.5 py-1 rounded-lg bg-purple-500/20 text-purple-400 font-medium">
+                                {role.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Ministérios */}
+                      <div className="bg-[var(--accent)] rounded-xl p-3 space-y-2">
+                        <p className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider">Ministérios</p>
+                        <div className="divide-y divide-[var(--border)]">
+                          {person.ministries.map((m: any, i: number) => (
+                            <div key={i} className="flex items-center justify-between px-3 py-2.5">
+                              <span className="text-xs font-medium">{m.ministry_name}</span>
+                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                                m.role === 'lider' || m.role === 'ambos' ? 'bg-amber-500/20 text-amber-400' : 'bg-[#58a6ff]/20 text-[#58a6ff]'
+                              }`}>
+                                {m.role === 'ambos' ? 'Membro + Líder' : m.role === 'lider' ? 'Líder' : 'Membro'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => { setEditingPerson(person.email); setEditName(person.name); setEditEmail(person.email) }}
+                        className="w-full py-2 rounded-xl bg-[#58a6ff]/10 text-[#58a6ff] text-xs font-semibold hover:bg-[#58a6ff]/20 transition-colors"
+                      >
+                        ✏️ Editar nome/email
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </>
   )
 }

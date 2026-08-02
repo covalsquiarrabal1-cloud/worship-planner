@@ -180,6 +180,23 @@ export default function ConfigPage() {
     <div className="max-w-2xl mx-auto space-y-10">
       <h2 className="text-xl font-bold">Configurações</h2>
 
+      {/* ========== FUNÇÕES ========== */}
+      <section className="space-y-4">
+        <Link
+          href="/admin/funcoes"
+          className="card flex items-center justify-between hover:border-[#58a6ff] transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <Tag className="w-5 h-5 text-[#58a6ff]" />
+            <div>
+              <p className="text-sm font-medium">Funções (Cargos)</p>
+              <p className="text-xs text-[var(--muted-foreground)]">Pastor, Ministro, Membro...</p>
+            </div>
+          </div>
+          <span className="text-xs text-[var(--muted-foreground)]">→</span>
+        </Link>
+      </section>
+
       {/* ========== INSTRUMENTOS ========== */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
