@@ -185,25 +185,34 @@ export default function GoogleCalendarSection() {
                   }}
                   disabled={!inMonth}
                   className={`
-                    relative flex flex-col items-center justify-start rounded-lg py-1.5 min-h-[44px] text-xs transition-all
+                    relative flex flex-col items-start rounded-lg p-1.5 min-h-[64px] text-xs transition-all overflow-hidden
                     ${!inMonth ? 'opacity-20 cursor-default' : 'cursor-pointer'}
-                    ${isSelected ? 'bg-[#4285f4] text-white' : ''}
+                    ${isSelected ? 'bg-[#4285f4] text-white ring-2 ring-[#4285f4]' : ''}
                     ${!isSelected && today ? 'ring-1 ring-[#4285f4]/50' : ''}
                     ${!isSelected && hasEvents ? 'bg-[#4285f4]/10' : ''}
                     ${!isSelected && !hasEvents && inMonth ? 'hover:bg-[var(--accent)]' : ''}
                   `}
                 >
-                  <span className={`text-xs font-medium ${isSelected ? 'text-white' : ''}`}>
+                  <span className={`text-[11px] font-semibold ${isSelected ? 'text-white' : ''}`}>
                     {format(day, 'd')}
                   </span>
                   {hasEvents && (
-                    <div className="flex gap-0.5 mt-0.5">
-                      {dayEvents.slice(0, 3).map((_, i) => (
-                        <div
-                          key={i}
-                          className={`w-1 h-1 rounded-full ${isSelected ? 'bg-white' : 'bg-[#4285f4]'}`}
-                        />
+                    <div className="flex flex-col gap-0.5 mt-0.5 w-full">
+                      {dayEvents.slice(0, 2).map((event) => (
+                        <span
+                          key={event.id}
+                          className={`text-[8px] leading-tight font-medium truncate w-full ${
+                            isSelected ? 'text-white/90' : 'text-[#4285f4]'
+                          }`}
+                        >
+                          {event.title}
+                        </span>
                       ))}
+                      {dayEvents.length > 2 && (
+                        <span className={`text-[8px] ${isSelected ? 'text-white/70' : 'text-[var(--muted-foreground)]'}`}>
+                          +{dayEvents.length - 2} mais
+                        </span>
+                      )}
                     </div>
                   )}
                 </button>
