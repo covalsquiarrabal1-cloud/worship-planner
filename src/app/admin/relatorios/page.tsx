@@ -335,12 +335,14 @@ function CadastroSection({
 }: CadastroSectionProps) {
   const [showForm, setShowForm] = useState(false)
   const [roles, setRoles] = useState<PersonRole[]>([])
-  const [form, setForm] = useState({ name: '', email: '', phone: '', birth_date: '', role_ids: [] as string[] })
+  const [ministries, setMinistries] = useState<{ id: string; name: string }[]>([])
+  const [form, setForm] = useState({ name: '', email: '', phone: '', birth_date: '', role_ids: [] as string[], ministry_ids: [] as string[] })
   const [saving, setSaving] = useState(false)
   const [personRoles, setPersonRoles] = useState<Record<string, PersonRole[]>>({})
 
   useEffect(() => {
     fetch('/api/person-roles').then(r => r.json()).then(d => { if (Array.isArray(d)) setRoles(d) })
+    fetch('/api/ministries').then(r => r.json()).then(d => { if (Array.isArray(d)) setMinistries(d.map((m: any) => ({ id: m.id, name: m.name }))) })
   }, [])
 
   async function loadPersonRoles(email: string) {
@@ -388,7 +390,16 @@ function CadastroSection({
         })
       }
 
-      setForm({ name: '', email: '', phone: '', birth_date: '', role_ids: [] })
+      // 3. Vincular ministérios
+      if (form.ministry_ids.length > 0) {
+        await fetch('/api/relatorios/cadastro/ministries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: form.email.trim().toLowerCase(), name: form.name.trim(), ministry_ids: form.ministry_ids }),
+        })
+      }
+
+      setForm({ name: '', email: '', phone: '', birth_date: '', role_ids: [], ministry_ids: [] })
       setShowForm(false)
       onReload()
     } catch {
@@ -404,6 +415,15 @@ function CadastroSection({
       role_ids: prev.role_ids.includes(roleId)
         ? prev.role_ids.filter(id => id !== roleId)
         : [...prev.role_ids, roleId],
+    }))
+  }
+
+  function toggleMinistry(ministryId: string) {
+    setForm(prev => ({
+      ...prev,
+      ministry_ids: prev.ministry_ids.includes(ministryId)
+        ? prev.ministry_ids.filter(id => id !== ministryId)
+        : [...prev.ministry_ids, ministryId],
     }))
   }
 
@@ -488,6 +508,27 @@ function CadastroSection({
                 Gerenciar funções →
               </Link>
             </div>
+
+            {/* Seleção de ministérios */}
+            <div>
+              <label className="text-xs font-medium text-[var(--muted-foreground)] mb-2 block">Ministério(s)</label>
+              <div className="flex flex-wrap gap-2 max-h-[150px] overflow-y-auto">
+                {ministries.map(ministry => (
+                  <button
+                    key={ministry.id}
+                    type="button"
+                    onClick={() => toggleMinistry(ministry.id)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                      form.ministry_ids.includes(ministry.id)
+                        ? 'bg-green-500/20 text-green-400 ring-1 ring-green-500/40'
+                        : 'bg-[var(--accent)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+                    }`}
+                  >
+                    {form.ministry_ids.includes(ministry.id) ? '✓ ' : ''}{ministry.name}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           <button
@@ -529,6 +570,14 @@ function CadastroSection({
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ email: data.new_email || data.old_email, role_ids: data.role_ids }),
                       })
+                      // Update ministries
+                      if (data.ministry_ids) {
+                        await fetch('/api/relatorios/cadastro/ministries', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ email: data.new_email || data.old_email, name: data.new_name, ministry_ids: data.ministry_ids }),
+                        })
+                      }
                       setEditingPerson(null)
                       onReload()
                     } else {
@@ -653,11 +702,25 @@ function EditPersonForm({ person, roles, personRoles, onSave, onCancel, onDelete
   const [phone, setPhone] = useState(person.phone || '')
   const [birthDate, setBirthDate] = useState(person.birth_date ? person.birth_date.substring(0, 10) : '')
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>(personRoles.map(r => r.id))
+  const [selectedMinistryIds, setSelectedMinistryIds] = useState<string[]>(
+    (person.ministries || []).map((m: any) => m.ministry_id).filter((id: string) => id !== 'louvor')
+  )
+  const [ministries, setMinistries] = useState<{ id: string; name: string }[]>([])
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/ministries').then(r => r.json()).then(d => { if (Array.isArray(d)) setMinistries(d.map((m: any) => ({ id: m.id, name: m.name }))) })
+  }, [])
 
   function toggleRole(roleId: string) {
     setSelectedRoleIds(prev =>
       prev.includes(roleId) ? prev.filter(id => id !== roleId) : [...prev, roleId]
+    )
+  }
+
+  function toggleMinistry(ministryId: string) {
+    setSelectedMinistryIds(prev =>
+      prev.includes(ministryId) ? prev.filter(id => id !== ministryId) : [...prev, ministryId]
     )
   }
 
@@ -674,6 +737,7 @@ function EditPersonForm({ person, roles, personRoles, onSave, onCancel, onDelete
       phone: phone.trim() || null,
       birth_date: birthDate || null,
       role_ids: selectedRoleIds,
+      ministry_ids: selectedMinistryIds,
     })
     setSaving(false)
   }
@@ -720,9 +784,28 @@ function EditPersonForm({ person, roles, personRoles, onSave, onCancel, onDelete
             ))}
           </div>
         </div>
-      </div>
 
-      {/* Actions */}
+        {/* Ministérios */}
+        <div>
+          <label className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider block mb-2">Ministérios</label>
+          <div className="flex flex-wrap gap-2 max-h-[150px] overflow-y-auto">
+            {ministries.map(ministry => (
+              <button
+                key={ministry.id}
+                type="button"
+                onClick={() => toggleMinistry(ministry.id)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  selectedMinistryIds.includes(ministry.id)
+                    ? 'bg-green-500/20 text-green-400 ring-1 ring-green-500/40'
+                    : 'bg-[var(--accent)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+                }`}
+              >
+                {selectedMinistryIds.includes(ministry.id) ? '✓ ' : ''}{ministry.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
       <div className="flex gap-2">
         <button
           onClick={handleSave}
