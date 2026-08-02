@@ -1,57 +1,63 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, Users, Home, Crown, ChevronRight, UserCircle } from 'lucide-react'
-import Link from 'next/link'
+import { Loader2, Home, Users, ChevronRight, ChevronDown, X } from 'lucide-react'
+
+interface MinistryCount {
+  id: string
+  name: string
+  slug: string
+  count: number
+}
+
+interface PersonDetail {
+  name: string
+  email: string
+  roles: string[]
+  ministries: string[]
+}
 
 interface RoleCount {
   id: string
   name: string
   count: number
+  people: { name: string; email: string; ministries: string[] }[]
 }
 
 interface DashboardData {
-  ministries: number
+  ministryCounts: MinistryCount[]
   totalPeople: number
+  allPeople: PersonDetail[]
   roleCounts: RoleCount[]
 }
 
 const roleIcons: Record<string, string> = {
   'Pastor': '⛪',
   'Ministro': '🎤',
-  'Membro': '👥',
   'Diácono': '🙏',
   'Presbítero': '📖',
 }
 
-const roleColors: Record<string, { gradient: string; iconBg: string; iconColor: string }> = {
-  'Pastor': { gradient: 'from-[#9333ea] to-[#a855f7]', iconBg: 'bg-purple-500/20', iconColor: 'text-purple-400' },
-  'Ministro': { gradient: 'from-[#b45309] to-[#f59e0b]', iconBg: 'bg-amber-500/20', iconColor: 'text-amber-400' },
-  'Membro': { gradient: 'from-[#1d4ed8] to-[#3b82f6]', iconBg: 'bg-blue-500/20', iconColor: 'text-blue-400' },
+const roleColors: Record<string, { gradient: string; iconBg: string }> = {
+  'Pastor': { gradient: 'from-[#9333ea] to-[#a855f7]', iconBg: 'bg-purple-500/20' },
+  'Ministro': { gradient: 'from-[#b45309] to-[#f59e0b]', iconBg: 'bg-amber-500/20' },
 }
 
-const defaultColor = { gradient: 'from-[#0f766e] to-[#14b8a6]', iconBg: 'bg-teal-500/20', iconColor: 'text-teal-400' }
+const defaultRoleColor = { gradient: 'from-[#0f766e] to-[#14b8a6]', iconBg: 'bg-teal-500/20' }
+
+type ExpandedSection = 'ministerios' | 'cadastrados' | string | null
 
 export default function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [loading, setLoading] = useState(true)
+  const [expanded, setExpanded] = useState<ExpandedSection>(null)
 
   useEffect(() => {
-    loadDashboard()
+    fetch('/api/dashboard')
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false) })
+      .catch(() => setLoading(false))
   }, [])
-
-  async function loadDashboard() {
-    try {
-      const res = await fetch('/api/dashboard')
-      if (res.ok) {
-        const json = await res.json()
-        setData(json)
-      }
-    } catch {
-      // silently fail
-    }
-    setLoading(false)
-  }
 
   if (loading) {
     return (
@@ -61,82 +67,127 @@ export default function DashboardPage() {
     )
   }
 
+  if (!data) return null
+
+  function toggle(section: ExpandedSection) {
+    setExpanded(prev => prev === section ? null : section)
+  }
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="max-w-2xl mx-auto space-y-4">
       <h2 className="text-xl font-bold">Dashboard</h2>
 
-      <div className="grid grid-cols-2 gap-4">
-        {/* Ministérios card */}
-        <Link
-          href="/admin/ministerios"
-          className="card relative overflow-hidden group hover:border-[var(--border)] transition-all active:scale-95"
-        >
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#238636] to-[#2ea043]" />
-          <div className="flex flex-col items-center text-center pt-4 pb-2 gap-3">
-            <div className="p-3 rounded-xl bg-green-500/20 text-green-400">
-              <Home className="w-7 h-7" />
+      {/* Ministérios card */}
+      <div className="card relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#238636] to-[#2ea043]" />
+        <button onClick={() => toggle('ministerios')} className="w-full flex items-center justify-between pt-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-green-500/20">
+              <Home className="w-6 h-6 text-green-400" />
             </div>
-            <div>
-              <p className="text-3xl font-bold">{data?.ministries ?? 0}</p>
-              <p className="text-xs text-[var(--muted-foreground)] mt-1">Ministérios</p>
+            <div className="text-left">
+              <p className="text-2xl font-bold">{data.ministryCounts.length}</p>
+              <p className="text-xs text-[var(--muted-foreground)]">Ministérios</p>
             </div>
           </div>
-          <div className="flex items-center justify-center gap-1 text-[10px] text-[var(--muted-foreground)] group-hover:text-[#58a6ff] transition-colors mt-1 pb-1">
-            <span>Ver detalhes</span>
-            <ChevronRight className="w-3 h-3" />
-          </div>
-        </Link>
+          <ChevronDown className={`w-5 h-5 text-[var(--muted-foreground)] transition-transform ${expanded === 'ministerios' ? 'rotate-180' : ''}`} />
+        </button>
 
-        {/* Total pessoas */}
-        <Link
-          href="/admin/relatorios"
-          className="card relative overflow-hidden group hover:border-[var(--border)] transition-all active:scale-95"
-        >
-          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#6366f1] to-[#818cf8]" />
-          <div className="flex flex-col items-center text-center pt-4 pb-2 gap-3">
-            <div className="p-3 rounded-xl bg-indigo-500/20 text-indigo-400">
-              <Users className="w-7 h-7" />
-            </div>
-            <div>
-              <p className="text-3xl font-bold">{data?.totalPeople ?? 0}</p>
-              <p className="text-xs text-[var(--muted-foreground)] mt-1">Total Cadastrados</p>
-            </div>
-          </div>
-          <div className="flex items-center justify-center gap-1 text-[10px] text-[var(--muted-foreground)] group-hover:text-[#58a6ff] transition-colors mt-1 pb-1">
-            <span>Ver detalhes</span>
-            <ChevronRight className="w-3 h-3" />
-          </div>
-        </Link>
-
-        {/* Dynamic role cards */}
-        {(data?.roleCounts || []).map((role) => {
-          const colors = roleColors[role.name] || defaultColor
-          const icon = roleIcons[role.name] || '👤'
-
-          return (
-            <Link
-              key={role.id}
-              href="/admin/relatorios"
-              className="card relative overflow-hidden group hover:border-[var(--border)] transition-all active:scale-95"
-            >
-              <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${colors.gradient}`} />
-              <div className="flex flex-col items-center text-center pt-4 pb-2 gap-3">
-                <div className={`p-3 rounded-xl ${colors.iconBg}`}>
-                  <span className="text-2xl">{icon}</span>
-                </div>
-                <div>
-                  <p className="text-3xl font-bold">{role.count}</p>
-                  <p className="text-xs text-[var(--muted-foreground)] mt-1">{role.name}</p>
-                </div>
+        {expanded === 'ministerios' && (
+          <div className="mt-4 pt-4 border-t border-[var(--border)] space-y-1.5 max-h-[400px] overflow-y-auto">
+            {data.ministryCounts.map(m => (
+              <div key={m.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-[var(--accent)]">
+                <span className="text-sm font-medium">{m.name}</span>
+                <span className="text-sm font-bold text-[#58a6ff]">{m.count}</span>
               </div>
-              <div className="flex items-center justify-center gap-1 text-[10px] text-[var(--muted-foreground)] group-hover:text-[#58a6ff] transition-colors mt-1 pb-1">
-                <span>Ver detalhes</span>
-                <ChevronRight className="w-3 h-3" />
-              </div>
-            </Link>
-          )
-        })}
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Total Cadastrados card */}
+      <div className="card relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#6366f1] to-[#818cf8]" />
+        <button onClick={() => toggle('cadastrados')} className="w-full flex items-center justify-between pt-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-indigo-500/20">
+              <Users className="w-6 h-6 text-indigo-400" />
+            </div>
+            <div className="text-left">
+              <p className="text-2xl font-bold">{data.totalPeople}</p>
+              <p className="text-xs text-[var(--muted-foreground)]">Total Cadastrados</p>
+            </div>
+          </div>
+          <ChevronDown className={`w-5 h-5 text-[var(--muted-foreground)] transition-transform ${expanded === 'cadastrados' ? 'rotate-180' : ''}`} />
+        </button>
+
+        {expanded === 'cadastrados' && (
+          <div className="mt-4 pt-4 border-t border-[var(--border)] space-y-1 max-h-[400px] overflow-y-auto">
+            {data.allPeople.map((person, idx) => (
+              <div key={idx} className="py-2 px-3 rounded-lg hover:bg-[var(--accent)]">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{person.name}</span>
+                  <div className="flex gap-1">
+                    {person.roles.map((role, i) => (
+                      <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400 font-medium">
+                        {role}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                {person.ministries.length > 0 && (
+                  <p className="text-[10px] text-[var(--muted-foreground)] mt-0.5">
+                    {person.ministries.join(', ')}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Dynamic role cards (Pastor, Ministro, etc. - excluding Membro) */}
+      {data.roleCounts.map((role) => {
+        const colors = roleColors[role.name] || defaultRoleColor
+        const icon = roleIcons[role.name] || '👤'
+
+        return (
+          <div key={role.id} className="card relative overflow-hidden">
+            <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${colors.gradient}`} />
+            <button onClick={() => toggle(role.id)} className="w-full flex items-center justify-between pt-2">
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl ${colors.iconBg}`}>
+                  <span className="text-xl">{icon}</span>
+                </div>
+                <div className="text-left">
+                  <p className="text-2xl font-bold">{role.count}</p>
+                  <p className="text-xs text-[var(--muted-foreground)]">{role.name}</p>
+                </div>
+              </div>
+              <ChevronDown className={`w-5 h-5 text-[var(--muted-foreground)] transition-transform ${expanded === role.id ? 'rotate-180' : ''}`} />
+            </button>
+
+            {expanded === role.id && (
+              <div className="mt-4 pt-4 border-t border-[var(--border)] space-y-1.5 max-h-[400px] overflow-y-auto">
+                {role.people.length === 0 ? (
+                  <p className="text-xs text-[var(--muted-foreground)] text-center py-4">Nenhum {role.name.toLowerCase()} cadastrado.</p>
+                ) : (
+                  role.people.map((person, idx) => (
+                    <div key={idx} className="py-2 px-3 rounded-lg hover:bg-[var(--accent)]">
+                      <span className="text-sm font-medium">{person.name}</span>
+                      {person.ministries.length > 0 && (
+                        <p className="text-[10px] text-[var(--muted-foreground)] mt-0.5">
+                          {person.ministries.join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

@@ -8,29 +8,100 @@ export async function GET() {
 
   const serviceClient = await createServiceRoleClient()
 
-  // Buscar ministérios e funções em paralelo
-  const [ministriesRes, rolesRes, assignmentsRes] = await Promise.all([
-    serviceClient.from('ministries').select('id', { count: 'exact', head: true }),
+  // Buscar tudo em paralelo
+  const [ministriesRes, rolesRes, assignmentsRes, ministryMembersRes, membersRes, signupsRes] = await Promise.all([
+    serviceClient.from('ministries').select('id, name, slug').order('name'),
     serviceClient.from('person_roles').select('id, name').order('name'),
     serviceClient.from('member_person_roles').select('member_email, role_id'),
+    serviceClient.from('ministry_members').select('name, email, ministry_id'),
+    serviceClient.from('members').select('name, email'),
+    serviceClient.from('ministry_signups').select('name, email'),
   ])
 
-  // Contar por função
-  const roleCounts: { id: string; name: string; count: number }[] = []
   const roles = rolesRes.data || []
   const assignments = assignmentsRes.data || []
+  const ministries = ministriesRes.data || []
+  const ministryMembers = ministryMembersRes.data || []
+  const members = membersRes.data || []
+  const signups = signupsRes.data || []
 
-  for (const role of roles) {
-    const count = assignments.filter(a => a.role_id === role.id).length
-    roleCounts.push({ id: role.id, name: role.name, count })
+  // Contagem de membros por ministério
+  const ministryCounts: { id: string; name: string; slug: string; count: number }[] = []
+  for (const m of ministries) {
+    const count = ministryMembers.filter(mm => mm.ministry_id === m.id).length
+    ministryCounts.push({ id: m.id, name: m.name, slug: m.slug, count })
+  }
+  // Add louvor
+  ministryCounts.unshift({ id: 'louvor', name: 'Louvor', slug: 'louvor', count: members.length })
+  ministryCounts.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+
+  // Pessoas por função (com nomes e ministérios)
+  const roleCounts: { id: string; name: string; count: number; people: { name: string; email: string; ministries: string[] }[] }[] = []
+
+  // Build email-to-name map and email-to-ministries map
+  const emailToName: Record<string, string> = {}
+  const emailToMinistries: Record<string, string[]> = {}
+
+  for (const m of members) {
+    if (m.email) {
+      emailToName[m.email.toLowerCase()] = m.name
+      if (!emailToMinistries[m.email.toLowerCase()]) emailToMinistries[m.email.toLowerCase()] = []
+      emailToMinistries[m.email.toLowerCase()].push('Louvor')
+    }
+  }
+  for (const mm of ministryMembers) {
+    if (mm.email) {
+      const key = mm.email.toLowerCase()
+      if (!emailToName[key]) emailToName[key] = mm.name
+      if (!emailToMinistries[key]) emailToMinistries[key] = []
+      const ministry = ministries.find(m => m.id === mm.ministry_id)
+      if (ministry) emailToMinistries[key].push(ministry.name)
+    }
+  }
+  for (const s of signups) {
+    if (s.email) {
+      const key = s.email.toLowerCase()
+      if (!emailToName[key]) emailToName[key] = s.name
+    }
   }
 
-  // Total de pessoas únicas (por email)
-  const uniqueEmails = new Set(assignments.map(a => a.member_email))
+  for (const role of roles) {
+    if (role.name === 'Membro') continue // Skip "Membro" card
+    const roleAssignments = assignments.filter(a => a.role_id === role.id)
+    const people = roleAssignments.map(a => ({
+      name: emailToName[a.member_email] || a.member_email,
+      email: a.member_email,
+      ministries: emailToMinistries[a.member_email] || [],
+    })).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+    roleCounts.push({ id: role.id, name: role.name, count: people.length, people })
+  }
+
+  // Total cadastrados (all unique people with details)
+  const allEmails = new Set<string>()
+  for (const a of assignments) allEmails.add(a.member_email)
+  for (const m of members) if (m.email) allEmails.add(m.email.toLowerCase())
+  for (const mm of ministryMembers) if (mm.email) allEmails.add(mm.email.toLowerCase())
+  for (const s of signups) if (s.email) allEmails.add(s.email.toLowerCase())
+
+  // Get roles for each person
+  const emailToRoles: Record<string, string[]> = {}
+  for (const a of assignments) {
+    if (!emailToRoles[a.member_email]) emailToRoles[a.member_email] = []
+    const role = roles.find(r => r.id === a.role_id)
+    if (role) emailToRoles[a.member_email].push(role.name)
+  }
+
+  const allPeople = Array.from(allEmails).map(email => ({
+    name: emailToName[email] || email,
+    email,
+    roles: emailToRoles[email] || [],
+    ministries: emailToMinistries[email] || [],
+  })).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
 
   return NextResponse.json({
-    ministries: ministriesRes.count || 0,
-    totalPeople: uniqueEmails.size,
+    ministryCounts,
+    totalPeople: allPeople.length,
+    allPeople,
     roleCounts,
   })
 }
