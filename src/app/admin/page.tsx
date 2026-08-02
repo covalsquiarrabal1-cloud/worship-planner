@@ -450,7 +450,7 @@ export default function AdminPage() {
       )}
 
       {/* Google Calendar Section */}
-      <GoogleCalendarSection month={month} year={year} />
+      <GoogleCalendarSection />
 
       {/* Quick menu removed - available in bottom nav */}
     </div>
