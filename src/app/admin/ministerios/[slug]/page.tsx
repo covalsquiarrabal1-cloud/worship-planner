@@ -228,9 +228,9 @@ export default function MinistryPage() {
     const title = slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, ' ')
 
     doc.setFontSize(16)
-    doc.text(`${title} - Escala`, 14, 20)
+    doc.text(`${title} - Escala`, doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' })
     doc.setFontSize(11)
-    doc.text(monthName, 14, 28)
+    doc.text(monthName, doc.internal.pageSize.getWidth() / 2, 28, { align: 'center' })
 
     // Build table rows matching the on-screen table
     const tableData: string[][] = []
@@ -264,13 +264,13 @@ export default function MinistryPage() {
       head: [['Data', 'Dia', 'Escala', 'Cel.', 'Torre', 'Intercessão', 'Suporte']],
       body: tableData,
       theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 3 },
-      headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255] },
+      styles: { fontSize: 8, cellPadding: 3, lineWidth: 0.5, lineColor: [80, 80, 80] },
+      headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], halign: 'center', fontStyle: 'bold' },
       columnStyles: {
-        0: { cellWidth: 18 },
-        1: { cellWidth: 25 },
-        2: { cellWidth: 32 },
-        3: { cellWidth: 12 },
+        0: { cellWidth: 18, halign: 'center' },
+        1: { cellWidth: 25, halign: 'center' },
+        2: { cellWidth: 32, halign: 'center' },
+        3: { cellWidth: 12, halign: 'center' },
         4: { cellWidth: 40 },
         5: { cellWidth: 'auto' },
         6: { cellWidth: 45 },
@@ -549,16 +549,16 @@ export default function MinistryPage() {
             </div>
           ) : (
             <div className="card p-0 overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm border-collapse">
                 <thead>
                   <tr className="border-b border-[var(--border)] bg-[var(--accent)]">
-                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Data</th>
-                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Dia</th>
-                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Escala</th>
-                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Cel.</th>
-                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-amber-400">Torre</th>
-                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-blue-400">Intercessão</th>
-                    <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Suporte</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Data</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Dia</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Escala</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Cel.</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-amber-400 border-r border-[var(--border)]">Torre</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-blue-400 border-r border-[var(--border)]">Intercessão</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Suporte</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -571,42 +571,42 @@ export default function MinistryPage() {
                       const suportes = celAssignments.filter(a => a.role_name === 'Suporte')
 
                       return (
-                        <tr key={`${event.id}-${celNum}`} className={`border-b border-[var(--border)] hover:bg-[var(--accent)]/50 ${celIdx > 0 ? 'border-t-0' : ''}`}>
+                        <tr key={`${event.id}-${celNum}`} className={`border-b border-[var(--border)] hover:bg-[var(--accent)]/50`}>
                           {celIdx === 0 && (
                             <>
-                              <td className="px-3 py-2.5 text-xs font-medium" rowSpan={event.num_celebrations}>
+                              <td className="text-center px-3 py-2.5 text-xs font-medium border-r border-[var(--border)]" rowSpan={event.num_celebrations}>
                                 {event.event_date.slice(8,10)}/{event.event_date.slice(5,7)}
                               </td>
-                              <td className="px-3 py-2.5 text-xs capitalize" rowSpan={event.num_celebrations}>
+                              <td className="text-center px-3 py-2.5 text-xs capitalize border-r border-[var(--border)]" rowSpan={event.num_celebrations}>
                                 {event.day_of_week}
                               </td>
-                              <td className="px-3 py-2.5 text-xs font-semibold text-green-400" rowSpan={event.num_celebrations}>
+                              <td className="text-center px-3 py-2.5 text-xs font-semibold text-green-400 border-r border-[var(--border)]" rowSpan={event.num_celebrations}>
                                 {event.scale_name || '-'}
                               </td>
                             </>
                           )}
-                          <td className="px-3 py-2.5 text-xs text-[var(--muted-foreground)]">
+                          <td className="text-center px-3 py-2.5 text-xs text-[var(--muted-foreground)] border-r border-[var(--border)]">
                             {event.num_celebrations > 1 ? `C${celNum}` : '-'}
                           </td>
-                          <td className="px-3 py-2.5">
+                          <td className="px-3 py-2.5 border-r border-[var(--border)]">
                             {torre.map(a => (
                               <span key={a.id} className="text-xs text-amber-400 font-medium">{a.member?.name || '-'}</span>
                             ))}
                           </td>
-                          <td className="px-3 py-2.5">
+                          <td className="px-3 py-2.5 border-r border-[var(--border)]">
                             <div className="flex flex-wrap gap-x-1.5 gap-y-0.5">
-                              {intercessores.map(a => (
+                              {intercessores.map((a, idx) => (
                                 <span key={a.id} className={`text-xs font-medium ${a.role_name === 'Coluna' ? 'text-red-400' : 'text-blue-400'}`}>
-                                  {a.member?.name || '-'}{intercessores.indexOf(a) < intercessores.length - 1 ? ',' : ''}
+                                  {a.member?.name || '-'}{idx < intercessores.length - 1 ? ',' : ''}
                                 </span>
                               ))}
                             </div>
                           </td>
                           <td className="px-3 py-2.5">
                             <div className="flex flex-wrap gap-x-1.5 gap-y-0.5">
-                              {suportes.map(a => (
+                              {suportes.map((a, idx) => (
                                 <span key={a.id} className="text-xs text-[var(--muted-foreground)]">
-                                  {a.member?.name || '-'}{suportes.indexOf(a) < suportes.length - 1 ? ',' : ''}
+                                  {a.member?.name || '-'}{idx < suportes.length - 1 ? ',' : ''}
                                 </span>
                               ))}
                             </div>
