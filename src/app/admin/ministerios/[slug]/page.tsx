@@ -232,7 +232,13 @@ export default function MinistryPage() {
     doc.setFontSize(11)
     doc.text(monthName, doc.internal.pageSize.getWidth() / 2, 28, { align: 'center' })
 
-    // Build table rows matching the on-screen table
+    // Detect roles dynamically
+    const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name)).filter(Boolean))] as string[]
+    const roleOrder = ['Torre', 'Coluna', 'Intercessor', 'Orar pelo Ministro', 'Suporte']
+    const orderedRoles = roleOrder.filter(r => allRoleNames.includes(r))
+    const displayColumns = orderedRoles.filter(r => r !== 'Coluna')
+
+    // Build table rows
     const tableData: string[][] = []
 
     for (const event of events) {
@@ -240,40 +246,38 @@ export default function MinistryPage() {
 
       for (const celNum of celebrations) {
         const celAssignments = event.assignments.filter(a => a.celebration_number === celNum)
-        const torre = celAssignments.filter(a => a.role_name === 'Torre').map(a => a.member?.name || '-').join(', ')
-        const intercessores = celAssignments
-          .filter(a => a.role_name === 'Intercessor' || a.role_name === 'Coluna')
-          .map(a => a.member?.name || '-')
-          .join(', ')
-        const suportes = celAssignments.filter(a => a.role_name === 'Suporte').map(a => a.member?.name || '-').join(', ')
-
-        tableData.push([
+        const row = [
           `${event.event_date.slice(8,10)}/${event.event_date.slice(5,7)}`,
           event.day_of_week,
           event.scale_name || '-',
           event.num_celebrations > 1 ? `C${celNum}` : '-',
-          torre || '-',
-          intercessores || '-',
-          suportes || '-',
-        ])
+        ]
+
+        for (const col of displayColumns) {
+          const colAssignments = col === 'Intercessor'
+            ? celAssignments.filter(a => a.role_name === 'Intercessor' || a.role_name === 'Coluna')
+            : celAssignments.filter(a => a.role_name === col)
+          row.push(colAssignments.map(a => a.member?.name || '-').join(', ') || '-')
+        }
+
+        tableData.push(row)
       }
     }
 
+    const headColumns = ['Data', 'Dia', 'Escala', 'Cel.', ...displayColumns.map(c => c === 'Intercessor' ? 'Intercessão' : c)]
+
     autoTable(doc, {
       startY: 35,
-      head: [['Data', 'Dia', 'Escala', 'Cel.', 'Torre', 'Intercessão', 'Suporte']],
+      head: [headColumns],
       body: tableData,
       theme: 'grid',
       styles: { fontSize: 8, cellPadding: 3, lineWidth: 0.5, lineColor: [80, 80, 80] },
       headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], halign: 'center', fontStyle: 'bold' },
       columnStyles: {
         0: { cellWidth: 18, halign: 'center' },
-        1: { cellWidth: 25, halign: 'center' },
-        2: { cellWidth: 32, halign: 'center' },
+        1: { cellWidth: 22, halign: 'center' },
+        2: { cellWidth: 28, halign: 'center' },
         3: { cellWidth: 12, halign: 'center' },
-        4: { cellWidth: 40 },
-        5: { cellWidth: 'auto' },
-        6: { cellWidth: 45 },
       },
     })
 
@@ -547,7 +551,24 @@ export default function MinistryPage() {
             <div className="card text-center py-8 text-[var(--muted-foreground)]">
               <p className="text-sm">Nenhuma escala gerada para este mês.</p>
             </div>
-          ) : (
+          ) : (() => {
+            // Detect all unique role_names to build dynamic columns
+            const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name)).filter(Boolean))] as string[]
+            // Order: Torre first, then others except Suporte, Suporte last
+            const roleOrder = ['Torre', 'Coluna', 'Intercessor', 'Orar pelo Ministro', 'Suporte']
+            const orderedRoles = roleOrder.filter(r => allRoleNames.includes(r))
+            // Group Coluna with Intercessor in display
+            const displayColumns = orderedRoles.filter(r => r !== 'Coluna')
+
+            const roleColors: Record<string, string> = {
+              'Torre': 'text-amber-400',
+              'Intercessor': 'text-blue-400',
+              'Coluna': 'text-red-400',
+              'Orar pelo Ministro': 'text-purple-400',
+              'Suporte': 'text-[var(--muted-foreground)]',
+            }
+
+            return (
             <div className="card p-0 overflow-x-auto">
               <table className="w-full text-sm border-collapse">
                 <thead>
@@ -556,9 +577,11 @@ export default function MinistryPage() {
                     <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Dia</th>
                     <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Escala</th>
                     <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Cel.</th>
-                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-amber-400 border-r border-[var(--border)]">Torre</th>
-                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-blue-400 border-r border-[var(--border)]">Intercessão</th>
-                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Suporte</th>
+                    {displayColumns.map(col => (
+                      <th key={col} className={`text-center px-3 py-2.5 text-xs font-semibold border-r border-[var(--border)] last:border-r-0 ${roleColors[col] || 'text-[var(--muted-foreground)]'}`}>
+                        {col === 'Intercessor' ? 'Intercessão' : col}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -566,12 +589,9 @@ export default function MinistryPage() {
                     const celebrations = Array.from({ length: event.num_celebrations }, (_, i) => i + 1)
                     return celebrations.map((celNum, celIdx) => {
                       const celAssignments = event.assignments.filter(a => a.celebration_number === celNum)
-                      const torre = celAssignments.filter(a => a.role_name === 'Torre')
-                      const intercessores = celAssignments.filter(a => a.role_name === 'Intercessor' || a.role_name === 'Coluna')
-                      const suportes = celAssignments.filter(a => a.role_name === 'Suporte')
 
                       return (
-                        <tr key={`${event.id}-${celNum}`} className={`border-b border-[var(--border)] hover:bg-[var(--accent)]/50`}>
+                        <tr key={`${event.id}-${celNum}`} className="border-b border-[var(--border)] hover:bg-[var(--accent)]/50">
                           {celIdx === 0 && (
                             <>
                               <td className="text-center px-3 py-2.5 text-xs font-medium border-r border-[var(--border)]" rowSpan={event.num_celebrations}>
@@ -588,29 +608,25 @@ export default function MinistryPage() {
                           <td className="text-center px-3 py-2.5 text-xs text-[var(--muted-foreground)] border-r border-[var(--border)]">
                             {event.num_celebrations > 1 ? `C${celNum}` : '-'}
                           </td>
-                          <td className="px-3 py-2.5 border-r border-[var(--border)]">
-                            {torre.map(a => (
-                              <span key={a.id} className="text-xs text-amber-400 font-medium">{a.member?.name || '-'}</span>
-                            ))}
-                          </td>
-                          <td className="px-3 py-2.5 border-r border-[var(--border)]">
-                            <div className="flex flex-wrap gap-x-1.5 gap-y-0.5">
-                              {intercessores.map((a, idx) => (
-                                <span key={a.id} className={`text-xs font-medium ${a.role_name === 'Coluna' ? 'text-red-400' : 'text-blue-400'}`}>
-                                  {a.member?.name || '-'}{idx < intercessores.length - 1 ? ',' : ''}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <div className="flex flex-wrap gap-x-1.5 gap-y-0.5">
-                              {suportes.map((a, idx) => (
-                                <span key={a.id} className="text-xs text-[var(--muted-foreground)]">
-                                  {a.member?.name || '-'}{idx < suportes.length - 1 ? ',' : ''}
-                                </span>
-                              ))}
-                            </div>
-                          </td>
+                          {displayColumns.map(col => {
+                            // For "Intercessor" column, include both Intercessor and Coluna
+                            const colAssignments = col === 'Intercessor'
+                              ? celAssignments.filter(a => a.role_name === 'Intercessor' || a.role_name === 'Coluna')
+                              : celAssignments.filter(a => a.role_name === col)
+
+                            return (
+                              <td key={col} className="px-3 py-2.5 border-r border-[var(--border)] last:border-r-0">
+                                <div className="flex flex-wrap gap-x-1.5 gap-y-0.5">
+                                  {colAssignments.map((a, idx) => (
+                                    <span key={a.id} className={`text-xs font-medium ${roleColors[a.role_name || ''] || 'text-white'}`}>
+                                      {a.member?.name || '-'}{idx < colAssignments.length - 1 ? ',' : ''}
+                                    </span>
+                                  ))}
+                                  {colAssignments.length === 0 && <span className="text-xs text-[var(--muted-foreground)]">-</span>}
+                                </div>
+                              </td>
+                            )
+                          })}
                         </tr>
                       )
                     })
@@ -618,7 +634,8 @@ export default function MinistryPage() {
                 </tbody>
               </table>
             </div>
-          )}
+            )
+          })()}
         </div>
       )}
     </div>
