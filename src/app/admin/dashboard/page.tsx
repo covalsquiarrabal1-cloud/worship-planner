@@ -34,8 +34,8 @@ interface DashboardData {
 
 const roleIcons: Record<string, string> = {
   'Pastor': '⛪',
-  'Ministro': '🎤',
-  'Diácono': '🙏',
+  'Ministro': '🙏',
+  'Diácono': '📖',
   'Presbítero': '📖',
 }
 
