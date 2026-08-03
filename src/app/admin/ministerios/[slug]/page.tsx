@@ -562,9 +562,9 @@ export default function MinistryPage() {
 
             const roleColors: Record<string, string> = {
               'Torre': 'text-amber-400',
-              'Intercessor': 'text-blue-400',
+              'Intercessor': 'text-white',
               'Coluna': 'text-red-400',
-              'Orar pelo Ministro': 'text-purple-400',
+              'Orar pelo Ministro': 'text-blue-400',
               'Suporte': 'text-[var(--muted-foreground)]',
             }
 
