@@ -22,12 +22,18 @@ export default function MinistryPage() {
   const [events, setEvents] = useState<MinistryEvent[]>([])
   const [currentDate, setCurrentDate] = useState(new Date())
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'escala' | 'membros'>('escala')
+  const [tab, setTab] = useState<'escala' | 'membros' | 'momentos'>('escala')
   const [showConfig, setShowConfig] = useState(false)
   const [scaleConfig, setScaleConfig] = useState<Record<string, number>>({})
   const [savingConfig, setSavingConfig] = useState(false)
   const [ministryRoles, setMinistryRoles] = useState<MinistryRole[]>([])
   const [newRoleName, setNewRoleName] = useState('')
+  const [momentos, setMomentos] = useState<any[]>([])
+  const [loadingMomentos, setLoadingMomentos] = useState(false)
+
+  async function loadMomentos() {
+    // Handled by MomentosTab component
+  }
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [newMemberIsMembro, setNewMemberIsMembro] = useState(true)
@@ -330,7 +336,7 @@ export default function MinistryPage() {
       </div>
 
       {/* Tabs */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className={`grid gap-3 ${slug === 'intercessao-alive' ? 'grid-cols-3' : 'grid-cols-2'}`}>
         <button
           onClick={() => setTab('escala')}
           className={`py-5 rounded-2xl text-sm font-semibold transition-all ${tab === 'escala' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
@@ -343,6 +349,14 @@ export default function MinistryPage() {
         >
           <Users className="w-4 h-4 inline mr-1" /> Membros ({members.length})
         </button>
+        {slug === 'intercessao-alive' && (
+          <button
+            onClick={() => { setTab('momentos'); loadMomentos() }}
+            className={`py-5 rounded-2xl text-sm font-semibold transition-all ${tab === 'momentos' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
+          >
+            🕐 Momentos
+          </button>
+        )}
       </div>
 
       {tab === 'membros' ? (
@@ -447,6 +461,8 @@ export default function MinistryPage() {
             </div>
           ))}
         </div>
+      ) : tab === 'momentos' ? (
+        <MomentosTab slug={slug} members={members} month={month} year={year} currentDate={currentDate} setCurrentDate={setCurrentDate} />
       ) : (
         <div className="space-y-4">
           {/* Month Nav */}
@@ -667,6 +683,138 @@ export default function MinistryPage() {
             </div>
             )
           })()}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }: {
+  slug: string
+  members: { id: string; name: string }[]
+  month: number
+  year: number
+  currentDate: Date
+  setCurrentDate: (d: Date) => void
+}) {
+  const [momentos, setMomentos] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => { loadMomentos() }, [month, year])
+
+  async function loadMomentos() {
+    setLoading(true)
+    const res = await fetch(`/api/ministries/${slug}/momentos?month=${month}&year=${year}`)
+    if (res.ok) setMomentos(await res.json())
+    setLoading(false)
+  }
+
+  async function updateMember(id: string, memberId: string) {
+    await fetch(`/api/ministries/${slug}/momentos`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, member_id: memberId || null }),
+    })
+    setMomentos(prev => prev.map(m => m.id === id ? { ...m, member_id: memberId || null, member: members.find(mb => mb.id === memberId) || null } : m))
+  }
+
+  async function generateMomentos() {
+    setSaving(true)
+    // Generate momentos for all sundays of the month
+    const start = new Date(year, month - 1, 1)
+    const end = new Date(year, month, 0)
+    const newMomentos: any[] = []
+
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dayOfWeek = d.getDay()
+      const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+
+      if (dayOfWeek === 0) { // Domingo
+        newMomentos.push({ event_date: dateStr, culto: 'Celebração Domingo', momento: 'Sobrenatural', member_id: null })
+        newMomentos.push({ event_date: dateStr, culto: 'Celebração Domingo', momento: 'Dízimos e Ofertas', member_id: null })
+      }
+    }
+
+    await fetch(`/api/ministries/${slug}/momentos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ momentos: newMomentos, month, year }),
+    })
+
+    await loadMomentos()
+    setSaving(false)
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Month Nav */}
+      <div className="flex items-center justify-between">
+        <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-3 rounded-xl bg-[#1c2128] border border-[#30363d]">
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <span className="text-base font-semibold capitalize">{format(currentDate, 'MMMM yyyy', { locale: ptBR })}</span>
+        <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-3 rounded-xl bg-[#1c2128] border border-[#30363d]">
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+
+      {/* Generate button */}
+      {momentos.length === 0 && !loading && (
+        <button
+          onClick={generateMomentos}
+          disabled={saving}
+          className="w-full py-3 rounded-xl bg-[#58a6ff] text-white font-semibold text-sm disabled:opacity-40"
+        >
+          {saving ? 'Gerando...' : 'Gerar Escala Momentos (Domingos)'}
+        </button>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin" /></div>
+      ) : momentos.length > 0 && (
+        <div className="card p-0 overflow-x-auto">
+          <table className="w-full text-sm border-collapse">
+            <thead>
+              <tr className="border-b border-[var(--border)] bg-[var(--accent)]">
+                <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Dia</th>
+                <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Culto</th>
+                <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Momento</th>
+                <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Escalado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {momentos.map((m, idx) => {
+                const prevMomento = idx > 0 ? momentos[idx - 1] : null
+                const sameDate = prevMomento && prevMomento.event_date === m.event_date && prevMomento.culto === m.culto
+                return (
+                  <tr key={m.id} className="border-b border-[var(--border)] hover:bg-[var(--accent)]/50">
+                    <td className="text-center px-3 py-2.5 text-xs font-medium border-r border-[var(--border)]">
+                      {!sameDate ? `${m.event_date.slice(8,10)}/${m.event_date.slice(5,7)}` : ''}
+                    </td>
+                    <td className="text-center px-3 py-2.5 text-xs font-semibold text-amber-400 border-r border-[var(--border)]">
+                      {!sameDate ? m.culto : ''}
+                    </td>
+                    <td className="text-center px-3 py-2.5 text-xs border-r border-[var(--border)]">
+                      {m.momento || '-'}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <select
+                        value={m.member_id || ''}
+                        onChange={(e) => updateMember(m.id, e.target.value)}
+                        className="text-xs bg-[#1c2128] border border-[#30363d] rounded-lg px-2 py-1.5 text-white w-full"
+                      >
+                        <option value="">— Selecione —</option>
+                        {members.map(mb => (
+                          <option key={mb.id} value={mb.id}>{mb.name}</option>
+                        ))}
+                      </select>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
