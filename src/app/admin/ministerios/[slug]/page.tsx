@@ -227,10 +227,10 @@ export default function MinistryPage() {
     const monthName = format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })
     const title = slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, ' ')
 
-    doc.setFontSize(16)
-    doc.text(`${title} - Escala`, doc.internal.pageSize.getWidth() / 2, 20, { align: 'center' })
-    doc.setFontSize(11)
-    doc.text(monthName, doc.internal.pageSize.getWidth() / 2, 28, { align: 'center' })
+    doc.setFontSize(12)
+    doc.text(`${title} - Escala`, doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' })
+    doc.setFontSize(9)
+    doc.text(monthName, doc.internal.pageSize.getWidth() / 2, 18, { align: 'center' })
 
     // Detect roles dynamically
     const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name)).filter(Boolean))] as string[]
@@ -275,17 +275,18 @@ export default function MinistryPage() {
     const headColumns = ['Data', 'Dia', 'Escala', 'Cel.', ...pdfDisplayColumns.map(c => c === 'Intercessor' ? 'Intercessão' : c === 'Orar pelo Ministro' ? 'Orar p/ Ministro' : c)]
 
     autoTable(doc, {
-      startY: 35,
+      startY: 22,
+      margin: { left: 5, right: 5, top: 5, bottom: 5 },
       head: [headColumns],
       body: tableData,
       theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 3, lineWidth: 0.5, lineColor: [80, 80, 80] },
-      headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], halign: 'center', fontStyle: 'bold' },
+      styles: { fontSize: 7, cellPadding: 2, lineWidth: 0.3, lineColor: [80, 80, 80], overflow: 'linebreak' },
+      headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], halign: 'center', fontStyle: 'bold', fontSize: 7 },
       columnStyles: {
-        0: { cellWidth: 18, halign: 'center' },
-        1: { cellWidth: 22, halign: 'center' },
-        2: { cellWidth: 28, halign: 'center' },
-        3: { cellWidth: 12, halign: 'center' },
+        0: { cellWidth: 14, halign: 'center' },
+        1: { cellWidth: 18, halign: 'center' },
+        2: { cellWidth: 26, halign: 'center' },
+        3: { cellWidth: 10, halign: 'center' },
       },
       didParseCell: (data: any) => {
         // For merged cells (Data, Dia, Escala - columns 0,1,2), hide text on non-first rows
