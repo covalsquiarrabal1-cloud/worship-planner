@@ -601,10 +601,10 @@ function CadastroSection({
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-[#58a6ff] font-semibold">
-                        {person.ministries.length > 0
-                          ? `${person.ministries.length} ${person.ministries.length === 1 ? 'Ministério' : 'Ministérios'}`
-                          : person.person_roles?.filter((r: string) => r !== 'Membro').length > 0
-                            ? person.person_roles.filter((r: string) => r !== 'Membro').join(', ')
+                        {person.person_roles?.filter((r: string) => r !== 'Membro').length > 0
+                          ? `Função: ${person.person_roles.filter((r: string) => r !== 'Membro').join(', ')}`
+                          : person.ministries.length > 0
+                            ? `${person.ministries.length} ${person.ministries.length === 1 ? 'Ministério' : 'Ministérios'}`
                             : person.person_roles?.includes('Membro')
                               ? 'Membro'
                               : 'Sem vínculo'
