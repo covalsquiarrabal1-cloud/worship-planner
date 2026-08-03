@@ -400,7 +400,7 @@ export default function MinistryPage() {
           </div>
 
           {/* Actions */}
-          <div className="grid grid-cols-4 gap-3">
+          <div className={`grid gap-3 ${slug === 'intercessao' ? 'grid-cols-5' : 'grid-cols-4'}`}>
             <Link
               href={`/admin/ministerios/${slug}/gerar?month=${month}&year=${year}`}
               className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-[#58a6ff] transition-colors"
@@ -408,6 +408,15 @@ export default function MinistryPage() {
               <Plus className="w-5 h-5 text-[#58a6ff]" />
               <span className="text-xs font-semibold">GERAR</span>
             </Link>
+            {slug === 'intercessao' && (
+              <Link
+                href={`/admin/ministerios/intercessao/equipes`}
+                className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-amber-400 transition-colors"
+              >
+                <Users className="w-5 h-5 text-amber-400" />
+                <span className="text-xs font-semibold">EQUIPES</span>
+              </Link>
+            )}
             <button
               onClick={() => setShowConfig(true)}
               className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-[#58a6ff] transition-colors"
