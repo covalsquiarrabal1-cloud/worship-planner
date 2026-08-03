@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Loader2, Eye, EyeOff } from 'lucide-react'
+import { Loader2, Eye, EyeOff, Download } from 'lucide-react'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -14,8 +14,44 @@ export default function LoginPage() {
   const [firstAccess, setFirstAccess] = useState(false)
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [bgImage, setBgImage] = useState<string | null>(null)
+  const [installPrompt, setInstallPrompt] = useState<any>(null)
+  const [showInstallBtn, setShowInstallBtn] = useState(false)
   const supabase = createClient()
   const router = useRouter()
+
+  useEffect(() => {
+    // Load background image
+    fetch('/api/app-settings?key=escalas_gerais_bg')
+      .then(r => r.json())
+      .then(d => { if (d.value) setBgImage(d.value) })
+      .catch(() => {})
+
+    // Capture install prompt
+    const handler = (e: any) => {
+      e.preventDefault()
+      setInstallPrompt(e)
+      setShowInstallBtn(true)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+
+    // Check if already installed
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setShowInstallBtn(false)
+    }
+
+    return () => window.removeEventListener('beforeinstallprompt', handler)
+  }, [])
+
+  async function handleInstall() {
+    if (!installPrompt) return
+    installPrompt.prompt()
+    const result = await installPrompt.userChoice
+    if (result.outcome === 'accepted') {
+      setShowInstallBtn(false)
+    }
+    setInstallPrompt(null)
+  }
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -23,7 +59,6 @@ export default function LoginPage() {
     setError('')
 
     try {
-      // Try login with email + password
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -47,9 +82,7 @@ export default function LoginPage() {
         return
       }
 
-      // If login failed, check if it's first access
       if (res.status === 401) {
-        // Try with the check endpoint to see if it's first access
         const checkRes = await fetch('/api/login/check', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -65,7 +98,6 @@ export default function LoginPage() {
         }
 
         if (!checkData.hasPassword) {
-          // First access - set session and show create password
           const { error: sessionError } = await supabase.auth.setSession({
             access_token: checkData.session.access_token,
             refresh_token: checkData.session.refresh_token,
@@ -80,7 +112,6 @@ export default function LoginPage() {
           return
         }
 
-        // Has password but wrong one
         setError('Senha incorreta.')
         setLoading(false)
         return
@@ -125,8 +156,16 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6">
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 relative">
+      {/* Background image */}
+      {bgImage && (
+        <div className="fixed inset-0 z-0">
+          <img src={bgImage} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/70" />
+        </div>
+      )}
+
+      <div className="w-full max-w-sm relative z-10">
         {/* Logo */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl mb-6 overflow-hidden">
@@ -239,6 +278,17 @@ export default function LoginPage() {
           <p className="text-xs text-[var(--muted-foreground)] text-center mt-6">
             Primeiro acesso? Digite seu e-mail e qualquer senha — o sistema vai pedir para criar uma nova.
           </p>
+        )}
+
+        {/* Install App button */}
+        {showInstallBtn && (
+          <button
+            onClick={handleInstall}
+            className="w-full mt-6 flex items-center justify-center gap-2 py-3 rounded-xl border border-[var(--border)] bg-[var(--card)]/80 backdrop-blur-sm text-sm font-medium text-[var(--muted-foreground)] hover:text-[#58a6ff] hover:border-[#58a6ff]/50 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+            Instalar App na tela inicial
+          </button>
         )}
       </div>
     </div>
