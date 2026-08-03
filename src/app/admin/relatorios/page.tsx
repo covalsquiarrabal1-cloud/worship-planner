@@ -602,7 +602,7 @@ function CadastroSection({
                           )}
                           {person.birth_date && (
                             <div className="flex items-center gap-2 text-xs text-[var(--foreground)]">
-                              <span>🎂</span> {new Date(person.birth_date).toLocaleDateString('pt-BR')}
+                              <span>🎂</span> {new Date(person.birth_date + 'T12:00:00').toLocaleDateString('pt-BR')}
                             </div>
                           )}
                         </div>
