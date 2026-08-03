@@ -428,13 +428,13 @@ function CadastroSection({
       <div className="flex gap-2 flex-wrap">
         <button
           onClick={() => setFilterNoRole(!filterNoRole)}
-          className={`px-4 py-2.5 rounded-none text-xs font-medium transition-colors border ${
+          className={`px-6 py-3 rounded-none text-sm font-medium transition-colors border ${
             filterNoRole
               ? 'bg-red-500/15 text-red-400 border-red-500/40'
               : 'bg-[var(--card)] text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--muted-foreground)]'
           }`}
         >
-          {filterNoRole ? '✓ ' : ''}Sem função/ministério
+          {filterNoRole ? '✓  ' : ''}Sem função/ministério
         </button>
       </div>
 
