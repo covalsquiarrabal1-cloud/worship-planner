@@ -786,15 +786,31 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
             <tbody>
               {momentos.map((m, idx) => {
                 const prevMomento = idx > 0 ? momentos[idx - 1] : null
-                const sameDate = prevMomento && prevMomento.event_date === m.event_date && prevMomento.culto === m.culto
+                const nextMomento = idx < momentos.length - 1 ? momentos[idx + 1] : null
+                const isFirstOfGroup = !prevMomento || prevMomento.event_date !== m.event_date || prevMomento.culto !== m.culto
+                const sameAsNext = nextMomento && nextMomento.event_date === m.event_date && nextMomento.culto === m.culto
+
+                // Count how many rows share same date+culto
+                let rowSpanCount = 1
+                if (isFirstOfGroup) {
+                  for (let i = idx + 1; i < momentos.length; i++) {
+                    if (momentos[i].event_date === m.event_date && momentos[i].culto === m.culto) rowSpanCount++
+                    else break
+                  }
+                }
+
                 return (
                   <tr key={m.id} className="border-b border-[var(--border)] hover:bg-[var(--accent)]/50">
-                    <td className="text-center px-3 py-2.5 text-xs font-medium border-r border-[var(--border)]">
-                      {!sameDate ? `${m.event_date.slice(8,10)}/${m.event_date.slice(5,7)}` : ''}
-                    </td>
-                    <td className="text-center px-3 py-2.5 text-xs font-semibold text-amber-400 border-r border-[var(--border)]">
-                      {!sameDate ? m.culto : ''}
-                    </td>
+                    {isFirstOfGroup && (
+                      <>
+                        <td className="text-center px-3 py-2.5 text-xs font-medium border-r border-[var(--border)]" rowSpan={rowSpanCount}>
+                          {m.event_date.slice(8,10)}/{m.event_date.slice(5,7)}
+                        </td>
+                        <td className="text-center px-3 py-2.5 text-xs font-semibold text-amber-400 border-r border-[var(--border)]" rowSpan={rowSpanCount}>
+                          {m.culto}
+                        </td>
+                      </>
+                    )}
                     <td className="text-center px-3 py-2.5 text-xs border-r border-[var(--border)]">
                       {m.momento || '-'}
                     </td>
