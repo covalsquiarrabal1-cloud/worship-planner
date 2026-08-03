@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Loader2, Users, BarChart3, ArrowLeft, ChevronDown, Search, Plus, X } from 'lucide-react'
 import Link from 'next/link'
+import { getMinistryIcon3D } from '@/lib/ministry-icons'
 
 interface MinistryStats {
   id: string
@@ -25,39 +26,6 @@ interface ReportData {
   ministryStats: MinistryStats[]
   totalUnique: number
   multiArea: MultiAreaMember[]
-}
-
-const ministryIcons: Record<string, string> = {
-  'som': '🔊',
-  'iluminacao': '💡',
-  'projecao': '📽',
-  'backstage': '🚪',
-  'conexao': '🤝',
-  'conexao-alive': '🤝',
-  'excelencia': '⭐',
-  'intercessao': '🙏',
-  'intercessao-alive': '🙏',
-  'centurioes': '🛡️',
-  'servos': '🙌',
-  'fotografia-creative': '📸',
-  'stories': '📱',
-  'profetico': '🔥',
-  'kids': '🧒',
-  'ac-soccer': '⚽',
-  'ac-volei': '🏐',
-  'decoracao': '🎨',
-  'ativadas': '👩',
-  'forja': '🔨',
-  'empoderadas': '👑',
-  'strong-brothers': '💪',
-  'alive': '⚡',
-  'sala-de-cura': '💊',
-  'acao-social': '❤️',
-  'financas': '💰',
-  'bookstore': '📚',
-  'exito': '🎯',
-  'evangelismo': '📢',
-  'membresia': '📋',
 }
 
 export default function RelatoriosPage() {
@@ -177,7 +145,9 @@ export default function RelatoriosPage() {
             className="w-full flex items-center justify-between"
           >
             <div className="flex items-center gap-3">
-              <span className="text-lg">🎵</span>
+              <div className="w-9 h-9 rounded-lg bg-[#1c2128] border border-[#30363d] flex items-center justify-center">
+                <img src={getMinistryIcon3D('louvor')} alt="Louvor" className="w-6 h-6 object-contain" />
+              </div>
               <div className="text-left">
                 <span className="text-sm font-medium">Louvor</span>
                 {data.worshipLeaders && data.worshipLeaders.length > 0 && (
@@ -210,7 +180,9 @@ export default function RelatoriosPage() {
               className="w-full flex items-center justify-between"
             >
               <div className="flex items-center gap-3">
-                <span className="text-lg">{ministryIcons[m.slug] || '⛪'}</span>
+                <div className="w-9 h-9 rounded-lg bg-[#1c2128] border border-[#30363d] flex items-center justify-center">
+                  <img src={getMinistryIcon3D(m.slug)} alt={m.name} className="w-6 h-6 object-contain" />
+                </div>
                 <div className="text-left">
                   <span className="text-sm font-medium">{m.name}</span>
                   {m.leader_name && (

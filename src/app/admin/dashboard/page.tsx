@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Loader2, Home, Users, ChevronRight, ChevronDown, X } from 'lucide-react'
+import { getMinistryIcon3D } from '@/lib/ministry-icons'
 
 interface MinistryCount {
   id: string
@@ -97,7 +98,12 @@ export default function DashboardPage() {
           <div className="mt-4 pt-4 border-t border-[var(--border)] space-y-1.5 max-h-[400px] overflow-y-auto">
             {data.ministryCounts.map(m => (
               <div key={m.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-[var(--accent)]">
-                <span className="text-sm font-medium">{m.name}</span>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-md bg-[#1c2128] border border-[#30363d] flex items-center justify-center">
+                    <img src={getMinistryIcon3D(m.slug)} alt={m.name} className="w-4.5 h-4.5 object-contain" />
+                  </div>
+                  <span className="text-sm font-medium">{m.name}</span>
+                </div>
                 <span className="text-sm font-bold text-[#58a6ff]">{m.count}</span>
               </div>
             ))}
