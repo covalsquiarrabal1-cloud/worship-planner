@@ -238,18 +238,24 @@ export default function MinistryPage() {
     const orderedRoles = roleOrder.filter(r => allRoleNames.includes(r))
     const pdfDisplayColumns = orderedRoles
 
-    // Build table rows
+    // Build table rows - group repeated Data/Dia/Escala
     const tableData: string[][] = []
+    let lastDate = ''
 
     for (const event of events) {
       const celebrations = Array.from({ length: event.num_celebrations }, (_, i) => i + 1)
+      const dateStr = `${event.event_date.slice(8,10)}/${event.event_date.slice(5,7)}`
 
-      for (const celNum of celebrations) {
+      for (let cIdx = 0; cIdx < celebrations.length; cIdx++) {
+        const celNum = celebrations[cIdx]
         const celAssignments = event.assignments.filter(a => a.celebration_number === celNum)
+
+        // Show Data/Dia/Escala only on first row of each event
+        const isFirstRow = cIdx === 0
         const row = [
-          `${event.event_date.slice(8,10)}/${event.event_date.slice(5,7)}`,
-          event.day_of_week,
-          event.scale_name || '-',
+          isFirstRow ? dateStr : '',
+          isFirstRow ? event.day_of_week : '',
+          isFirstRow ? (event.scale_name || '-') : '',
           event.num_celebrations > 1 ? `C${celNum}` : '-',
         ]
 
