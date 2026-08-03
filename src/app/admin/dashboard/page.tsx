@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Loader2, Home, Users, ChevronRight, ChevronDown, X } from 'lucide-react'
+import React, { useState, useEffect } from 'react'
+import { Loader2, Home, Users, ChevronRight, ChevronDown, X, UserCircle, Crown } from 'lucide-react'
 import { getMinistryIcon3D } from '@/lib/ministry-icons'
 
 interface MinistryCount {
@@ -32,12 +32,14 @@ interface DashboardData {
   roleCounts: RoleCount[]
 }
 
-const roleIcons: Record<string, string> = {
-  'Pastor': '⛪',
-  'Ministro': '🙏',
-  'Diácono': '📖',
-  'Presbítero': '📖',
+const roleIcons: Record<string, React.ReactNode> = {
+  'Pastor': <Crown className="w-6 h-6 text-purple-400" />,
+  'Ministro': <UserCircle className="w-6 h-6 text-amber-400" />,
+  'Diácono': <Users className="w-6 h-6 text-teal-400" />,
+  'Presbítero': <Users className="w-6 h-6 text-teal-400" />,
 }
+
+const defaultRoleIcon = <UserCircle className="w-6 h-6 text-teal-400" />
 
 const roleColors: Record<string, { gradient: string; iconBg: string }> = {
   'Pastor': { gradient: 'from-[#9333ea] to-[#a855f7]', iconBg: 'bg-purple-500/20' },
@@ -155,7 +157,7 @@ export default function DashboardPage() {
       {/* Dynamic role cards (Pastor, Ministro, etc. - excluding Membro) */}
       {data.roleCounts.map((role) => {
         const colors = roleColors[role.name] || defaultRoleColor
-        const icon = roleIcons[role.name] || '👤'
+        const icon = roleIcons[role.name] || defaultRoleIcon
 
         return (
           <div key={role.id} className="card relative overflow-hidden">
@@ -163,7 +165,7 @@ export default function DashboardPage() {
             <button onClick={() => toggle(role.id)} className="w-full flex items-center justify-between pt-2">
               <div className="flex items-center gap-3">
                 <div className={`p-2.5 rounded-xl ${colors.iconBg}`}>
-                  <span className="text-xl">{icon}</span>
+                  {icon}
                 </div>
                 <div className="text-left">
                   <p className="text-2xl font-bold">{role.count}</p>
