@@ -11,6 +11,7 @@ interface Member { id: string; name: string }
 interface TeamData {
   name: string
   torre_member_id: string | null
+  coluna_member_id: string | null
   members: { member_id: string; role: 'intercessor' | 'suporte' }[]
 }
 
@@ -18,8 +19,8 @@ export default function IntercessaoEquipesPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [allMembers, setAllMembers] = useState<Member[]>([])
   const [teams, setTeams] = useState<TeamData[]>([
-    { name: 'Equipe 1', torre_member_id: null, members: [] },
-    { name: 'Equipe 2', torre_member_id: null, members: [] },
+    { name: 'Equipe 1', torre_member_id: null, coluna_member_id: null, members: [] },
+    { name: 'Equipe 2', torre_member_id: null, coluna_member_id: null, members: [] },
   ])
   const [suportes, setSuportes] = useState<string[]>([])
   const [torres, setTorres] = useState<string[]>([])
@@ -55,14 +56,15 @@ export default function IntercessaoEquipesPage() {
           .map((t: any) => ({
             name: t.name,
             torre_member_id: t.torre_member?.id || null,
+            coluna_member_id: t.coluna_member_id || null,
             members: (t.members || []).filter((m: any) => m.role === 'intercessor').map((m: any) => ({
               member_id: m.member?.id,
               role: 'intercessor' as const,
             })),
           }))
         setTeams(loadedTeams.length > 0 ? loadedTeams : [
-          { name: 'Equipe 1', torre_member_id: null, members: [] },
-          { name: 'Equipe 2', torre_member_id: null, members: [] },
+          { name: 'Equipe 1', torre_member_id: null, coluna_member_id: null, members: [] },
+          { name: 'Equipe 2', torre_member_id: null, coluna_member_id: null, members: [] },
         ])
 
         // Load torres
@@ -83,7 +85,7 @@ export default function IntercessaoEquipesPage() {
   }
 
   function addTeam() {
-    setTeams(prev => [...prev, { name: `Equipe ${prev.length + 1}`, torre_member_id: null, members: [] }])
+    setTeams(prev => [...prev, { name: `Equipe ${prev.length + 1}`, torre_member_id: null, coluna_member_id: null, members: [] }])
   }
 
   function removeTeam(idx: number) {
@@ -118,8 +120,8 @@ export default function IntercessaoEquipesPage() {
 
     // Build teams data including suportes as a special team
     const allTeams = [
-      ...teams,
-      { name: 'Suportes', torre_member_id: null, members: suportes.map(id => ({ member_id: id, role: 'suporte' as const })) },
+      ...teams.map(t => ({ ...t, coluna_member_id: t.coluna_member_id })),
+      { name: 'Suportes', torre_member_id: null, coluna_member_id: null, members: suportes.map(id => ({ member_id: id, role: 'suporte' as const })) },
     ]
 
     await fetch('/api/ministries/intercessao/teams', {
@@ -235,23 +237,45 @@ export default function IntercessaoEquipesPage() {
             </select>
           </div>
 
+          {/* Coluna for this team */}
+          <div>
+            <label className="text-[10px] text-[var(--muted-foreground)] uppercase font-semibold">Coluna <span className="text-red-400">(destaque vermelho)</span></label>
+            <select
+              value={team.coluna_member_id || ''}
+              onChange={e => setTeams(prev => prev.map((t, i) => i === idx ? { ...t, coluna_member_id: e.target.value || null } : t))}
+              className="!py-2 !text-xs mt-1"
+            >
+              <option value="">— Selecionar Coluna —</option>
+              {team.members.map(tm => {
+                const member = allMembers.find(m => m.id === tm.member_id)
+                return member ? <option key={member.id} value={member.id}>{member.name}</option> : null
+              })}
+            </select>
+          </div>
+
           {/* Intercessores */}
           <div>
-            <label className="text-[10px] text-[var(--muted-foreground)] uppercase font-semibold">Intercessores</label>
+            <label className="text-[10px] text-[var(--muted-foreground)] uppercase font-semibold">Intercessores <span className="text-blue-400">(azul)</span></label>
             <div className="flex flex-wrap gap-1.5 mt-1">
-              {allMembers.filter(m => !torres.includes(m.id) && !suportes.includes(m.id)).map(m => (
-                <button
-                  key={m.id}
-                  onClick={() => toggleTeamMember(idx, m.id)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
-                    team.members.find(tm => tm.member_id === m.id)
-                      ? 'bg-green-500/20 text-green-400 ring-1 ring-green-500/40'
-                      : 'bg-[var(--accent)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
-                  }`}
-                >
-                  {team.members.find(tm => tm.member_id === m.id) ? '✓ ' : ''}{m.name}
-                </button>
-              ))}
+              {allMembers.filter(m => !torres.includes(m.id) && !suportes.includes(m.id)).map(m => {
+                const isInTeam = team.members.find(tm => tm.member_id === m.id)
+                const isColuna = team.coluna_member_id === m.id
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => toggleTeamMember(idx, m.id)}
+                    className={`px-2.5 py-1 rounded-lg text-[11px] font-medium transition-colors ${
+                      isInTeam
+                        ? isColuna
+                          ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/40'
+                          : 'bg-blue-500/20 text-blue-400 ring-1 ring-blue-500/40'
+                        : 'bg-[var(--accent)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+                    }`}
+                  >
+                    {isInTeam ? '✓ ' : ''}{m.name}
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>

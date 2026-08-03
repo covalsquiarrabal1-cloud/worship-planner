@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   const { data: teams, error } = await serviceClient
     .from('intercessao_teams')
     .select(`
-      id, name, month, year,
+      id, name, month, year, coluna_member_id,
       torre_member:ministry_members!intercessao_teams_torre_member_id_fkey(id, name),
       members:intercessao_team_members(
         id, role,
@@ -69,6 +69,7 @@ export async function POST(request: Request) {
         month,
         year,
         torre_member_id: team.torre_member_id || null,
+        coluna_member_id: team.coluna_member_id || null,
       })
       .select()
       .single()
