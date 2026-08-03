@@ -698,16 +698,43 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
   setCurrentDate: (d: Date) => void
 }) {
   const [momentos, setMomentos] = useState<any[]>([])
+  const [momentosMembers, setMomentosMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [newMemberName, setNewMemberName] = useState('')
+  const [showMembers, setShowMembers] = useState(false)
 
-  useEffect(() => { loadMomentos() }, [month, year])
+  useEffect(() => { loadMomentos(); loadMembers() }, [month, year])
 
   async function loadMomentos() {
     setLoading(true)
     const res = await fetch(`/api/ministries/${slug}/momentos?month=${month}&year=${year}`)
     if (res.ok) setMomentos(await res.json())
     setLoading(false)
+  }
+
+  async function loadMembers() {
+    const res = await fetch(`/api/ministries/${slug}/momentos-members`)
+    if (res.ok) setMomentosMembers(await res.json())
+  }
+
+  async function addMember() {
+    if (!newMemberName.trim()) return
+    const res = await fetch(`/api/ministries/${slug}/momentos-members`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newMemberName.trim() }),
+    })
+    if (res.ok) {
+      setNewMemberName('')
+      loadMembers()
+    }
+  }
+
+  async function removeMember(id: string) {
+    if (!confirm('Remover este membro da lista de momentos?')) return
+    await fetch(`/api/ministries/${slug}/momentos-members?id=${id}`, { method: 'DELETE' })
+    loadMembers()
   }
 
   async function updateMember(id: string, memberId: string) {
@@ -757,6 +784,37 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
         <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-3 rounded-xl bg-[#1c2128] border border-[#30363d]">
           <ChevronRight className="w-5 h-5" />
         </button>
+      </div>
+
+      {/* Members management */}
+      <div className="card space-y-3">
+        <button onClick={() => setShowMembers(!showMembers)} className="text-sm font-semibold flex items-center gap-2">
+          👥 Membros Momentos ({momentosMembers.length})
+          <span className="text-[10px] text-[var(--muted-foreground)]">{showMembers ? '▲' : '▼'}</span>
+        </button>
+        {showMembers && (
+          <div className="space-y-2">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Nome do membro"
+                value={newMemberName}
+                onChange={e => setNewMemberName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addMember())}
+                className="flex-1 !py-2 !text-xs"
+              />
+              <button onClick={addMember} disabled={!newMemberName.trim()} className="px-3 py-2 bg-[#58a6ff] text-white rounded-lg text-xs font-medium disabled:opacity-40">+</button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {momentosMembers.map(m => (
+                <span key={m.id} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--accent)] border border-[var(--border)] text-xs">
+                  {m.nickname || m.name}
+                  <button onClick={() => removeMember(m.id)} className="text-red-400 hover:text-red-300 ml-1">×</button>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Generate button */}
@@ -821,8 +879,8 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
                         className="text-xs bg-[#1c2128] border border-[#30363d] rounded-lg px-2 py-1.5 text-white w-full"
                       >
                         <option value="">— Selecione —</option>
-                        {members.map(mb => (
-                          <option key={mb.id} value={mb.id}>{mb.name}</option>
+                        {momentosMembers.map(mb => (
+                          <option key={mb.id} value={mb.id}>{mb.nickname || mb.name}</option>
                         ))}
                       </select>
                     </td>
