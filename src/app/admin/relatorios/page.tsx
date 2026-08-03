@@ -311,7 +311,7 @@ function CadastroSection({
   const [form, setForm] = useState({ name: '', email: '', phone: '', birth_date: '', role_ids: [] as string[], ministry_ids: [] as string[] })
   const [saving, setSaving] = useState(false)
   const [personRoles, setPersonRoles] = useState<Record<string, PersonRole[]>>({})
-
+  const [filterNoRole, setFilterNoRole] = useState(false)
   useEffect(() => {
     fetch('/api/person-roles').then(r => r.json()).then(d => { if (Array.isArray(d)) setRoles(d) })
     fetch('/api/ministries').then(r => r.json()).then(d => { if (Array.isArray(d)) setMinistries(d.map((m: any) => ({ id: m.id, name: m.name }))) })
@@ -424,6 +424,20 @@ function CadastroSection({
         </button>
       </div>
 
+      {/* Filtros */}
+      <div className="flex gap-2 flex-wrap">
+        <button
+          onClick={() => setFilterNoRole(!filterNoRole)}
+          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            filterNoRole
+              ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/40'
+              : 'bg-[var(--accent)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+          }`}
+        >
+          {filterNoRole ? '✓ ' : ''}Sem função/ministério
+        </button>
+      </div>
+
       {/* Formulário de cadastro */}
       {showForm && (
         <div className="card space-y-4">
@@ -522,6 +536,7 @@ function CadastroSection({
           <p className="text-sm text-[var(--muted-foreground)]">{cadastro.length} pessoas cadastradas</p>
           {cadastro
             .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+            .filter(p => !filterNoRole || p.ministries.length === 0)
             .map((person, idx) => (
             <div key={idx} className="card overflow-hidden">
               {editingPerson === person.email ? (
@@ -640,15 +655,33 @@ function CadastroSection({
                         </div>
                       </div>
 
-                      <button
-                        onClick={() => {
-                          setEditingPerson(person.email)
-                          if (!personRoles[person.email]) loadPersonRoles(person.email)
-                        }}
-                        className="w-full py-2 rounded-xl bg-[#58a6ff]/10 text-[#58a6ff] text-xs font-semibold hover:bg-[#58a6ff]/20 transition-colors"
-                      >
-                        ✏️ Editar cadastro
-                      </button>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => {
+                            setEditingPerson(person.email)
+                            if (!personRoles[person.email]) loadPersonRoles(person.email)
+                          }}
+                          className="flex-1 py-2 rounded-xl bg-[#58a6ff]/10 text-[#58a6ff] text-xs font-semibold hover:bg-[#58a6ff]/20 transition-colors"
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!confirm(`Excluir "${person.name}"? Isso não pode ser desfeito.`)) return
+                            const res = await fetch(`/api/relatorios/cadastro/register?email=${encodeURIComponent(person.email)}`, { method: 'DELETE' })
+                            if (res.ok) {
+                              setExpandedPerson(null)
+                              onReload()
+                            } else {
+                              const d = await res.json()
+                              alert(d.error || 'Erro ao excluir')
+                            }
+                          }}
+                          className="px-4 py-2 rounded-xl bg-red-500/10 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition-colors"
+                        >
+                          🗑️ Excluir
+                        </button>
+                      </div>
                     </div>
                   )}
                 </>
