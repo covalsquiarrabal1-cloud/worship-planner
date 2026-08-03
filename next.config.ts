@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  // Optimize for mobile
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'date-fns'],
+  },
+  // Ensure googleapis doesn't leak to client bundle
+  serverExternalPackages: ['googleapis'],
 };
 
 export default nextConfig;
