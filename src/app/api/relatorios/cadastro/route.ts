@@ -59,7 +59,7 @@ export async function GET() {
         ministries: [],
       }
     }
-    const role = wm.is_general_leader ? 'lider' : wm.is_leader ? 'lider' : 'membro'
+    const role = wm.is_general_leader ? 'lider' : 'membro'
     peopleMap[key].ministries.push({
       ministry_id: 'louvor',
       ministry_name: 'Louvor',
