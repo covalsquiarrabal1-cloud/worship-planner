@@ -532,7 +532,12 @@ export default function MinistryPage() {
                   {event.scale_name && <span className="text-xs text-green-400 ml-2 font-medium">{event.scale_name}</span>}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {event.assignments.sort((a, b) => a.celebration_number - b.celebration_number).map(a => (
+                  {event.assignments.sort((a, b) => a.celebration_number - b.celebration_number).map(a => {
+                    const nameColor = a.role_name === 'Coluna' ? 'text-red-400'
+                      : a.role_name === 'Torre' ? 'text-amber-400'
+                      : a.role_name === 'Suporte' ? 'text-[var(--muted-foreground)]'
+                      : 'text-blue-400'
+                    return (
                     <div key={a.id} className="flex items-center gap-1">
                       {event.num_celebrations > 1 && (
                         <span className="text-xs text-[var(--muted-foreground)]">C{a.celebration_number}:</span>
@@ -540,7 +545,7 @@ export default function MinistryPage() {
                       <select
                         value={a.member?.id || ''}
                         onChange={(e) => handleSwapMember(a.id, e.target.value)}
-                        className="text-xs bg-[#1c2128] border border-[#30363d] rounded-lg px-2 py-1.5 text-white"
+                        className={`text-xs bg-[#1c2128] border border-[#30363d] rounded-lg px-2 py-1.5 ${nameColor}`}
                       >
                         <option value="">— Selecione —</option>
                         {members.map(m => (
@@ -560,7 +565,7 @@ export default function MinistryPage() {
                         </select>
                       )}
                     </div>
-                  ))}
+                  )})}
                 </div>
               </div>
             ))
