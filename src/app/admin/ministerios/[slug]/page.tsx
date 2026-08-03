@@ -526,55 +526,95 @@ export default function MinistryPage() {
             </div>
           ) : (
             events.map(event => (
-              <div key={event.id} className="card space-y-2">
+              <div key={event.id} className="card space-y-3">
                 <div>
                   <span className="text-xs text-[var(--muted-foreground)] capitalize">{event.day_of_week}, {event.event_date.slice(8,10)}/{event.event_date.slice(5,7)}</span>
                   {event.scale_name && <span className="text-xs text-green-400 ml-2 font-medium">{event.scale_name}</span>}
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {event.assignments.sort((a, b) => a.celebration_number - b.celebration_number).map(a => {
-                    const roleColors: Record<string, string> = {
-                      'Torre': 'text-amber-400 border-amber-500/40',
-                      'Coluna': 'text-red-400 border-red-500/40',
-                      'Intercessor': 'text-blue-400 border-blue-500/40',
-                      'Suporte': 'text-[var(--muted-foreground)] border-[var(--border)]',
-                    }
-                    const roleOrder = ['Torre', 'Coluna', 'Intercessor', 'Suporte']
-                    const currentColor = roleColors[a.role_name || ''] || 'text-white border-[#30363d]'
 
-                    function cycleRole() {
-                      const currentIdx = roleOrder.indexOf(a.role_name || '')
-                      const nextIdx = (currentIdx + 1) % roleOrder.length
-                      updateAssignmentRole(a.id, roleOrder[nextIdx])
-                    }
+                {/* Group by celebration */}
+                {Array.from({ length: event.num_celebrations }, (_, cIdx) => {
+                  const celebrationNum = cIdx + 1
+                  const celebrationAssignments = event.assignments.filter(a => a.celebration_number === celebrationNum)
+                  const torre = celebrationAssignments.filter(a => a.role_name === 'Torre')
+                  const coluna = celebrationAssignments.filter(a => a.role_name === 'Coluna')
+                  const intercessores = celebrationAssignments.filter(a => a.role_name === 'Intercessor' || a.role_name === 'Coluna')
+                  const suportes = celebrationAssignments.filter(a => a.role_name === 'Suporte')
 
-                    return (
-                    <div key={a.id} className="flex items-center gap-1">
+                  return (
+                    <div key={celebrationNum} className="space-y-2">
                       {event.num_celebrations > 1 && (
-                        <span className="text-xs text-[var(--muted-foreground)]">C{a.celebration_number}:</span>
+                        <p className="text-[10px] font-semibold text-[var(--muted-foreground)] uppercase tracking-wider pt-1 border-t border-[var(--border)]">
+                          C{celebrationNum}
+                        </p>
                       )}
-                      <div className="flex items-center">
-                        <button
-                          onClick={cycleRole}
-                          className={`text-[10px] px-1.5 py-1 rounded-l-lg border ${currentColor} bg-[#1c2128] font-semibold min-w-[18px] text-center`}
-                          title={`Função: ${a.role_name || 'Nenhuma'} (clique para trocar)`}
-                        >
-                          {a.role_name?.[0] || '?'}
-                        </button>
-                        <select
-                          value={a.member?.id || ''}
-                          onChange={(e) => handleSwapMember(a.id, e.target.value)}
-                          className={`text-xs bg-[#1c2128] border border-l-0 border-[#30363d] rounded-r-lg px-2 py-1.5 ${roleColors[a.role_name || '']?.split(' ')[0] || 'text-white'}`}
-                        >
-                          <option value="">— Selecione —</option>
-                          {members.map(m => (
-                            <option key={m.id} value={m.id}>{m.name}</option>
+
+                      {/* Torre */}
+                      {torre.length > 0 && (
+                        <div>
+                          <p className="text-[10px] text-amber-400 font-semibold mb-1">Torre</p>
+                          {torre.map(a => (
+                            <div key={a.id} className="flex items-center gap-1">
+                              <select
+                                value={a.member?.id || ''}
+                                onChange={(e) => handleSwapMember(a.id, e.target.value)}
+                                className="text-xs bg-[#1c2128] border border-amber-500/30 rounded-lg px-2 py-1.5 text-amber-400 flex-1"
+                              >
+                                <option value="">— Selecione —</option>
+                                {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                              </select>
+                              <button onClick={() => { const r = ['Torre','Coluna','Intercessor','Suporte']; const i = r.indexOf(a.role_name||''); updateAssignmentRole(a.id, r[(i+1)%r.length]) }} className="text-[9px] px-1.5 py-1 rounded bg-amber-500/20 text-amber-400 font-bold" title="Clique para trocar função">T</button>
+                            </div>
                           ))}
-                        </select>
-                      </div>
+                        </div>
+                      )}
+
+                      {/* Intercessores (includes Coluna) */}
+                      {intercessores.length > 0 && (
+                        <div>
+                          <p className="text-[10px] text-blue-400 font-semibold mb-1">Intercessores</p>
+                          <div className="space-y-1">
+                            {intercessores.map(a => (
+                              <div key={a.id} className="flex items-center gap-1">
+                                <select
+                                  value={a.member?.id || ''}
+                                  onChange={(e) => handleSwapMember(a.id, e.target.value)}
+                                  className={`text-xs bg-[#1c2128] border rounded-lg px-2 py-1.5 flex-1 ${a.role_name === 'Coluna' ? 'border-red-500/30 text-red-400' : 'border-blue-500/30 text-blue-400'}`}
+                                >
+                                  <option value="">— Selecione —</option>
+                                  {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                </select>
+                                <button onClick={() => { const r = ['Torre','Coluna','Intercessor','Suporte']; const i = r.indexOf(a.role_name||''); updateAssignmentRole(a.id, r[(i+1)%r.length]) }} className={`text-[9px] px-1.5 py-1 rounded font-bold ${a.role_name === 'Coluna' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`} title="Clique para trocar função">{a.role_name === 'Coluna' ? 'C' : 'I'}</button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Suporte */}
+                      {suportes.length > 0 && (
+                        <div>
+                          <p className="text-[10px] text-[var(--muted-foreground)] font-semibold mb-1">Suporte</p>
+                          <div className="space-y-1">
+                            {suportes.map(a => (
+                              <div key={a.id} className="flex items-center gap-1">
+                                <select
+                                  value={a.member?.id || ''}
+                                  onChange={(e) => handleSwapMember(a.id, e.target.value)}
+                                  className="text-xs bg-[#1c2128] border border-[var(--border)] rounded-lg px-2 py-1.5 text-[var(--muted-foreground)] flex-1"
+                                >
+                                  <option value="">— Selecione —</option>
+                                  {members.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                                </select>
+                                <button onClick={() => { const r = ['Torre','Coluna','Intercessor','Suporte']; const i = r.indexOf(a.role_name||''); updateAssignmentRole(a.id, r[(i+1)%r.length]) }} className="text-[9px] px-1.5 py-1 rounded bg-[var(--accent)] text-[var(--muted-foreground)] font-bold" title="Clique para trocar função">S</button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )})}
-                </div>
+                  )
+                })}
               </div>
             ))
           )}
