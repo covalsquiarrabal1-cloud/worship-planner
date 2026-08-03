@@ -1011,7 +1011,6 @@ function SchedulePermissions() {
 }
 
 function PhotoSettings() {
-  const [headerImage, setHeaderImage] = useState<string | null>(null)
   const [escalasImage, setEscalasImage] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState<string | null>(null)
@@ -1021,16 +1020,9 @@ function PhotoSettings() {
   }, [])
 
   async function loadImages() {
-    const [headerRes, escalasRes] = await Promise.all([
-      fetch('/api/app-settings?key=header_image'),
-      fetch('/api/app-settings?key=escalas_gerais_bg'),
-    ])
-    if (headerRes.ok) {
-      const data = await headerRes.json()
-      if (data.value) setHeaderImage(data.value)
-    }
-    if (escalasRes.ok) {
-      const data = await escalasRes.json()
+    const res = await fetch('/api/app-settings?key=escalas_gerais_bg')
+    if (res.ok) {
+      const data = await res.json()
       if (data.value) setEscalasImage(data.value)
     }
     setLoading(false)
@@ -1062,8 +1054,7 @@ function PhotoSettings() {
         body: JSON.stringify({ key, value: dataUrl }),
       })
 
-      if (key === 'header_image') setHeaderImage(dataUrl)
-      else setEscalasImage(dataUrl)
+      setEscalasImage(dataUrl)
       setSaving(null)
     }
 
@@ -1077,8 +1068,7 @@ function PhotoSettings() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ key, value: null }),
     })
-    if (key === 'header_image') setHeaderImage(null)
-    else setEscalasImage(null)
+    if (key === 'escalas_gerais_bg') setEscalasImage(null)
     setSaving(null)
   }
 
@@ -1092,34 +1082,6 @@ function PhotoSettings() {
           Personalização Visual
         </h3>
         <p className="text-xs text-[var(--muted-foreground)] mt-1">Defina imagens de fundo e header do app.</p>
-      </div>
-
-      {/* Header image */}
-      <div className="card space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">Foto do Header</p>
-            <p className="text-[10px] text-[var(--muted-foreground)]">Aparece no topo de todas as páginas.</p>
-          </div>
-          {headerImage && (
-            <button onClick={() => removeImage('header_image')} className="text-xs text-red-400 hover:text-red-300">
-              Remover
-            </button>
-          )}
-        </div>
-        {headerImage ? (
-          <div className="relative rounded-xl overflow-hidden h-16">
-            <img src={headerImage} alt="Header" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-black/30" />
-          </div>
-        ) : (
-          <label className="flex items-center justify-center gap-2 py-6 border-2 border-dashed border-[var(--border)] rounded-xl cursor-pointer hover:border-[#58a6ff] transition-colors">
-            <ImagePlus className="w-5 h-5 text-[var(--muted-foreground)]" />
-            <span className="text-sm text-[var(--muted-foreground)]">Selecionar imagem</span>
-            <input type="file" accept="image/*" onChange={(e) => handleUpload('header_image', e)} className="hidden" />
-          </label>
-        )}
-        {saving === 'header_image' && <p className="text-[10px] text-[var(--muted-foreground)]">Salvando...</p>}
       </div>
 
       {/* Escalas Gerais background */}
