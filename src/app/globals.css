@@ -7,14 +7,14 @@
   --card-foreground: #f0f6fc;
   --border: #30363d;
   --input: #0d1117;
-  --primary: #ffffff;
-  --primary-foreground: #000000;
+  --primary: #58a6ff;
+  --primary-foreground: #ffffff;
   --muted: #21262d;
   --muted-foreground: #8b949e;
   --accent: #1c2128;
   --accent-foreground: #f0f6fc;
   --destructive: #f85149;
-  --radius: 0.75rem;
+  --radius: 0.875rem;
 }
 
 * {
@@ -152,9 +152,15 @@ button {
 
 .card {
   background: var(--card);
-  border: 1px solid var(--border);
+  border: 1px solid rgba(48, 54, 61, 0.6);
   border-radius: var(--radius);
   padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  border-color: rgba(48, 54, 61, 0.9);
 }
 
 /* ========================

@@ -133,16 +133,16 @@ export default function RelatoriosPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-3 mt-4">
+      <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-1.5 flex gap-1 mt-4">
         <button
           onClick={() => handleTabChange('visao')}
-          className={`flex-1 py-6 rounded-xl text-sm font-semibold transition-colors text-center ${tab === 'visao' ? 'bg-[#58a6ff] text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
+          className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all text-center ${tab === 'visao' ? 'bg-[#58a6ff] text-white shadow-[0_2px_8px_rgba(88,166,255,0.3)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
         >
           Visão Geral
         </button>
         <button
           onClick={() => handleTabChange('cadastro')}
-          className={`flex-1 py-6 rounded-xl text-sm font-semibold transition-colors text-center ${tab === 'cadastro' ? 'bg-[#58a6ff] text-white' : 'bg-[var(--card)] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
+          className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all text-center ${tab === 'cadastro' ? 'bg-[#58a6ff] text-white shadow-[0_2px_8px_rgba(88,166,255,0.3)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
         >
           Cadastro
         </button>

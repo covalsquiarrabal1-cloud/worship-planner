@@ -38,7 +38,9 @@ export function AdminBottomNav() {
               href={item.href}
               onClick={() => playClick()}
               className={`flex flex-col items-center justify-center gap-1 min-w-[52px] min-h-[52px] px-2 py-1.5 rounded-2xl transition-all active:scale-90 active:bg-[#58a6ff]/20 ${
-                isActive ? 'text-[#58a6ff] bg-[#58a6ff]/10' : 'text-[#8b949e]'
+                isActive
+                  ? 'text-[#58a6ff] bg-[#58a6ff]/15 shadow-[0_0_12px_rgba(88,166,255,0.25)]'
+                  : 'text-[#8b949e]'
               }`}
             >
               {item.icon}

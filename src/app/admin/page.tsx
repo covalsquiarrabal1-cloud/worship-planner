@@ -266,12 +266,12 @@ export default function AdminPage() {
                     ${!inMonth ? 'opacity-20 cursor-default' : 'cursor-pointer'}
                     ${selected ? 'bg-white text-black font-bold' : ''}
                     ${!selected && today ? 'ring-1 ring-white/50' : ''}
-                    ${!selected && eventOnDay ? 'bg-green-500/20' : ''}
+                    ${!selected && eventOnDay ? 'bg-[#58a6ff]/15' : ''}
                     ${!selected && !eventOnDay && inMonth ? 'hover:bg-[var(--accent)]' : ''}
                   `}
                 >
                   <span>{format(day, 'd')}</span>
-                  {eventOnDay && <div className="absolute bottom-0 w-1 h-1 rounded-full bg-green-400" />}
+                  {eventOnDay && <div className="absolute bottom-0 w-1 h-1 rounded-full bg-[#58a6ff]" />}
                 </button>
               )
             })}
@@ -284,90 +284,96 @@ export default function AdminPage() {
           )}
         </div>
 
-        {/* Actions - Grid of square buttons */}
-        <div className="grid grid-cols-2 gap-3">
-          <button
-            onClick={handleGerarEscala}
-            disabled={selectedDates.length === 0}
-            className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[var(--border)] py-6 rounded-2xl disabled:opacity-40 hover:border-[#58a6ff] transition-colors"
-          >
-            <Plus className="w-6 h-6 text-[#58a6ff]" />
-            <span className="text-sm font-semibold">GERAR ESCALA</span>
-          </button>
-          <button
-            onClick={async () => {
-              const newStatus = !isPublished
-              const msg = newStatus
-                ? 'Publicar a escala deste mês para os membros?'
-                : 'Ocultar a escala deste mês? Os membros não poderão mais ver.'
-              if (!confirm(msg)) return
-              const res = await fetch('/api/schedule-events/publish', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ month, year, publish: newStatus }),
-              })
-              const data = await res.json()
-              if (res.ok) {
-                setIsPublished(newStatus)
-                alert(newStatus ? 'Escala publicada! Os membros já podem ver.' : 'Escala ocultada.')
-              } else {
-                alert('Erro: ' + data.error)
-              }
-            }}
-            className={`flex flex-col items-center justify-center gap-2 py-6 rounded-2xl hover:opacity-90 transition-opacity ${
-              isPublished
-                ? 'bg-gradient-to-r from-[#da3633] to-[#f85149]'
-                : 'bg-gradient-to-r from-[#238636] to-[#2ea043]'
-            }`}
-          >
-            <span className="text-xl">{isPublished ? '👁️‍🗨️' : '✓'}</span>
-            <span className="text-sm font-semibold">{isPublished ? 'OCULTAR' : 'PUBLICAR'}</span>
-          </button>
-          <Link
-            href="/admin/escala/manual"
-            className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[var(--border)] py-5 rounded-2xl hover:border-[#58a6ff] transition-colors"
-          >
-            <Calendar className="w-5 h-5 text-[var(--muted-foreground)]" />
-            <span className="text-xs font-medium text-[var(--muted-foreground)]">Escala Manual</span>
-          </Link>
-          <button
-            onClick={async () => {
-              if (!confirm('ATENÇÃO: Excluir toda a escala deste mês?')) return
-              if (!confirm('Confirma a exclusão?')) return
-              const res = await fetch('/api/schedule-events/delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ month, year }),
-              })
-              const data = await res.json()
-              if (res.ok) { alert('Escala excluída.'); loadEvents() }
-              else alert('Erro: ' + data.error)
-            }}
-            className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[var(--border)] py-5 rounded-2xl hover:border-[#f85149] transition-colors"
-          >
-            <span className="text-lg">🗑</span>
-            <span className="text-xs font-medium text-[var(--muted-foreground)]">Excluir</span>
-          </button>
+        {/* Actions - grouped by priority */}
+        <div className="flex-1 space-y-3">
+          {/* Primary actions */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={handleGerarEscala}
+              disabled={selectedDates.length === 0}
+              className="flex flex-col items-center justify-center gap-2 bg-[var(--card)] border border-[var(--border)] py-6 rounded-2xl disabled:opacity-40 hover:border-[#58a6ff] hover:shadow-[0_0_12px_rgba(88,166,255,0.15)] transition-all"
+            >
+              <Plus className="w-6 h-6 text-[#58a6ff]" />
+              <span className="text-sm font-semibold">GERAR ESCALA</span>
+            </button>
+            <button
+              onClick={async () => {
+                const newStatus = !isPublished
+                const msg = newStatus
+                  ? 'Publicar a escala deste mês para os membros?'
+                  : 'Ocultar a escala deste mês? Os membros não poderão mais ver.'
+                if (!confirm(msg)) return
+                const res = await fetch('/api/schedule-events/publish', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ month, year, publish: newStatus }),
+                })
+                const data = await res.json()
+                if (res.ok) {
+                  setIsPublished(newStatus)
+                  alert(newStatus ? 'Escala publicada! Os membros já podem ver.' : 'Escala ocultada.')
+                } else {
+                  alert('Erro: ' + data.error)
+                }
+              }}
+              className={`flex flex-col items-center justify-center gap-2 py-6 rounded-2xl transition-all ${
+                isPublished
+                  ? 'bg-[var(--card)] border border-[#f85149]/40 hover:border-[#f85149] text-[#f85149]'
+                  : 'bg-[var(--card)] border border-[#2ea043]/40 hover:border-[#2ea043] text-[#3fb950]'
+              }`}
+            >
+              <span className="text-xl">{isPublished ? '👁️‍🗨️' : '✓'}</span>
+              <span className="text-sm font-semibold">{isPublished ? 'OCULTAR' : 'PUBLICAR'}</span>
+            </button>
+          </div>
+          {/* Secondary actions */}
+          <div className="grid grid-cols-2 gap-3">
+            <Link
+              href="/admin/escala/manual"
+              className="flex flex-col items-center justify-center gap-2 bg-[var(--card)] border border-[var(--border)] py-4 rounded-2xl hover:border-[var(--muted-foreground)] transition-colors"
+            >
+              <Calendar className="w-5 h-5 text-[var(--muted-foreground)]" />
+              <span className="text-xs font-medium text-[var(--muted-foreground)]">Escala Manual</span>
+            </Link>
+            <button
+              onClick={async () => {
+                if (!confirm('ATENÇÃO: Excluir toda a escala deste mês?')) return
+                if (!confirm('Confirma a exclusão?')) return
+                const res = await fetch('/api/schedule-events/delete', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ month, year }),
+                })
+                const data = await res.json()
+                if (res.ok) { alert('Escala excluída.'); loadEvents() }
+                else alert('Erro: ' + data.error)
+              }}
+              className="flex flex-col items-center justify-center gap-2 bg-[var(--card)] border border-[var(--border)] py-4 rounded-2xl hover:border-[#f85149]/50 transition-colors"
+            >
+              <span className="text-lg">🗑</span>
+              <span className="text-xs font-medium text-[var(--muted-foreground)]">Excluir</span>
+            </button>
+          </div>
         </div>
       </div>
 
       {/* === VIEW TOGGLE === */}
-      <div className="grid grid-cols-3 gap-2" style={{ marginTop: '32px' }}>
+      <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-1.5 grid grid-cols-3 gap-1" style={{ marginTop: '32px' }}>
         <button
           onClick={() => setView('mensal')}
-          className={`py-6 rounded-2xl text-sm font-semibold transition-all ${view === 'mensal' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
+          className={`py-3 rounded-xl text-sm font-semibold transition-all ${view === 'mensal' ? 'bg-[#58a6ff] text-white shadow-[0_2px_8px_rgba(88,166,255,0.3)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
         >
           Mensal
         </button>
         <button
           onClick={() => setView('semanal')}
-          className={`py-6 rounded-2xl text-sm font-semibold transition-all ${view === 'semanal' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
+          className={`py-3 rounded-xl text-sm font-semibold transition-all ${view === 'semanal' ? 'bg-[#58a6ff] text-white shadow-[0_2px_8px_rgba(88,166,255,0.3)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
         >
           Semanal
         </button>
         <button
           onClick={() => setView('pessoa')}
-          className={`py-6 rounded-2xl text-sm font-semibold transition-all ${view === 'pessoa' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[var(--border)] text-[var(--muted-foreground)]'}`}
+          className={`py-3 rounded-xl text-sm font-semibold transition-all ${view === 'pessoa' ? 'bg-[#58a6ff] text-white shadow-[0_2px_8px_rgba(88,166,255,0.3)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
         >
           Pessoa
         </button>
