@@ -15,7 +15,7 @@ export async function GET() {
     .eq('id', user.id)
     .single()
 
-  // Check person_roles (Pastor, Ministro, etc.)
+  // Check person_roles
   const { data: personRoles } = await serviceClient
     .from('member_person_roles')
     .select('role_id, person_roles(name)')
@@ -23,8 +23,15 @@ export async function GET() {
 
   const roles = (personRoles || []).map((pr: any) => pr.person_roles?.name).filter(Boolean)
 
-  // Can view all schedules if Pastor or Ministro
-  const canViewAllSchedules = profile?.role === 'admin' || roles.includes('Pastor') || roles.includes('Ministro')
+  // Get allowed roles from settings
+  const { data: setting } = await serviceClient
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'roles_can_view_all_schedules')
+    .single()
+
+  const allowedRoles: string[] = setting?.value && Array.isArray(setting.value) ? setting.value : ['Pastor', 'Ministro']
+  const canViewAllSchedules = profile?.role === 'admin' || roles.some((r: string) => allowedRoles.includes(r))
 
   return NextResponse.json({
     isAdmin: profile?.role === 'admin',

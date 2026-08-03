@@ -197,6 +197,9 @@ export default function ConfigPage() {
         </Link>
       </section>
 
+      {/* ========== PERMISSÕES ESCALAS GERAIS ========== */}
+      <SchedulePermissions />
+
       {/* ========== INSTRUMENTOS ========== */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
@@ -929,5 +932,77 @@ function ScaleTypeEditForm({
         </div>
       </div>
     </div>
+  )
+}
+
+function SchedulePermissions() {
+  const [roles, setRoles] = useState<{ id: string; name: string }[]>([])
+  const [allowedRoles, setAllowedRoles] = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  async function loadData() {
+    const [rolesRes, settingsRes] = await Promise.all([
+      fetch('/api/person-roles'),
+      fetch('/api/app-settings?key=roles_can_view_all_schedules'),
+    ])
+
+    if (rolesRes.ok) setRoles(await rolesRes.json())
+    if (settingsRes.ok) {
+      const data = await settingsRes.json()
+      if (data.value && Array.isArray(data.value)) {
+        setAllowedRoles(data.value)
+      }
+    }
+    setLoading(false)
+  }
+
+  async function toggleRole(roleName: string) {
+    const newRoles = allowedRoles.includes(roleName)
+      ? allowedRoles.filter(r => r !== roleName)
+      : [...allowedRoles, roleName]
+    setAllowedRoles(newRoles)
+
+    setSaving(true)
+    await fetch('/api/app-settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: 'roles_can_view_all_schedules', value: newRoles }),
+    })
+    setSaving(false)
+  }
+
+  if (loading) return <div className="py-4"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h3 className="font-semibold flex items-center gap-2 text-base">
+          <Users className="w-5 h-5" />
+          Acesso às Escalas Gerais
+        </h3>
+        <p className="text-xs text-[var(--muted-foreground)] mt-1">Defina quais funções podem visualizar as escalas de todos os ministérios.</p>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {roles.map(role => (
+          <button
+            key={role.id}
+            onClick={() => toggleRole(role.name)}
+            className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-colors border ${
+              allowedRoles.includes(role.name)
+                ? 'bg-green-500/15 text-green-400 border-green-500/40'
+                : 'bg-[var(--card)] text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--muted-foreground)]'
+            }`}
+          >
+            {allowedRoles.includes(role.name) ? '✓ ' : ''}{role.name}
+          </button>
+        ))}
+      </div>
+      {saving && <p className="text-[10px] text-[var(--muted-foreground)]">Salvando...</p>}
+    </section>
   )
 }

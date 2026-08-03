@@ -33,14 +33,23 @@ export default async function MemberLayout({
 
   const isWorshipMember = !!worshipMember
 
-  // Check if user has Pastor or Ministro role (can view all schedules)
+  // Check if user has permission to view all schedules (from app_settings)
   const { data: personRoles } = await serviceClient
     .from('member_person_roles')
     .select('role_id, person_roles(name)')
     .eq('member_email', user.email?.toLowerCase() || '')
 
   const userRoles = (personRoles || []).map((pr: any) => pr.person_roles?.name).filter(Boolean)
-  const canViewAllSchedules = userRoles.includes('Pastor') || userRoles.includes('Ministro')
+
+  // Get allowed roles from settings
+  const { data: setting } = await serviceClient
+    .from('app_settings')
+    .select('value')
+    .eq('key', 'roles_can_view_all_schedules')
+    .single()
+
+  const allowedRoles: string[] = setting?.value && Array.isArray(setting.value) ? setting.value : ['Pastor', 'Ministro']
+  const canViewAllSchedules = userRoles.some((r: string) => allowedRoles.includes(r))
 
   return (
     <div className="min-h-screen pb-safe">
