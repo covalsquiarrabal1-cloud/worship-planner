@@ -35,3 +35,33 @@ export async function PUT(request: Request, { params }: { params: Promise<{ slug
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
 }
+
+export async function PATCH(request: Request, { params }: { params: Promise<{ slug: string }> }) {
+  const supabase = await createServerSupabaseClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+
+  const { slug } = await params
+  const serviceClient = await createServiceRoleClient()
+
+  const { data: ministry } = await serviceClient
+    .from('ministries').select('id, leader_user_id').eq('slug', slug).single()
+  if (!ministry) return NextResponse.json({ error: 'Ministério não encontrado' }, { status: 404 })
+
+  const { data: profile } = await serviceClient
+    .from('profiles').select('role').eq('id', user.id).single()
+  if (profile?.role !== 'admin' && ministry.leader_user_id !== user.id) {
+    return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  }
+
+  const { assignmentId, roleName } = await request.json()
+  if (!assignmentId) return NextResponse.json({ error: 'assignmentId obrigatório' }, { status: 400 })
+
+  const { error } = await serviceClient
+    .from('ministry_assignments')
+    .update({ role_name: roleName || null })
+    .eq('id', assignmentId)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ success: true })
+}

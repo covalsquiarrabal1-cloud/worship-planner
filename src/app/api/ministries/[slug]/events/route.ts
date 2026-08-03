@@ -32,7 +32,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
       id, event_date, day_of_week, week_number, scale_name, num_celebrations,
       schedule_id,
       assignments:ministry_assignments(
-        id, celebration_number, role,
+        id, celebration_number, role, role_name,
         member:ministry_members(id, name)
       )
     `)

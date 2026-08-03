@@ -11,8 +11,9 @@ interface MinistryMember { id: string; name: string; email: string | null; is_bl
 interface MinistryEvent {
   id: string; event_date: string; day_of_week: string; week_number: number;
   scale_name: string | null; num_celebrations: number;
-  assignments: { id: string; celebration_number: number; member: { id: string; name: string } | null }[]
+  assignments: { id: string; celebration_number: number; role_name: string | null; member: { id: string; name: string } | null }[]
 }
+interface MinistryRole { id: string; name: string }
 
 export default function MinistryPage() {
   const params = useParams()
@@ -25,6 +26,8 @@ export default function MinistryPage() {
   const [showConfig, setShowConfig] = useState(false)
   const [scaleConfig, setScaleConfig] = useState<Record<string, number>>({})
   const [savingConfig, setSavingConfig] = useState(false)
+  const [ministryRoles, setMinistryRoles] = useState<MinistryRole[]>([])
+  const [newRoleName, setNewRoleName] = useState('')
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [newMemberIsMembro, setNewMemberIsMembro] = useState(true)
@@ -46,10 +49,11 @@ export default function MinistryPage() {
     const start = format(startOfMonth(currentDate), 'yyyy-MM-dd')
     const end = format(endOfMonth(currentDate), 'yyyy-MM-dd')
 
-    const [membersRes, eventsRes, configRes] = await Promise.all([
+    const [membersRes, eventsRes, configRes, rolesRes] = await Promise.all([
       fetch(`/api/ministries/${slug}/members`),
       fetch(`/api/ministries/${slug}/events?start=${start}&end=${end}`),
       fetch(`/api/ministries/${slug}/config`),
+      fetch(`/api/ministries/${slug}/roles`),
     ])
 
     if (membersRes.ok) setMembers(await membersRes.json())
@@ -60,6 +64,7 @@ export default function MinistryPage() {
       for (const c of configData) map[c.scale_name] = c.num_people
       setScaleConfig(map)
     }
+    if (rolesRes.ok) setMinistryRoles(await rolesRes.json())
     setLoading(false)
   }
 
@@ -73,6 +78,42 @@ export default function MinistryPage() {
     })
     setSavingConfig(false)
     setShowConfig(false)
+  }
+
+  async function addMinistryRole() {
+    if (!newRoleName.trim()) return
+    const res = await fetch(`/api/ministries/${slug}/roles`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: newRoleName.trim() }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setMinistryRoles(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+      setNewRoleName('')
+    } else {
+      const d = await res.json()
+      alert(d.error || 'Erro')
+    }
+  }
+
+  async function deleteMinistryRole(id: string) {
+    await fetch(`/api/ministries/${slug}/roles?id=${id}`, { method: 'DELETE' })
+    setMinistryRoles(prev => prev.filter(r => r.id !== id))
+  }
+
+  async function updateAssignmentRole(assignmentId: string, roleName: string | null) {
+    await fetch(`/api/ministries/${slug}/assignments`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ assignmentId, roleName }),
+    })
+    setEvents(prev => prev.map(event => ({
+      ...event,
+      assignments: event.assignments.map(a =>
+        a.id === assignmentId ? { ...a, role_name: roleName } : a
+      ),
+    })))
   }
 
   async function addMember() {
@@ -440,6 +481,32 @@ export default function MinistryPage() {
               >
                 {savingConfig ? 'Salvando...' : 'Salvar Configuração'}
               </button>
+
+              {/* Funções do ministério */}
+              <div className="border-t border-[var(--border)] pt-4 mt-4 space-y-3">
+                <h4 className="text-xs font-bold text-[var(--muted-foreground)] uppercase tracking-wider">Funções deste Ministério</h4>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Nova função (ex: Operador, Líder de sala...)"
+                    value={newRoleName}
+                    onChange={e => setNewRoleName(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addMinistryRole())}
+                    className="flex-1 !py-2 !text-xs"
+                  />
+                  <button onClick={addMinistryRole} disabled={!newRoleName.trim()} className="px-3 py-2 bg-[#58a6ff] text-white rounded-lg text-xs font-medium disabled:opacity-40">+</button>
+                </div>
+                {ministryRoles.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {ministryRoles.map(r => (
+                      <span key={r.id} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--accent)] border border-[var(--border)] text-xs">
+                        {r.name}
+                        <button onClick={() => deleteMinistryRole(r.id)} className="text-red-400 hover:text-red-300 ml-1">×</button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -471,6 +538,18 @@ export default function MinistryPage() {
                           <option key={m.id} value={m.id}>{m.name}</option>
                         ))}
                       </select>
+                      {ministryRoles.length > 0 && (
+                        <select
+                          value={a.role_name || ''}
+                          onChange={(e) => updateAssignmentRole(a.id, e.target.value || null)}
+                          className="text-[10px] bg-[#1c2128] border border-[#30363d] rounded-lg px-1.5 py-1.5 text-[var(--muted-foreground)]"
+                        >
+                          <option value="">Função</option>
+                          {ministryRoles.map(r => (
+                            <option key={r.id} value={r.name}>{r.name}</option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                   ))}
                 </div>
