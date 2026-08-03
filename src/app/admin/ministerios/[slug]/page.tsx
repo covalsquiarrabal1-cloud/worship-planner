@@ -533,37 +533,45 @@ export default function MinistryPage() {
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {event.assignments.sort((a, b) => a.celebration_number - b.celebration_number).map(a => {
-                    const nameColor = a.role_name === 'Coluna' ? 'text-red-400'
-                      : a.role_name === 'Torre' ? 'text-amber-400'
-                      : a.role_name === 'Suporte' ? 'text-[var(--muted-foreground)]'
-                      : 'text-blue-400'
+                    const roleColors: Record<string, string> = {
+                      'Torre': 'text-amber-400 border-amber-500/40',
+                      'Coluna': 'text-red-400 border-red-500/40',
+                      'Intercessor': 'text-blue-400 border-blue-500/40',
+                      'Suporte': 'text-[var(--muted-foreground)] border-[var(--border)]',
+                    }
+                    const roleOrder = ['Torre', 'Coluna', 'Intercessor', 'Suporte']
+                    const currentColor = roleColors[a.role_name || ''] || 'text-white border-[#30363d]'
+
+                    function cycleRole() {
+                      const currentIdx = roleOrder.indexOf(a.role_name || '')
+                      const nextIdx = (currentIdx + 1) % roleOrder.length
+                      updateAssignmentRole(a.id, roleOrder[nextIdx])
+                    }
+
                     return (
                     <div key={a.id} className="flex items-center gap-1">
                       {event.num_celebrations > 1 && (
                         <span className="text-xs text-[var(--muted-foreground)]">C{a.celebration_number}:</span>
                       )}
-                      <select
-                        value={a.member?.id || ''}
-                        onChange={(e) => handleSwapMember(a.id, e.target.value)}
-                        className={`text-xs bg-[#1c2128] border border-[#30363d] rounded-lg px-2 py-1.5 ${nameColor}`}
-                      >
-                        <option value="">— Selecione —</option>
-                        {members.map(m => (
-                          <option key={m.id} value={m.id}>{m.name}</option>
-                        ))}
-                      </select>
-                      {ministryRoles.length > 0 && (
-                        <select
-                          value={a.role_name || ''}
-                          onChange={(e) => updateAssignmentRole(a.id, e.target.value || null)}
-                          className="text-[10px] bg-[#1c2128] border border-[#30363d] rounded-lg px-1.5 py-1.5 text-[var(--muted-foreground)]"
+                      <div className="flex items-center">
+                        <button
+                          onClick={cycleRole}
+                          className={`text-[10px] px-1.5 py-1 rounded-l-lg border ${currentColor} bg-[#1c2128] font-semibold min-w-[18px] text-center`}
+                          title={`Função: ${a.role_name || 'Nenhuma'} (clique para trocar)`}
                         >
-                          <option value="">Função</option>
-                          {ministryRoles.map(r => (
-                            <option key={r.id} value={r.name}>{r.name}</option>
+                          {a.role_name?.[0] || '?'}
+                        </button>
+                        <select
+                          value={a.member?.id || ''}
+                          onChange={(e) => handleSwapMember(a.id, e.target.value)}
+                          className={`text-xs bg-[#1c2128] border border-l-0 border-[#30363d] rounded-r-lg px-2 py-1.5 ${roleColors[a.role_name || '']?.split(' ')[0] || 'text-white'}`}
+                        >
+                          <option value="">— Selecione —</option>
+                          {members.map(m => (
+                            <option key={m.id} value={m.id}>{m.name}</option>
                           ))}
                         </select>
-                      )}
+                      </div>
                     </div>
                   )})}
                 </div>
