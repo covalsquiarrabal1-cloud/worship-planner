@@ -223,35 +223,58 @@ export default function MinistryPage() {
     const { jsPDF } = await import('jspdf')
     const { default: autoTable } = await import('jspdf-autotable')
 
-    const doc = new jsPDF({ orientation: 'portrait' })
+    const doc = new jsPDF({ orientation: 'landscape' })
     const monthName = format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })
+    const title = slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, ' ')
 
     doc.setFontSize(16)
-    doc.text(`${slug.charAt(0).toUpperCase() + slug.slice(1).replace('-', ' ')} - Escala`, 14, 20)
+    doc.text(`${title} - Escala`, 14, 20)
     doc.setFontSize(11)
     doc.text(monthName, 14, 28)
 
-    const tableData = events.map(ev => {
-      const membersStr = ev.assignments
-        .sort((a, b) => a.celebration_number - b.celebration_number)
-        .map(a => ev.num_celebrations > 1 ? `C${a.celebration_number}: ${a.member?.name || '-'}` : (a.member?.name || '-'))
-        .join(', ')
-      return [
-        `${ev.event_date.slice(8,10)}/${ev.event_date.slice(5,7)}`,
-        ev.day_of_week,
-        ev.scale_name || '-',
-        membersStr,
-      ]
-    })
+    // Build table rows matching the on-screen table
+    const tableData: string[][] = []
+
+    for (const event of events) {
+      const celebrations = Array.from({ length: event.num_celebrations }, (_, i) => i + 1)
+
+      for (const celNum of celebrations) {
+        const celAssignments = event.assignments.filter(a => a.celebration_number === celNum)
+        const torre = celAssignments.filter(a => a.role_name === 'Torre').map(a => a.member?.name || '-').join(', ')
+        const intercessores = celAssignments
+          .filter(a => a.role_name === 'Intercessor' || a.role_name === 'Coluna')
+          .map(a => a.member?.name || '-')
+          .join(', ')
+        const suportes = celAssignments.filter(a => a.role_name === 'Suporte').map(a => a.member?.name || '-').join(', ')
+
+        tableData.push([
+          `${event.event_date.slice(8,10)}/${event.event_date.slice(5,7)}`,
+          event.day_of_week,
+          event.scale_name || '-',
+          event.num_celebrations > 1 ? `C${celNum}` : '-',
+          torre || '-',
+          intercessores || '-',
+          suportes || '-',
+        ])
+      }
+    }
 
     autoTable(doc, {
       startY: 35,
-      head: [['Data', 'Dia', 'Escala', 'Membros']],
+      head: [['Data', 'Dia', 'Escala', 'Cel.', 'Torre', 'Intercessão', 'Suporte']],
       body: tableData,
       theme: 'grid',
-      styles: { fontSize: 9, cellPadding: 3 },
+      styles: { fontSize: 8, cellPadding: 3 },
       headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255] },
-      columnStyles: { 3: { cellWidth: 'auto' } },
+      columnStyles: {
+        0: { cellWidth: 18 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 32 },
+        3: { cellWidth: 12 },
+        4: { cellWidth: 40 },
+        5: { cellWidth: 'auto' },
+        6: { cellWidth: 45 },
+      },
     })
 
     doc.save(`escala-${slug}-${month}-${year}.pdf`)
