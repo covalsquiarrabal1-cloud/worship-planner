@@ -234,9 +234,10 @@ export default function MinistryPage() {
 
     // Detect roles dynamically
     const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name)).filter(Boolean))] as string[]
-    const roleOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
-    const orderedRoles = roleOrder.filter(r => allRoleNames.includes(r))
-    const pdfDisplayColumns = orderedRoles
+    const knownOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
+    const knownRoles = knownOrder.filter(r => allRoleNames.includes(r))
+    const otherRoles = allRoleNames.filter(r => !knownOrder.includes(r)).sort()
+    const pdfDisplayColumns = [...knownRoles, ...otherRoles]
 
     // Build table rows - group repeated Data/Dia/Escala
     const tableData: string[][] = []
@@ -558,11 +559,11 @@ export default function MinistryPage() {
           ) : (() => {
             // Detect all unique role_names to build dynamic columns
             const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name)).filter(Boolean))] as string[]
-            // Order: Torre first, then others except Suporte, Suporte last
-            const roleOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
-            const orderedRoles = roleOrder.filter(r => allRoleNames.includes(r))
-            // Each role gets its own column
-            const displayColumns = orderedRoles
+            // Known order for specific roles, then others alphabetically
+            const knownOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
+            const knownRoles = knownOrder.filter(r => allRoleNames.includes(r))
+            const otherRoles = allRoleNames.filter(r => !knownOrder.includes(r)).sort()
+            const displayColumns = [...knownRoles, ...otherRoles]
 
             const roleColors: Record<string, string> = {
               'Torre': 'text-amber-400',
