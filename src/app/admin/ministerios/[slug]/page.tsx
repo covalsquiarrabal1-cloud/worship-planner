@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, ArrowLeft, Users, FileDown, Pencil } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, ArrowLeft, Users, FileDown, Pencil, Settings } from 'lucide-react'
 import Link from 'next/link'
 
 interface MinistryMember { id: string; name: string; email: string | null; is_blocked: boolean; role: string }
@@ -22,6 +22,9 @@ export default function MinistryPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'escala' | 'membros'>('escala')
+  const [showConfig, setShowConfig] = useState(false)
+  const [scaleConfig, setScaleConfig] = useState<Record<string, number>>({})
+  const [savingConfig, setSavingConfig] = useState(false)
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [newMemberIsMembro, setNewMemberIsMembro] = useState(true)
@@ -43,14 +46,33 @@ export default function MinistryPage() {
     const start = format(startOfMonth(currentDate), 'yyyy-MM-dd')
     const end = format(endOfMonth(currentDate), 'yyyy-MM-dd')
 
-    const [membersRes, eventsRes] = await Promise.all([
+    const [membersRes, eventsRes, configRes] = await Promise.all([
       fetch(`/api/ministries/${slug}/members`),
       fetch(`/api/ministries/${slug}/events?start=${start}&end=${end}`),
+      fetch(`/api/ministries/${slug}/config`),
     ])
 
     if (membersRes.ok) setMembers(await membersRes.json())
     if (eventsRes.ok) setEvents(await eventsRes.json())
+    if (configRes.ok) {
+      const configData = await configRes.json()
+      const map: Record<string, number> = {}
+      for (const c of configData) map[c.scale_name] = c.num_people
+      setScaleConfig(map)
+    }
     setLoading(false)
+  }
+
+  async function saveConfig() {
+    setSavingConfig(true)
+    const entries = Object.entries(scaleConfig).filter(([_, v]) => v > 0)
+    await fetch(`/api/ministries/${slug}/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ config: entries.map(([scale_name, num_people]) => ({ scale_name, num_people })) }),
+    })
+    setSavingConfig(false)
+    setShowConfig(false)
   }
 
   async function addMember() {
@@ -337,7 +359,7 @@ export default function MinistryPage() {
           </div>
 
           {/* Actions */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-4 gap-3">
             <Link
               href={`/admin/ministerios/${slug}/gerar?month=${month}&year=${year}`}
               className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-[#58a6ff] transition-colors"
@@ -345,6 +367,13 @@ export default function MinistryPage() {
               <Plus className="w-5 h-5 text-[#58a6ff]" />
               <span className="text-xs font-semibold">GERAR</span>
             </Link>
+            <button
+              onClick={() => setShowConfig(true)}
+              className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-[#58a6ff] transition-colors"
+            >
+              <Settings className="w-5 h-5 text-[#58a6ff]" />
+              <span className="text-xs font-semibold">CONFIG</span>
+            </button>
             <button
               onClick={exportPDF}
               disabled={events.length === 0}
@@ -362,6 +391,57 @@ export default function MinistryPage() {
               <span className="text-xs font-semibold">EXCLUIR</span>
             </button>
           </div>
+
+          {/* Config modal */}
+          {showConfig && (
+            <div className="card space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold">Configurar Escalas</h3>
+                <button onClick={() => setShowConfig(false)} className="text-xs text-[var(--muted-foreground)]">✕</button>
+              </div>
+              <p className="text-xs text-[var(--muted-foreground)]">Defina quantas pessoas escalar para cada tipo de culto/evento.</p>
+              <div className="space-y-3">
+                {/* Get unique scale names from existing events or scale_types */}
+                {(() => {
+                  const scaleNames = [...new Set(events.map(e => e.scale_name).filter(Boolean))] as string[]
+                  // Also add any saved config names not in current events
+                  for (const name of Object.keys(scaleConfig)) {
+                    if (!scaleNames.includes(name)) scaleNames.push(name)
+                  }
+                  if (scaleNames.length === 0) {
+                    return <p className="text-xs text-[var(--muted-foreground)] italic">Gere uma escala primeiro para configurar os tipos.</p>
+                  }
+                  return scaleNames.sort().map(name => (
+                    <div key={name} className="flex items-center justify-between gap-3">
+                      <span className="text-sm font-medium flex-1">{name}</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setScaleConfig(prev => ({ ...prev, [name]: Math.max(1, (prev[name] || 1) - 1) }))}
+                          className="w-8 h-8 rounded-lg bg-[var(--accent)] border border-[var(--border)] text-sm font-bold"
+                        >
+                          -
+                        </button>
+                        <span className="w-8 text-center text-sm font-bold">{scaleConfig[name] || 1}</span>
+                        <button
+                          onClick={() => setScaleConfig(prev => ({ ...prev, [name]: (prev[name] || 1) + 1 }))}
+                          className="w-8 h-8 rounded-lg bg-[var(--accent)] border border-[var(--border)] text-sm font-bold"
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                })()}
+              </div>
+              <button
+                onClick={saveConfig}
+                disabled={savingConfig}
+                className="w-full bg-[#58a6ff] text-white py-2.5 rounded-xl text-sm font-medium disabled:opacity-40"
+              >
+                {savingConfig ? 'Salvando...' : 'Salvar Configuração'}
+              </button>
+            </div>
+          )}
 
           {/* Events */}
           {events.length === 0 ? (
