@@ -105,8 +105,33 @@ export async function GET() {
     }
   }
 
+  // Buscar funções (person_roles) de cada pessoa
+  const { data: personRolesData } = await serviceClient
+    .from('member_person_roles')
+    .select('member_email, role_id')
+
+  const { data: allRoles } = await serviceClient
+    .from('person_roles')
+    .select('id, name')
+
+  const roleMap: Record<string, string> = {}
+  for (const r of allRoles || []) roleMap[r.id] = r.name
+
+  const emailRoles: Record<string, string[]> = {}
+  for (const pr of personRolesData || []) {
+    if (!emailRoles[pr.member_email]) emailRoles[pr.member_email] = []
+    const roleName = roleMap[pr.role_id]
+    if (roleName) emailRoles[pr.member_email].push(roleName)
+  }
+
+  // Adicionar funções ao resultado
+  const peopleWithRoles = Object.values(peopleMap).map(p => ({
+    ...p,
+    person_roles: emailRoles[p.email.toLowerCase()] || [],
+  }))
+
   // Ordenar alfabeticamente
-  const people = Object.values(peopleMap).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+  const people = peopleWithRoles.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
 
   return NextResponse.json(people)
 }

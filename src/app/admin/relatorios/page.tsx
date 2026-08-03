@@ -600,7 +600,16 @@ function CadastroSection({
                       <p className="text-xs text-[var(--muted-foreground)]">{person.email}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-[#58a6ff] font-semibold">{person.ministries.length} {person.ministries.length === 1 ? 'Ministério' : 'Ministérios'}</span>
+                      <span className="text-xs text-[#58a6ff] font-semibold">
+                        {person.ministries.length > 0
+                          ? `${person.ministries.length} ${person.ministries.length === 1 ? 'Ministério' : 'Ministérios'}`
+                          : person.person_roles?.filter((r: string) => r !== 'Membro').length > 0
+                            ? person.person_roles.filter((r: string) => r !== 'Membro').join(', ')
+                            : person.person_roles?.includes('Membro')
+                              ? 'Membro'
+                              : 'Sem vínculo'
+                        }
+                      </span>
                       <ChevronDown className={`w-4 h-4 text-[var(--muted-foreground)] transition-transform ${expandedPerson === person.email ? 'rotate-180' : ''}`} />
                     </div>
                   </button>
