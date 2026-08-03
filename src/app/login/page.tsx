@@ -290,6 +290,15 @@ export default function LoginPage() {
             Instalar App na tela inicial
           </button>
         )}
+
+        {/* iOS install instructions */}
+        {!showInstallBtn && typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent) && !window.matchMedia('(display-mode: standalone)').matches && (
+          <div className="mt-6 text-center py-3 px-4 rounded-xl border border-[var(--border)] bg-[var(--card)]/80">
+            <p className="text-xs text-[var(--muted-foreground)]">
+              Para instalar: toque em <span className="text-white font-medium">Compartilhar</span> (⬆️) e depois <span className="text-white font-medium">Adicionar à Tela Inicial</span>
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )
