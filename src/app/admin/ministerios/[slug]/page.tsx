@@ -234,9 +234,9 @@ export default function MinistryPage() {
 
     // Detect roles dynamically
     const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name)).filter(Boolean))] as string[]
-    const roleOrder = ['Torre', 'Coluna', 'Intercessor', 'Orar pelo Ministro', 'Suporte']
+    const roleOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
     const orderedRoles = roleOrder.filter(r => allRoleNames.includes(r))
-    const displayColumns = orderedRoles.filter(r => r !== 'Coluna')
+    const pdfDisplayColumns = orderedRoles
 
     // Build table rows
     const tableData: string[][] = []
@@ -253,10 +253,8 @@ export default function MinistryPage() {
           event.num_celebrations > 1 ? `C${celNum}` : '-',
         ]
 
-        for (const col of displayColumns) {
-          const colAssignments = col === 'Intercessor'
-            ? celAssignments.filter(a => a.role_name === 'Intercessor' || a.role_name === 'Coluna')
-            : celAssignments.filter(a => a.role_name === col)
+        for (const col of pdfDisplayColumns) {
+          const colAssignments = celAssignments.filter(a => a.role_name === col)
           row.push(colAssignments.map(a => a.member?.name || '-').join(', ') || '-')
         }
 
@@ -264,7 +262,7 @@ export default function MinistryPage() {
       }
     }
 
-    const headColumns = ['Data', 'Dia', 'Escala', 'Cel.', ...displayColumns.map(c => c === 'Intercessor' ? 'Intercessão' : c)]
+    const headColumns = ['Data', 'Dia', 'Escala', 'Cel.', ...pdfDisplayColumns.map(c => c === 'Intercessor' ? 'Intercessão' : c === 'Orar pelo Ministro' ? 'Orar p/ Ministro' : c)]
 
     autoTable(doc, {
       startY: 35,
@@ -555,10 +553,10 @@ export default function MinistryPage() {
             // Detect all unique role_names to build dynamic columns
             const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name)).filter(Boolean))] as string[]
             // Order: Torre first, then others except Suporte, Suporte last
-            const roleOrder = ['Torre', 'Coluna', 'Intercessor', 'Orar pelo Ministro', 'Suporte']
+            const roleOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
             const orderedRoles = roleOrder.filter(r => allRoleNames.includes(r))
-            // Group Coluna with Intercessor in display
-            const displayColumns = orderedRoles.filter(r => r !== 'Coluna')
+            // Each role gets its own column
+            const displayColumns = orderedRoles
 
             const roleColors: Record<string, string> = {
               'Torre': 'text-amber-400',
@@ -579,7 +577,7 @@ export default function MinistryPage() {
                     <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Cel.</th>
                     {displayColumns.map(col => (
                       <th key={col} className={`text-center px-3 py-2.5 text-xs font-semibold border-r border-[var(--border)] last:border-r-0 ${roleColors[col] || 'text-[var(--muted-foreground)]'}`}>
-                        {col === 'Intercessor' ? 'Intercessão' : col}
+                        {col === 'Intercessor' ? 'Intercessão' : col === 'Orar pelo Ministro' ? 'Orar p/ Ministro' : col}
                       </th>
                     ))}
                   </tr>
@@ -609,10 +607,7 @@ export default function MinistryPage() {
                             {event.num_celebrations > 1 ? `C${celNum}` : '-'}
                           </td>
                           {displayColumns.map(col => {
-                            // For "Intercessor" column, include both Intercessor and Coluna
-                            const colAssignments = col === 'Intercessor'
-                              ? celAssignments.filter(a => a.role_name === 'Intercessor' || a.role_name === 'Coluna')
-                              : celAssignments.filter(a => a.role_name === col)
+                            const colAssignments = celAssignments.filter(a => a.role_name === col)
 
                             return (
                               <td key={col} className="px-3 py-2.5 border-r border-[var(--border)] last:border-r-0">
