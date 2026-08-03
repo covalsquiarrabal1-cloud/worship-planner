@@ -536,7 +536,7 @@ function CadastroSection({
           <p className="text-sm text-[var(--muted-foreground)]">{cadastro.length} pessoas cadastradas</p>
           {cadastro
             .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
-            .filter(p => !filterNoRole || p.ministries.length === 0)
+            .filter(p => !filterNoRole || (p.ministries.length === 0 && (!p.person_roles || p.person_roles.length === 0 || (p.person_roles.length === 1 && p.person_roles[0] === 'Membro'))))
             .map((person, idx) => (
             <div key={idx} className="card overflow-hidden">
               {editingPerson === person.email ? (
