@@ -404,13 +404,13 @@ function CadastroSection({
       {/* Botão cadastrar + busca */}
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)] pointer-events-none" />
           <input
             type="text"
             placeholder="Buscar por nome..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-10"
+            className="w-full !pl-11"
           />
         </div>
         <button
@@ -428,10 +428,10 @@ function CadastroSection({
       <div className="flex gap-2 flex-wrap">
         <button
           onClick={() => setFilterNoRole(!filterNoRole)}
-          className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+          className={`px-4 py-2.5 rounded-xl text-xs font-medium transition-colors border ${
             filterNoRole
-              ? 'bg-red-500/20 text-red-400 ring-1 ring-red-500/40'
-              : 'bg-[var(--accent)] text-[var(--muted-foreground)] hover:bg-[var(--border)]'
+              ? 'bg-red-500/15 text-red-400 border-red-500/40'
+              : 'bg-[var(--card)] text-[var(--muted-foreground)] border-[var(--border)] hover:border-[var(--muted-foreground)]'
           }`}
         >
           {filterNoRole ? '✓ ' : ''}Sem função/ministério
