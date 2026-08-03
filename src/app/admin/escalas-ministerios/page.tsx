@@ -10,6 +10,7 @@ interface Ministry {
   id: string
   name: string
   slug: string
+  group_name: string | null
 }
 
 interface MinistryEvent {
@@ -20,6 +21,8 @@ interface MinistryEvent {
   num_celebrations: number
   assignments: { id: string; celebration_number: number; role_name: string | null; member: { id: string; name: string } | null }[]
 }
+
+const GROUP_ORDER = ['Integração', 'Culto', 'Esporte', 'Comunidade', 'Espiritual', 'Operacional', 'Alive', 'Comunicação', 'Administrativo', 'Outros']
 
 export default function EscalasMinisteriosAdminPage() {
   const [ministries, setMinistries] = useState<Ministry[]>([])
@@ -95,36 +98,63 @@ export default function EscalasMinisteriosAdminPage() {
           <div className="absolute inset-0 bg-gradient-to-br from-[#1c2128] via-[#161b22] to-[#0d1117] border border-[var(--border)] rounded-2xl" />
         )}
 
-        {/* Grid of ministry icons */}
+        {/* Grid of ministry icons - grouped */}
         <div className="relative z-10 p-6">
-          <div className="flex flex-wrap justify-center gap-4">
-            {ministries.map(m => (
-              <button
-                key={m.id}
-                onClick={() => setSelectedMinistry(selectedMinistry === m.id ? null : m.id)}
-                className={`flex flex-col items-center gap-1.5 transition-all active:scale-90 ${
-                  selectedMinistry === m.id ? 'scale-105' : 'hover:scale-105'
-                }`}
-              >
-                <div className={`w-[60px] h-[60px] rounded-[14px] flex items-center justify-center shadow-lg transition-all ${
-                  selectedMinistry === m.id
-                    ? 'bg-[#58a6ff]/20 border-2 border-[#58a6ff] shadow-[0_0_16px_rgba(88,166,255,0.3)]'
-                    : 'bg-[#1c2128]/80 border border-[#30363d]/60 hover:border-[#58a6ff]/50'
-                }`}>
-                  <img
-                    src={getMinistryIcon3D(m.slug)}
-                    alt={m.name}
-                    className="w-[36px] h-[36px] object-contain"
-                  />
-                </div>
-                <span className={`text-[9px] text-center leading-tight font-medium w-[65px] break-words ${
-                  selectedMinistry === m.id ? 'text-[#58a6ff]' : 'text-[var(--muted-foreground)]'
-                }`}>
-                  {m.name}
-                </span>
-              </button>
-            ))}
-          </div>
+          {(() => {
+            // Group ministries
+            const groupMap: Record<string, Ministry[]> = {}
+            for (const m of ministries) {
+              const group = m.group_name || 'Outros'
+              if (!groupMap[group]) groupMap[group] = []
+              groupMap[group].push(m)
+            }
+
+            const groups = GROUP_ORDER
+              .filter(g => groupMap[g] && groupMap[g].length > 0)
+              .map(g => groupMap[g])
+
+            const extraGroups = Object.keys(groupMap)
+              .filter(g => !GROUP_ORDER.includes(g))
+              .map(g => groupMap[g])
+              .filter(g => g.length > 0)
+
+            const allGroups = [...groups, ...extraGroups]
+
+            return (
+              <div className="space-y-6">
+                {allGroups.map((items, idx) => (
+                  <div key={idx} className="flex flex-wrap justify-center gap-4">
+                    {items.map(m => (
+                      <button
+                        key={m.id}
+                        onClick={() => setSelectedMinistry(selectedMinistry === m.id ? null : m.id)}
+                        className={`flex flex-col items-center gap-1.5 transition-all active:scale-90 ${
+                          selectedMinistry === m.id ? 'scale-105' : 'hover:scale-105'
+                        }`}
+                      >
+                        <div className={`w-[60px] h-[60px] rounded-[14px] flex items-center justify-center shadow-lg transition-all ${
+                          selectedMinistry === m.id
+                            ? 'bg-[#58a6ff]/20 border-2 border-[#58a6ff] shadow-[0_0_16px_rgba(88,166,255,0.3)]'
+                            : 'bg-[#1c2128]/80 border border-[#30363d]/60 hover:border-[#58a6ff]/50'
+                        }`}>
+                          <img
+                            src={getMinistryIcon3D(m.slug)}
+                            alt={m.name}
+                            className="w-[36px] h-[36px] object-contain"
+                          />
+                        </div>
+                        <span className={`text-[9px] text-center leading-tight font-medium w-[65px] break-words ${
+                          selectedMinistry === m.id ? 'text-[#58a6ff]' : 'text-[var(--muted-foreground)]'
+                        }`}>
+                          {m.name}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )
+          })()}
         </div>
       </div>
 
