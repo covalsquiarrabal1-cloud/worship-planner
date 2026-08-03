@@ -33,6 +33,15 @@ export default async function MemberLayout({
 
   const isWorshipMember = !!worshipMember
 
+  // Check if user has Pastor or Ministro role (can view all schedules)
+  const { data: personRoles } = await serviceClient
+    .from('member_person_roles')
+    .select('role_id, person_roles(name)')
+    .eq('member_email', user.email?.toLowerCase() || '')
+
+  const userRoles = (personRoles || []).map((pr: any) => pr.person_roles?.name).filter(Boolean)
+  const canViewAllSchedules = userRoles.includes('Pastor') || userRoles.includes('Ministro')
+
   return (
     <div className="min-h-screen pb-safe">
       <header className="sticky top-0 z-40 bg-[var(--background)] border-b border-[var(--border)] px-4 py-3 flex items-center justify-between">
@@ -53,7 +62,7 @@ export default async function MemberLayout({
       <main className="px-4 py-4">
         {children}
       </main>
-      <MemberBottomNav showMusicas={isWorshipMember} />
+      <MemberBottomNav showMusicas={isWorshipMember} showAllSchedules={canViewAllSchedules} />
     </div>
   )
 }

@@ -17,6 +17,7 @@ export function AdminBottomNav() {
   const items: NavItem[] = [
     { href: '/admin/dashboard', icon: <BarChart3 className="w-7 h-7" />, label: 'Dashboard' },
     { href: '/admin', icon: <Calendar className="w-7 h-7" />, label: 'Escalas' },
+    { href: '/admin/escalas-ministerios', icon: <Users className="w-7 h-7" />, label: 'Escalas Gerais' },
     { href: '/admin/ministerios', icon: <Home className="w-7 h-7" />, label: 'Ministérios' },
     { href: '/admin/relatorios', icon: <ClipboardList className="w-7 h-7" />, label: 'Relatórios' },
     { href: '/admin/config', icon: <Settings className="w-7 h-7" />, label: 'Config' },
@@ -34,6 +35,8 @@ export function AdminBottomNav() {
             isActive = pathname === '/admin' || escalasSubPaths.some(p => pathname.startsWith(p))
           } else if (item.href === '/admin/ministerios') {
             isActive = pathname.startsWith('/admin/ministerios') || ministeriosSubPaths.some(p => pathname.startsWith(p))
+          } else if (item.href === '/admin/escalas-ministerios') {
+            isActive = pathname === '/admin/escalas-ministerios'
           } else {
             isActive = pathname === item.href || pathname.startsWith(item.href + '/')
           }
@@ -58,12 +61,13 @@ export function AdminBottomNav() {
   )
 }
 
-export function MemberBottomNav({ showMusicas = false }: { showMusicas?: boolean }) {
+export function MemberBottomNav({ showMusicas = false, showAllSchedules = false }: { showMusicas?: boolean; showAllSchedules?: boolean }) {
   const pathname = usePathname()
 
   const items: NavItem[] = [
     { href: '/membro', icon: <Calendar className="w-7 h-7" />, label: 'Escala' },
     { href: '/membro/meus-dias', icon: <User className="w-7 h-7" />, label: 'Meus Dias' },
+    ...(showAllSchedules ? [{ href: '/membro/escalas-ministerios', icon: <Home className="w-7 h-7" />, label: 'Ministérios' }] : []),
     ...(showMusicas ? [{ href: '/membro/musicas', icon: <Music className="w-7 h-7" />, label: 'Músicas' }] : []),
   ]
 
