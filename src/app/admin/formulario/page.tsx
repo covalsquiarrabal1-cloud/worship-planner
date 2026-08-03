@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Loader2, Plus, Trash2, ClipboardList, Users, ChevronDown, Clock, Pencil } from 'lucide-react'
+import Link from 'next/link'
 
 interface Ministry {
   id: string
@@ -174,6 +175,16 @@ export default function AdminFormularioPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {/* Sub-tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        <Link href="/admin/ministerios" className="px-4 py-2 rounded-xl text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] bg-[var(--card)] border border-[var(--border)]">
+          Ministérios
+        </Link>
+        <Link href="/admin/formulario" className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#58a6ff] text-white shadow-[0_2px_8px_rgba(88,166,255,0.3)]">
+          Formulário
+        </Link>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

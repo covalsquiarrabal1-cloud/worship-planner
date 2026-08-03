@@ -103,6 +103,16 @@ export default function MinisteriosPage() {
 
   return (
     <div className="flex flex-col items-center px-3 pb-8">
+      {/* Sub-tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-3 w-full max-w-[360px]">
+        <Link href="/admin/ministerios" className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#58a6ff] text-white shadow-[0_2px_8px_rgba(88,166,255,0.3)]">
+          Ministérios
+        </Link>
+        <Link href="/admin/formulario" className="px-4 py-2 rounded-xl text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] bg-[var(--card)] border border-[var(--border)]">
+          Formulário
+        </Link>
+      </div>
+
       <div className="text-center pt-2">
         <h2 className="text-lg font-bold">Ministérios</h2>
       </div>

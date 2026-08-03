@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Music, ExternalLink, Loader2, Plus, Trash2, X, MessageSquare, Link2, ChevronUp, ChevronDown, Edit2 } from 'lucide-react'
+import Link from 'next/link'
 
 interface SongEvent {
   id: string
@@ -184,6 +185,22 @@ export default function AdminMusicasPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
+      {/* Sub-tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        <Link href="/admin" className="px-4 py-2 rounded-xl text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] bg-[var(--card)] border border-[var(--border)]">
+          Escalas
+        </Link>
+        <Link href="/admin/membros" className="px-4 py-2 rounded-xl text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] bg-[var(--card)] border border-[var(--border)]">
+          Membros
+        </Link>
+        <Link href="/admin/musicas" className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#58a6ff] text-white shadow-[0_2px_8px_rgba(88,166,255,0.3)]">
+          Músicas
+        </Link>
+        <Link href="/admin/minha-escala" className="px-4 py-2 rounded-xl text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] bg-[var(--card)] border border-[var(--border)]">
+          Minha Escala
+        </Link>
+      </div>
+
       {/* Tabs */}
       <div className="grid grid-cols-2 gap-3">
         <button

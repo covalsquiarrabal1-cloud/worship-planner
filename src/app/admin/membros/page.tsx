@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Plus, Search, UserCircle, Guitar, Ban, Crown, Loader2, X, Trash2, Star } from 'lucide-react'
+import Link from 'next/link'
 
 interface Member {
   id: string
@@ -61,6 +62,22 @@ export default function MembrosPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      {/* Sub-tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        <Link href="/admin" className="px-4 py-2 rounded-xl text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] bg-[var(--card)] border border-[var(--border)]">
+          Escalas
+        </Link>
+        <Link href="/admin/membros" className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#58a6ff] text-white shadow-[0_2px_8px_rgba(88,166,255,0.3)]">
+          Membros
+        </Link>
+        <Link href="/admin/musicas" className="px-4 py-2 rounded-xl text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] bg-[var(--card)] border border-[var(--border)]">
+          Músicas
+        </Link>
+        <Link href="/admin/minha-escala" className="px-4 py-2 rounded-xl text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] bg-[var(--card)] border border-[var(--border)]">
+          Minha Escala
+        </Link>
+      </div>
+
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold">Membros</h2>
         <button

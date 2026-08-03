@@ -114,6 +114,22 @@ export default function MinhaEscalaPage() {
 
   return (
     <div className="max-w-2xl mx-auto space-y-5">
+      {/* Sub-tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        <Link href="/admin" className="px-4 py-2 rounded-xl text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] bg-[var(--card)] border border-[var(--border)]">
+          Escalas
+        </Link>
+        <Link href="/admin/membros" className="px-4 py-2 rounded-xl text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] bg-[var(--card)] border border-[var(--border)]">
+          Membros
+        </Link>
+        <Link href="/admin/musicas" className="px-4 py-2 rounded-xl text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] bg-[var(--card)] border border-[var(--border)]">
+          Músicas
+        </Link>
+        <Link href="/admin/minha-escala" className="px-4 py-2 rounded-xl text-sm font-semibold bg-[#58a6ff] text-white shadow-[0_2px_8px_rgba(88,166,255,0.3)]">
+          Minha Escala
+        </Link>
+      </div>
+
       <div className="flex items-center gap-3">
         <Link href="/admin" className="p-2 rounded-xl bg-[var(--card)] border border-[var(--border)]">
           <ArrowLeft className="w-5 h-5" />

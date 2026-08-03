@@ -17,12 +17,8 @@ export function AdminBottomNav() {
   const items: NavItem[] = [
     { href: '/admin/dashboard', icon: <BarChart3 className="w-7 h-7" />, label: 'Dashboard' },
     { href: '/admin', icon: <Calendar className="w-7 h-7" />, label: 'Escalas' },
-    { href: '/admin/minha-escala', icon: <User className="w-7 h-7" />, label: 'Minha Escala' },
-    { href: '/admin/membros', icon: <Users className="w-7 h-7" />, label: 'Membros' },
-    { href: '/admin/musicas', icon: <Music className="w-7 h-7" />, label: 'Músicas' },
     { href: '/admin/ministerios', icon: <Home className="w-7 h-7" />, label: 'Ministérios' },
-    { href: '/admin/formulario', icon: <ClipboardList className="w-7 h-7" />, label: 'Formulário' },
-    { href: '/admin/relatorios', icon: <BarChart3 className="w-7 h-7" />, label: 'Relatórios' },
+    { href: '/admin/relatorios', icon: <ClipboardList className="w-7 h-7" />, label: 'Relatórios' },
     { href: '/admin/config', icon: <Settings className="w-7 h-7" />, label: 'Config' },
   ]
 
@@ -30,9 +26,17 @@ export function AdminBottomNav() {
     <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, width: '100%', overflow: 'hidden', zIndex: 50 }} className="bg-[#161b22] border-t border-[#30363d]">
       <div className="max-w-5xl mx-auto flex items-center justify-around py-3">
         {items.map((item) => {
-          const isActive = pathname === item.href || 
-            (item.href !== '/admin' && pathname.startsWith(item.href + '/')) ||
-            (item.href === '/admin' && pathname === '/admin')
+          const escalasSubPaths = ['/admin/membros', '/admin/musicas', '/admin/minha-escala', '/admin/escala']
+          const ministeriosSubPaths = ['/admin/formulario']
+          
+          let isActive = false
+          if (item.href === '/admin') {
+            isActive = pathname === '/admin' || escalasSubPaths.some(p => pathname.startsWith(p))
+          } else if (item.href === '/admin/ministerios') {
+            isActive = pathname.startsWith('/admin/ministerios') || ministeriosSubPaths.some(p => pathname.startsWith(p))
+          } else {
+            isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+          }
           return (
             <Link
               key={item.href}
