@@ -239,24 +239,23 @@ export default function MinistryPage() {
     const otherRoles = allRoleNames.filter(r => !knownOrder.includes(r)).sort()
     const pdfDisplayColumns = [...knownRoles, ...otherRoles]
 
-    // Build table rows - group repeated Data/Dia/Escala
+    // Build table rows - track which rows belong to same event for merge
     const tableData: string[][] = []
-    let lastDate = ''
+    const mergeGroups: { startRow: number; endRow: number }[] = []
 
     for (const event of events) {
       const celebrations = Array.from({ length: event.num_celebrations }, (_, i) => i + 1)
       const dateStr = `${event.event_date.slice(8,10)}/${event.event_date.slice(5,7)}`
+      const startRow = tableData.length
 
       for (let cIdx = 0; cIdx < celebrations.length; cIdx++) {
         const celNum = celebrations[cIdx]
         const celAssignments = event.assignments.filter(a => a.celebration_number === celNum)
 
-        // Show Data/Dia/Escala only on first row of each event
-        const isFirstRow = cIdx === 0
         const row = [
-          isFirstRow ? dateStr : '',
-          isFirstRow ? event.day_of_week : '',
-          isFirstRow ? (event.scale_name || '-') : '',
+          dateStr,
+          event.day_of_week,
+          event.scale_name || '-',
           event.num_celebrations > 1 ? `C${celNum}` : '-',
         ]
 
@@ -266,6 +265,10 @@ export default function MinistryPage() {
         }
 
         tableData.push(row)
+      }
+
+      if (celebrations.length > 1) {
+        mergeGroups.push({ startRow, endRow: tableData.length - 1 })
       }
     }
 
@@ -283,6 +286,31 @@ export default function MinistryPage() {
         1: { cellWidth: 22, halign: 'center' },
         2: { cellWidth: 28, halign: 'center' },
         3: { cellWidth: 12, halign: 'center' },
+      },
+      didParseCell: (data: any) => {
+        // For merged cells (Data, Dia, Escala - columns 0,1,2), hide text on non-first rows
+        if (data.section === 'body' && data.column.index <= 2) {
+          const rowIdx = data.row.index
+          const group = mergeGroups.find(g => rowIdx > g.startRow && rowIdx <= g.endRow)
+          if (group) {
+            data.cell.text = ['']
+          }
+        }
+      },
+      didDrawCell: (data: any) => {
+        // Remove top border for merged cells
+        if (data.section === 'body' && data.column.index <= 2) {
+          const rowIdx = data.row.index
+          const group = mergeGroups.find(g => rowIdx > g.startRow && rowIdx <= g.endRow)
+          if (group) {
+            // Draw white line over the top border to hide it
+            doc.setDrawColor(255, 255, 255)
+            doc.setLineWidth(0.6)
+            doc.line(data.cell.x + 0.3, data.cell.y, data.cell.x + data.cell.width - 0.3, data.cell.y)
+            doc.setDrawColor(80, 80, 80)
+            doc.setLineWidth(0.5)
+          }
+        }
       },
     })
 
