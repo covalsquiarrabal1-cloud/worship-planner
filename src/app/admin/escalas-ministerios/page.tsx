@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Loader2, X, ImagePlus } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { getMinistryIcon3D } from '@/lib/ministry-icons'
 
 interface Ministry {
@@ -32,10 +32,16 @@ export default function EscalasMinisteriosAdminPage() {
 
   useEffect(() => {
     loadMinistries()
-    // Load saved background
-    const saved = localStorage.getItem('escalas_gerais_bg')
-    if (saved) setBgImage(saved)
+    loadBackground()
   }, [])
+
+  async function loadBackground() {
+    const res = await fetch('/api/app-settings?key=escalas_gerais_bg')
+    if (res.ok) {
+      const data = await res.json()
+      if (data.value) setBgImage(data.value)
+    }
+  }
 
   useEffect(() => {
     if (selectedMinistry) loadEvents()
@@ -63,23 +69,6 @@ export default function EscalasMinisteriosAdminPage() {
     setLoadingEvents(false)
   }
 
-  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const dataUrl = ev.target?.result as string
-      setBgImage(dataUrl)
-      localStorage.setItem('escalas_gerais_bg', dataUrl)
-    }
-    reader.readAsDataURL(file)
-  }
-
-  function removeBgImage() {
-    setBgImage(null)
-    localStorage.removeItem('escalas_gerais_bg')
-  }
-
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
   }
@@ -89,16 +78,9 @@ export default function EscalasMinisteriosAdminPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold">Escalas Gerais</h2>
-          <p className="text-sm text-[var(--muted-foreground)]">Selecione um ministério para ver a escala.</p>
-        </div>
-        {/* Background image toggle */}
-        <label className="p-2 rounded-lg bg-[var(--accent)] hover:bg-[var(--border)] cursor-pointer transition-colors" title="Adicionar foto de fundo">
-          <ImagePlus className="w-5 h-5 text-[var(--muted-foreground)]" />
-          <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-        </label>
+      <div>
+        <h2 className="text-xl font-bold">Escalas Gerais</h2>
+        <p className="text-sm text-[var(--muted-foreground)]">Selecione um ministério para ver a escala.</p>
       </div>
 
       {/* Ministry grid with background */}
@@ -108,13 +90,6 @@ export default function EscalasMinisteriosAdminPage() {
           <div className="absolute inset-0">
             <img src={bgImage} alt="" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px]" />
-            <button
-              onClick={removeBgImage}
-              className="absolute top-3 right-3 p-1.5 rounded-lg bg-black/50 hover:bg-black/70 z-10"
-              title="Remover foto"
-            >
-              <X className="w-4 h-4 text-white" />
-            </button>
           </div>
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-[#1c2128] via-[#161b22] to-[#0d1117] border border-[var(--border)] rounded-2xl" />

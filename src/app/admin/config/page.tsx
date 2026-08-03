@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Plus, Trash2, Loader2, X, LogOut, Tag, CalendarOff, Guitar, Users, Calendar, Edit2 } from 'lucide-react'
+import { Plus, Trash2, Loader2, X, LogOut, Tag, CalendarOff, Guitar, Users, Calendar, Edit2, ImagePlus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
@@ -199,6 +199,9 @@ export default function ConfigPage() {
 
       {/* ========== PERMISSÕES ESCALAS GERAIS ========== */}
       <SchedulePermissions />
+
+      {/* ========== FOTOS / PERSONALIZAÇÃO ========== */}
+      <PhotoSettings />
 
       {/* ========== INSTRUMENTOS ========== */}
       <section className="space-y-4">
@@ -1003,6 +1006,149 @@ function SchedulePermissions() {
         ))}
       </div>
       {saving && <p className="text-[10px] text-[var(--muted-foreground)]">Salvando...</p>}
+    </section>
+  )
+}
+
+function PhotoSettings() {
+  const [headerImage, setHeaderImage] = useState<string | null>(null)
+  const [escalasImage, setEscalasImage] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadImages()
+  }, [])
+
+  async function loadImages() {
+    const [headerRes, escalasRes] = await Promise.all([
+      fetch('/api/app-settings?key=header_image'),
+      fetch('/api/app-settings?key=escalas_gerais_bg'),
+    ])
+    if (headerRes.ok) {
+      const data = await headerRes.json()
+      if (data.value) setHeaderImage(data.value)
+    }
+    if (escalasRes.ok) {
+      const data = await escalasRes.json()
+      if (data.value) setEscalasImage(data.value)
+    }
+    setLoading(false)
+  }
+
+  async function handleUpload(key: string, e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Compress/resize image
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')!
+    const img = new Image()
+
+    img.onload = async () => {
+      // Max width for header: 1200px, for escalas: 800px
+      const maxWidth = key === 'header_image' ? 1200 : 800
+      const scale = Math.min(1, maxWidth / img.width)
+      canvas.width = img.width * scale
+      canvas.height = img.height * scale
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7)
+
+      setSaving(key)
+      await fetch('/api/app-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value: dataUrl }),
+      })
+
+      if (key === 'header_image') setHeaderImage(dataUrl)
+      else setEscalasImage(dataUrl)
+      setSaving(null)
+    }
+
+    img.src = URL.createObjectURL(file)
+  }
+
+  async function removeImage(key: string) {
+    setSaving(key)
+    await fetch('/api/app-settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, value: null }),
+    })
+    if (key === 'header_image') setHeaderImage(null)
+    else setEscalasImage(null)
+    setSaving(null)
+  }
+
+  if (loading) return <div className="py-4"><Loader2 className="w-5 h-5 animate-spin mx-auto" /></div>
+
+  return (
+    <section className="space-y-4">
+      <div>
+        <h3 className="font-semibold flex items-center gap-2 text-base">
+          <ImagePlus className="w-5 h-5" />
+          Personalização Visual
+        </h3>
+        <p className="text-xs text-[var(--muted-foreground)] mt-1">Defina imagens de fundo e header do app.</p>
+      </div>
+
+      {/* Header image */}
+      <div className="card space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Foto do Header</p>
+            <p className="text-[10px] text-[var(--muted-foreground)]">Aparece no topo de todas as páginas.</p>
+          </div>
+          {headerImage && (
+            <button onClick={() => removeImage('header_image')} className="text-xs text-red-400 hover:text-red-300">
+              Remover
+            </button>
+          )}
+        </div>
+        {headerImage ? (
+          <div className="relative rounded-xl overflow-hidden h-16">
+            <img src={headerImage} alt="Header" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/30" />
+          </div>
+        ) : (
+          <label className="flex items-center justify-center gap-2 py-6 border-2 border-dashed border-[var(--border)] rounded-xl cursor-pointer hover:border-[#58a6ff] transition-colors">
+            <ImagePlus className="w-5 h-5 text-[var(--muted-foreground)]" />
+            <span className="text-sm text-[var(--muted-foreground)]">Selecionar imagem</span>
+            <input type="file" accept="image/*" onChange={(e) => handleUpload('header_image', e)} className="hidden" />
+          </label>
+        )}
+        {saving === 'header_image' && <p className="text-[10px] text-[var(--muted-foreground)]">Salvando...</p>}
+      </div>
+
+      {/* Escalas Gerais background */}
+      <div className="card space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Fundo - Escalas Gerais</p>
+            <p className="text-[10px] text-[var(--muted-foreground)]">Aparece atrás do grid de ministérios.</p>
+          </div>
+          {escalasImage && (
+            <button onClick={() => removeImage('escalas_gerais_bg')} className="text-xs text-red-400 hover:text-red-300">
+              Remover
+            </button>
+          )}
+        </div>
+        {escalasImage ? (
+          <div className="relative rounded-xl overflow-hidden h-24">
+            <img src={escalasImage} alt="Escalas BG" className="w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/40" />
+          </div>
+        ) : (
+          <label className="flex items-center justify-center gap-2 py-6 border-2 border-dashed border-[var(--border)] rounded-xl cursor-pointer hover:border-[#58a6ff] transition-colors">
+            <ImagePlus className="w-5 h-5 text-[var(--muted-foreground)]" />
+            <span className="text-sm text-[var(--muted-foreground)]">Selecionar imagem</span>
+            <input type="file" accept="image/*" onChange={(e) => handleUpload('escalas_gerais_bg', e)} className="hidden" />
+          </label>
+        )}
+        {saving === 'escalas_gerais_bg' && <p className="text-[10px] text-[var(--muted-foreground)]">Salvando...</p>}
+      </div>
     </section>
   )
 }
