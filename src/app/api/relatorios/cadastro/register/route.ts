@@ -10,6 +10,12 @@ function capitalizeName(name: string): string {
     .join(' ')
 }
 
+function generateNickname(fullName: string): string {
+  const parts = fullName.trim().split(/\s+/)
+  if (parts.length <= 2) return fullName
+  return `${parts[0]} ${parts[parts.length - 1]}`
+}
+
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -21,12 +27,13 @@ export async function POST(request: Request) {
   if (profile?.role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const body = await request.json()
-  const { name, email, phone, birth_date } = body
+  const { name, email, phone, birth_date, nickname } = body
 
   if (!name || !email) return NextResponse.json({ error: 'Nome e email obrigatórios' }, { status: 400 })
 
   const normalizedEmail = email.trim().toLowerCase()
   const capitalizedName = capitalizeName(name)
+  const finalNickname = nickname?.trim() || generateNickname(capitalizedName)
 
   // Check if already exists in ministry_signups
   const { data: existing } = await serviceClient
@@ -38,15 +45,21 @@ export async function POST(request: Request) {
   if (existing && existing.length > 0) {
     await serviceClient
       .from('ministry_signups')
-      .update({ name: capitalizedName, phone: phone || null, birth_date: birth_date || null })
+      .update({ name: capitalizedName, phone: phone || null, birth_date: birth_date || null, nickname: finalNickname })
       .ilike('email', normalizedEmail)
   } else {
     const { error } = await serviceClient
       .from('ministry_signups')
-      .insert({ name: capitalizedName, email: normalizedEmail, phone: phone || null, birth_date: birth_date || null })
+      .insert({ name: capitalizedName, email: normalizedEmail, phone: phone || null, birth_date: birth_date || null, nickname: finalNickname })
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }
+
+  // Sync nickname to ministry_members
+  await serviceClient
+    .from('ministry_members')
+    .update({ nickname: finalNickname })
+    .ilike('email', normalizedEmail)
 
   return NextResponse.json({ success: true })
 }
@@ -62,17 +75,18 @@ export async function PUT(request: Request) {
   if (profile?.role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const body = await request.json()
-  const { old_email, new_name, new_email, phone, birth_date } = body
+  const { old_email, new_name, new_email, phone, birth_date, nickname } = body
 
   if (!old_email || !new_name) return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
 
   const capitalizedName = capitalizeName(new_name)
   const normalizedNewEmail = new_email ? new_email.trim().toLowerCase() : old_email.toLowerCase()
+  const finalNickname = nickname?.trim() || generateNickname(capitalizedName)
 
-  // Update ministry_members
+  // Update ministry_members (name + nickname)
   await serviceClient
     .from('ministry_members')
-    .update({ name: capitalizedName, email: normalizedNewEmail })
+    .update({ name: capitalizedName, email: normalizedNewEmail, nickname: finalNickname })
     .ilike('email', old_email)
 
   // Update ministry_signups
@@ -85,12 +99,12 @@ export async function PUT(request: Request) {
   if (existingSignup && existingSignup.length > 0) {
     await serviceClient
       .from('ministry_signups')
-      .update({ name: capitalizedName, email: normalizedNewEmail, phone: phone || null, birth_date: birth_date || null })
+      .update({ name: capitalizedName, email: normalizedNewEmail, phone: phone || null, birth_date: birth_date || null, nickname: finalNickname })
       .ilike('email', old_email)
   } else {
     await serviceClient
       .from('ministry_signups')
-      .insert({ name: capitalizedName, email: normalizedNewEmail, phone: phone || null, birth_date: birth_date || null })
+      .insert({ name: capitalizedName, email: normalizedNewEmail, phone: phone || null, birth_date: birth_date || null, nickname: finalNickname })
   }
 
   // Update members (louvor)

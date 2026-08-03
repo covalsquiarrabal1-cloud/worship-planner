@@ -308,7 +308,7 @@ function CadastroSection({
   const [showForm, setShowForm] = useState(false)
   const [roles, setRoles] = useState<PersonRole[]>([])
   const [ministries, setMinistries] = useState<{ id: string; name: string }[]>([])
-  const [form, setForm] = useState({ name: '', email: '', phone: '', birth_date: '', role_ids: [] as string[], ministry_ids: [] as string[] })
+  const [form, setForm] = useState({ name: '', email: '', phone: '', birth_date: '', nickname: '', role_ids: [] as string[], ministry_ids: [] as string[] })
   const [saving, setSaving] = useState(false)
   const [personRoles, setPersonRoles] = useState<Record<string, PersonRole[]>>({})
   const [filterNoRole, setFilterNoRole] = useState(false)
@@ -343,6 +343,7 @@ function CadastroSection({
           email: form.email.trim().toLowerCase(),
           phone: form.phone.trim() || null,
           birth_date: form.birth_date || null,
+          nickname: form.nickname.trim() || null,
         }),
       })
 
@@ -371,7 +372,7 @@ function CadastroSection({
         })
       }
 
-      setForm({ name: '', email: '', phone: '', birth_date: '', role_ids: [], ministry_ids: [] })
+      setForm({ name: '', email: '', phone: '', birth_date: '', nickname: '', role_ids: [], ministry_ids: [] })
       setShowForm(false)
       onReload()
     } catch {
@@ -455,6 +456,12 @@ function CadastroSection({
               placeholder="E-mail *"
               value={form.email}
               onChange={e => setForm({ ...form, email: e.target.value })}
+            />
+            <input
+              type="text"
+              placeholder="Apelido (ex: João Silva)"
+              value={form.nickname}
+              onChange={e => setForm({ ...form, nickname: e.target.value })}
             />
             <div className="grid grid-cols-2 gap-3">
               <input
@@ -713,6 +720,7 @@ function EditPersonForm({ person, roles, personRoles, onSave, onCancel, onDelete
 }) {
   const [name, setName] = useState(person.name || '')
   const [email, setEmail] = useState(person.email || '')
+  const [nickname, setNickname] = useState(person.nickname || '')
   const [phone, setPhone] = useState(person.phone || '')
   const [birthDate, setBirthDate] = useState(person.birth_date ? person.birth_date.substring(0, 10) : '')
   const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>(personRoles.map(r => r.id))
@@ -750,6 +758,7 @@ function EditPersonForm({ person, roles, personRoles, onSave, onCancel, onDelete
       new_email: email.trim().toLowerCase(),
       phone: phone.trim() || null,
       birth_date: birthDate || null,
+      nickname: nickname.trim() || null,
       role_ids: selectedRoleIds,
       ministry_ids: selectedMinistryIds,
     })
@@ -766,6 +775,10 @@ function EditPersonForm({ person, roles, personRoles, onSave, onCancel, onDelete
         <div>
           <label className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider block mb-1">E-mail</label>
           <input value={email} onChange={e => setEmail(e.target.value)} placeholder="E-mail" type="email" />
+        </div>
+        <div>
+          <label className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider block mb-1">Apelido (usado nas escalas)</label>
+          <input value={nickname} onChange={e => setNickname(e.target.value)} placeholder="Ex: João Silva" />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>

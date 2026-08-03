@@ -28,10 +28,10 @@ export async function GET() {
     .from('members')
     .select('id, name, email, is_leader, is_general_leader')
 
-  // Buscar dados do formulário (telefone, data nascimento)
+  // Buscar dados do formulário (telefone, data nascimento, apelido)
   const { data: signups } = await serviceClient
     .from('ministry_signups')
-    .select('name, email, phone, birth_date')
+    .select('name, email, phone, birth_date, nickname')
 
   const ministryMap: Record<string, string> = {}
   for (const m of ministries || []) ministryMap[m.id] = m.name
@@ -40,6 +40,7 @@ export async function GET() {
   const peopleMap: Record<string, {
     name: string
     email: string
+    nickname: string | null
     phone: string | null
     birth_date: string | null
     ministries: { ministry_id: string; ministry_name: string; role: string; member_id: string }[]
@@ -54,6 +55,7 @@ export async function GET() {
       peopleMap[key] = {
         name: wm.name,
         email: wm.email,
+        nickname: signup?.nickname || null,
         phone: signup?.phone || null,
         birth_date: signup?.birth_date || null,
         ministries: [],
@@ -77,6 +79,7 @@ export async function GET() {
       peopleMap[key] = {
         name: mm.name,
         email: mm.email,
+        nickname: signup?.nickname || null,
         phone: signup?.phone || null,
         birth_date: signup?.birth_date || null,
         ministries: [],
@@ -98,6 +101,7 @@ export async function GET() {
       peopleMap[key] = {
         name: signup.name,
         email: signup.email,
+        nickname: signup.nickname || null,
         phone: signup.phone || null,
         birth_date: signup.birth_date || null,
         ministries: [],
