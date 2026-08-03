@@ -11,7 +11,7 @@ interface MinistryMember { id: string; name: string; email: string | null; is_bl
 interface MinistryEvent {
   id: string; event_date: string; day_of_week: string; week_number: number;
   scale_name: string | null; num_celebrations: number;
-  assignments: { id: string; celebration_number: number; role_name: string | null; member: { id: string; name: string } | null }[]
+  assignments: { id: string; celebration_number: number; role_name: string | null; member: { id: string; name: string; nickname: string | null } | null }[]
 }
 interface MinistryRole { id: string; name: string }
 
@@ -255,7 +255,7 @@ export default function MinistryPage() {
 
         for (const col of pdfDisplayColumns) {
           const colAssignments = celAssignments.filter(a => a.role_name === col)
-          row.push(colAssignments.map(a => a.member?.name || '-').join(', ') || '-')
+          row.push(colAssignments.map(a => a.member?.nickname || a.member?.name || '-').join(', ') || '-')
         }
 
         tableData.push(row)
@@ -614,7 +614,7 @@ export default function MinistryPage() {
                                 <div className="flex flex-wrap gap-x-1.5 gap-y-0.5">
                                   {colAssignments.map((a, idx) => (
                                     <span key={a.id} className={`text-xs font-medium ${roleColors[a.role_name || ''] || 'text-white'}`}>
-                                      {a.member?.name || '-'}{idx < colAssignments.length - 1 ? ',' : ''}
+                                      {a.member?.nickname || a.member?.name || '-'}{idx < colAssignments.length - 1 ? ',' : ''}
                                     </span>
                                   ))}
                                   {colAssignments.length === 0 && <span className="text-xs text-[var(--muted-foreground)]">-</span>}

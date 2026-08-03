@@ -33,7 +33,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ slug
       schedule_id,
       assignments:ministry_assignments(
         id, celebration_number, role, role_name,
-        member:ministry_members(id, name)
+        member:ministry_members(id, name, nickname)
       )
     `)
     .gte('event_date', start)
