@@ -48,6 +48,7 @@ export default function AdminMusicasPage() {
   const [saving, setSaving] = useState(false)
   const [tab, setTab] = useState<'musicas' | 'sugestoes'>('musicas')
   const [generating, setGenerating] = useState(false)
+  const [generatingEvent, setGeneratingEvent] = useState<string | null>(null)
 
   useEffect(() => {
     loadData()
@@ -92,6 +93,26 @@ export default function AdminMusicasPage() {
       loadData()
     }
     setGenerating(false)
+  }
+
+  async function generateSongsForEvent(eventId: string, scaleName: string) {
+    const hasSongs = events.find(e => e.id === eventId)?.songs?.length || 0
+    if (hasSongs > 0) {
+      if (!confirm(`Substituir os ${hasSongs} louvores existentes de ${scaleName}?`)) return
+    }
+    setGeneratingEvent(eventId)
+    const res = await fetch('/api/gerar-louvores/individual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_id: eventId }),
+    })
+    const data = await res.json()
+    if (!res.ok) {
+      alert('Erro: ' + (data.error || 'Erro desconhecido'))
+    } else {
+      loadData()
+    }
+    setGeneratingEvent(null)
   }
 
   async function addSong(eventId: string) {
@@ -317,6 +338,14 @@ export default function AdminMusicasPage() {
                       <h4 className="font-semibold text-green-400">{event.scale_type?.name || '-'}</h4>
                     </div>
                     <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => generateSongsForEvent(event.id, event.scale_type?.name || 'este dia')}
+                        disabled={generatingEvent === event.id}
+                        className="p-2 rounded-lg text-[#58a6ff] hover:bg-[#58a6ff]/10 disabled:opacity-50"
+                        title="Gerar louvores para este dia"
+                      >
+                        {generatingEvent === event.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Music className="w-4 h-4" />}
+                      </button>
                       {event.songs.length > 0 && (
                         <button
                           onClick={async () => {
