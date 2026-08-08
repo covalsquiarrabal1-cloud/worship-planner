@@ -350,21 +350,21 @@ export default function LoginPage() {
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Entrar'}
             </button>
-
-            <button
-              type="button"
-              onClick={() => { setResetMode(true); setError('') }}
-              className="w-full py-2 text-sm text-[#58a6ff] hover:underline transition-colors"
-            >
-              Esqueci minha senha
-            </button>
           </form>
         )}
 
         {!firstAccess && !resetMode && (
-          <p className="text-xs text-[var(--muted-foreground)] text-center mt-6">
-            Primeiro acesso? Digite seu e-mail e qualquer senha — o sistema vai pedir para criar uma nova.
-          </p>
+          <>
+            <p className="text-xs text-[var(--muted-foreground)] text-center mt-6">
+              Primeiro acesso? Digite seu e-mail e qualquer senha — o sistema vai pedir para criar uma nova.
+            </p>
+            <button
+              onClick={() => { setResetMode(true); setError('') }}
+              className="w-full py-2 text-xs text-[#58a6ff] hover:underline transition-colors mt-2"
+            >
+              Esqueci minha senha
+            </button>
+          </>
         )}
 
         {/* Install App button */}
