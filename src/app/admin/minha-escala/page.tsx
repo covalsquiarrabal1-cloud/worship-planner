@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Loader2, CalendarDays, ArrowLeft } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, CalendarDays, ArrowLeft, X } from 'lucide-react'
 import Link from 'next/link'
 
 interface ScheduleEvent {
@@ -17,6 +17,14 @@ interface ScheduleEvent {
     role: string
     member: { id: string; name: string } | null
   }[]
+  songs: {
+    id: string
+    order_num: number
+    title: string
+    version: string | null
+    minister: string | null
+    youtube_url: string | null
+  }[]
 }
 
 interface MyDay {
@@ -26,6 +34,7 @@ interface MyDay {
   role: string
   type: 'louvor' | 'ministerio'
   ministryName?: string
+  eventId?: string
 }
 
 const roleLabels: Record<string, string> = {
@@ -39,11 +48,16 @@ const roleLabels: Record<string, string> = {
   back: 'Back',
 }
 
+const vocalRoles = ['vocal_1', 'vocal_2', 'vocal_3']
+const instrumentRoles = ['bateria', 'guitarra', 'baixo', 'teclado']
+
 export default function MinhaEscalaPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [days, setDays] = useState<MyDay[]>([])
+  const [allEvents, setAllEvents] = useState<ScheduleEvent[]>([])
   const [loading, setLoading] = useState(true)
   const [memberName, setMemberName] = useState('')
+  const [selectedEvent, setSelectedEvent] = useState<ScheduleEvent | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
@@ -75,6 +89,7 @@ export default function MinhaEscalaPage() {
     const worshipRes = await fetch(`/api/schedule-events?start=${start}&end=${end}`)
     if (worshipRes.ok && name) {
       const events: ScheduleEvent[] = await worshipRes.json()
+      setAllEvents(events)
       for (const event of events) {
         for (const assignment of event.assignments) {
           if (assignment.member?.name?.toUpperCase() === name.toUpperCase()) {
@@ -84,6 +99,7 @@ export default function MinhaEscalaPage() {
               scaleName: event.scale_type?.name || '-',
               role: assignment.role,
               type: 'louvor',
+              eventId: event.id,
             })
             break
           }
@@ -110,6 +126,12 @@ export default function MinhaEscalaPage() {
     unified.sort((a, b) => a.date.localeCompare(b.date))
     setDays(unified)
     setLoading(false)
+  }
+
+  function openEventDetail(day: MyDay) {
+    if (day.type !== 'louvor' || !day.eventId) return
+    const event = allEvents.find(e => e.id === day.eventId)
+    if (event) setSelectedEvent(event)
   }
 
   return (
@@ -176,7 +198,11 @@ export default function MinhaEscalaPage() {
           {days.map((day, idx) => {
             const dateObj = new Date(day.date + 'T12:00:00')
             return (
-              <div key={idx} className="card relative flex items-center gap-4">
+              <div
+                key={idx}
+                className={`card relative flex items-center gap-4 ${day.type === 'louvor' ? 'cursor-pointer active:scale-[0.98] transition-transform' : ''}`}
+                onClick={() => openEventDetail(day)}
+              >
                 <div className="absolute inset-0 rounded-2xl border-flow-card" style={{ '--flow-color': day.type === 'louvor' ? '#22c55e' : '#58a6ff' } as React.CSSProperties} />
                 <div className="relative flex items-center gap-4 w-full">
                 {/* Date */}
@@ -195,10 +221,132 @@ export default function MinhaEscalaPage() {
                     }
                   </p>
                 </div>
+
+                {day.type === 'louvor' && (
+                  <ChevronRight className="w-4 h-4 text-[var(--muted-foreground)] shrink-0" />
+                )}
                 </div>
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Event Detail Modal */}
+      {selectedEvent && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => setSelectedEvent(null)}
+        >
+          <div
+            className="w-full max-w-md max-h-[85vh] rounded-2xl overflow-hidden bg-[var(--card)] border border-[var(--border)] shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-6 py-5 border-b border-[var(--border)] flex items-center justify-between">
+              <div>
+                <p className="text-xs text-[var(--muted-foreground)] capitalize">
+                  {selectedEvent.day_of_week}, {format(new Date(selectedEvent.event_date + 'T12:00:00'), "dd 'de' MMMM", { locale: ptBR })}
+                </p>
+                <h3 className="text-lg font-bold text-green-400">{selectedEvent.scale_type?.name || '-'}</h3>
+              </div>
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="p-2 rounded-lg hover:bg-[var(--accent)]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="px-6 py-5 overflow-y-auto max-h-[65vh] space-y-5">
+              {/* Vocais */}
+              {(() => {
+                const vocals = selectedEvent.assignments
+                  .filter(a => vocalRoles.includes(a.role))
+                  .sort((a, b) => a.role.localeCompare(b.role))
+                return vocals.length > 0 ? (
+                  <div>
+                    <h4 className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wide mb-2">Vocais</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {vocals.map(a => (
+                        <span key={a.id} className="badge-vocal">
+                          🎤 {roleLabels[a.role]} {a.member?.name || '-'}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null
+              })()}
+
+              {/* Louvores */}
+              {selectedEvent.songs && selectedEvent.songs.length > 0 && (
+                <div>
+                  <h4 className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wide mb-2">Louvores</h4>
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-[var(--border)]">
+                        <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold w-8">#</th>
+                        <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold">Louvor</th>
+                        <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold">Versão</th>
+                        <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold">Ministro</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[...selectedEvent.songs].sort((a, b) => a.order_num - b.order_num).map(song => (
+                        <tr key={song.id} className="border-b border-[var(--border)]/30">
+                          <td className="py-2 px-1 text-center font-bold">{song.order_num}</td>
+                          <td className="py-2 px-1 font-medium">{song.title}</td>
+                          <td className="py-2 px-1 text-[var(--muted-foreground)]">{song.version || '-'}</td>
+                          <td className={`py-2 px-1 ${song.minister && memberName && song.minister.toUpperCase().includes(memberName.toUpperCase()) ? 'text-green-400 font-bold' : ''}`}>
+                            {song.minister || '-'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Músicos */}
+              {(() => {
+                const instruments = selectedEvent.assignments
+                  .filter(a => instrumentRoles.includes(a.role) || (!vocalRoles.includes(a.role) && !instrumentRoles.includes(a.role)))
+                  .sort((a, b) => {
+                    const order = instrumentRoles
+                    const aIdx = order.indexOf(a.role)
+                    const bIdx = order.indexOf(b.role)
+                    if (aIdx === -1 && bIdx === -1) return a.role.localeCompare(b.role)
+                    if (aIdx === -1) return 1
+                    if (bIdx === -1) return -1
+                    return aIdx - bIdx
+                  })
+                return instruments.length > 0 ? (
+                  <div>
+                    <h4 className="text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wide mb-2">Músicos</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {instruments.map(a => {
+                        const badgeClass = a.role === 'guitarra' ? 'badge-guitar' : a.role === 'baixo' ? 'badge-bass' : a.role === 'bateria' ? 'badge-drums' : 'badge-keys'
+                        const icon = a.role === 'guitarra' ? '🎸' : a.role === 'baixo' ? '🎸' : a.role === 'bateria' ? '🥁' : '🎹'
+                        return (
+                          <span key={a.id} className={badgeClass}>
+                            {icon} {roleLabels[a.role] || a.role} {a.member?.name || '-'}
+                          </span>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ) : null
+              })()}
+
+              {/* Empty state */}
+              {selectedEvent.songs.length === 0 && selectedEvent.assignments.length === 0 && (
+                <p className="text-sm text-[var(--muted-foreground)] text-center py-4">
+                  Nenhum detalhe disponível para este evento.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
