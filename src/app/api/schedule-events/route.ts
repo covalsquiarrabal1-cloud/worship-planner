@@ -40,7 +40,7 @@ export async function GET(request: Request) {
       assignments:schedule_assignments(
         id,
         role,
-        member:members(id, name, email, nickname)
+        member:members(id, name, email)
       ),
       songs(id, order_num, title, version, minister, youtube_url)
     `)
