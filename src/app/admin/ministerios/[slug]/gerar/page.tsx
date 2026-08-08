@@ -68,7 +68,10 @@ export default function GerarEscalaMinisterioPage() {
         scaleName: event.scale_type?.name || '',
         numCelebrations: event.day_of_week?.toLowerCase().includes('domingo') ? 2 : 1,
         uid: crypto.randomUUID(),
-        selected: true,
+        // For intercessao-alive and conexao-alive, pre-select only Saturdays (ALIVE)
+        selected: (slug === 'intercessao-alive' || slug === 'conexao-alive')
+          ? event.day_of_week?.toLowerCase().includes('sábado') || event.day_of_week?.toLowerCase().includes('sabado')
+          : true,
       }))
       setDays(newDays)
     } else {

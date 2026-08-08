@@ -46,26 +46,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
 
   const members = membersData || []
   if (members.length === 0) {
-    return NextResponse.json({ error: 'Nenhum membro cadastrado neste ministério' }, { status: 400 })
+    return NextResponse.json({ error: 'Nenhum membro cadastrado' }, { status: 400 })
   }
 
-  // --- Check conflicts with main worship schedule ---
-  // Get all dates we'll be scheduling
+  // Check conflicts with main worship schedule
   const allDates = selectedDays.map(d => d.date)
-
-  // Get main schedule events for those dates
   const { data: mainEvents } = await serviceClient
     .from('schedule_events')
-    .select(`
-      id, event_date,
-      assignments:schedule_assignments(
-        id, role,
-        member:members(id, name, email)
-      )
-    `)
+    .select(`id, event_date, assignments:schedule_assignments(id, role, member:members(id, name, email))`)
     .in('event_date', allDates)
 
-  // Build a map: date -> set of emails that are busy in the main schedule
   const busyByDate: Record<string, Set<string>> = {}
   for (const event of mainEvents || []) {
     if (!busyByDate[event.event_date]) busyByDate[event.event_date] = new Set()
@@ -85,33 +75,252 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     .single()
 
   let scheduleId: string
-
   if (existingSchedule) {
     scheduleId = existingSchedule.id
+    const { data: oldEvents } = await serviceClient
+      .from('ministry_events').select('id').eq('schedule_id', scheduleId)
+    if (oldEvents && oldEvents.length > 0) {
+      await serviceClient.from('ministry_assignments').delete().in('event_id', oldEvents.map(e => e.id))
+    }
     await serviceClient.from('ministry_events').delete().eq('schedule_id', scheduleId)
   } else {
     const { data: newSchedule, error: schedErr } = await serviceClient
       .from('ministry_schedules')
       .insert({ ministry_id: ministry.id, month, year, is_published: true })
-      .select('id')
-      .single()
+      .select('id').single()
     if (schedErr || !newSchedule) {
       return NextResponse.json({ error: 'Erro ao criar schedule: ' + schedErr?.message }, { status: 500 })
     }
     scheduleId = newSchedule.id
   }
 
-  // Round-robin assignment
-  let memberIndex = 0
   const sortedDays = [...selectedDays].sort((a, b) => a.date.localeCompare(b.date))
   const conflicts: string[] = []
+
+  // === INTERCESSÃO: Role-based generation ===
+  if (slug === 'intercessao' || slug === 'intercessao-alive') {
+    // Load member roles
+    const { data: memberRoles } = await serviceClient
+      .from('intercessao_member_roles')
+      .select('member_id, role_type')
+
+    // Load event config
+    const { data: eventConfigs } = await serviceClient
+      .from('intercessao_event_config')
+      .select('scale_name, role_type, num_people, gender_filter')
+
+    if (!eventConfigs || eventConfigs.length === 0) {
+      return NextResponse.json({
+        error: 'Configuração de eventos não encontrada. Configure em CONFIG primeiro.'
+      }, { status: 400 })
+    }
+
+    // Build role map: member_id -> role_types[]
+    const roleMap: Record<string, string[]> = {}
+    for (const r of memberRoles || []) {
+      if (!roleMap[r.member_id]) roleMap[r.member_id] = []
+      roleMap[r.member_id].push(r.role_type)
+    }
+
+    // Build config map: scale_name -> { role_type: { num_people, gender_filter } }
+    const configMap: Record<string, Record<string, { num_people: number; gender_filter: string }>> = {}
+    for (const cfg of eventConfigs) {
+      if (!configMap[cfg.scale_name]) configMap[cfg.scale_name] = {}
+      configMap[cfg.scale_name][cfg.role_type] = {
+        num_people: cfg.num_people,
+        gender_filter: cfg.gender_filter,
+      }
+    }
+
+    // Round-robin trackers per role
+    const roleCounters: Record<string, number> = {
+      torre_domingo: 0, torre_sexta: 0, torre_strong: 0, torre_empoderadas: 0,
+      intercessor: 0, coluna: 0, suporte: 0,
+    }
+
+    // Get members eligible for each role (filtered by gender when needed)
+    function getEligibleMembers(roleType: string, genderFilter: string): any[] {
+      return members.filter(m => {
+        const roles = roleMap[m.id] || []
+        if (!roles.includes(roleType)) return false
+        if (genderFilter === 'male' && m.gender !== 'male') return false
+        if (genderFilter === 'female' && m.gender !== 'female') return false
+        return true
+      })
+    }
+
+    // Determine torre role key based on scale
+    function getTorreKey(scaleName: string, dayOfWeek: string): string {
+      const upper = scaleName.toUpperCase()
+      if (upper.includes('STRONG')) return 'torre_strong'
+      if (upper.includes('EMPODERADA')) return 'torre_empoderadas'
+      if (dayOfWeek.toLowerCase().includes('domingo')) return 'torre_domingo'
+      return 'torre_sexta'
+    }
+
+    for (const day of sortedDays) {
+      const dateObj = new Date(day.date + 'T12:00:00')
+      const weekNum = Math.ceil(dateObj.getDate() / 7)
+      const numCelebrations = day.numCelebrations || 1
+      const scaleName = (day.scaleName || '').toUpperCase()
+
+      // Find matching config
+      let config = configMap[scaleName]
+      if (!config) {
+        // Try partial match
+        const matchKey = Object.keys(configMap).find(k => scaleName.includes(k) || k.includes(scaleName))
+        if (matchKey) config = configMap[matchKey]
+      }
+      if (!config) config = configMap['CELEBRAÇÃO'] || {}
+
+      // Create event
+      const { data: event, error: eventErr } = await serviceClient
+        .from('ministry_events')
+        .insert({
+          schedule_id: scheduleId,
+          event_date: day.date,
+          day_of_week: day.dayOfWeek,
+          week_number: weekNum,
+          scale_name: day.scaleName || null,
+          num_celebrations: numCelebrations,
+        })
+        .select('id').single()
+
+      if (eventErr || !event) continue
+
+      const assignments: { event_id: string; member_id: string; celebration_number: number; role: string; role_name: string }[] = []
+      const assignedThisEvent = new Set<string>()
+      const busyEmails = busyByDate[day.date] || new Set()
+
+      // Pre-select Torre for the event (same Torre for all celebrations)
+      const torreConfig = config['torre']
+      let selectedTorreId: string | null = null
+      if (torreConfig && torreConfig.num_people > 0) {
+        const torreKey = getTorreKey(day.scaleName || '', day.dayOfWeek)
+        const torreEligible = getEligibleMembers(torreKey, torreConfig.gender_filter)
+        if (torreEligible.length > 0) {
+          // Find a torre not busy
+          let found = false
+          for (let a = 0; a < torreEligible.length; a++) {
+            const candidate = torreEligible[roleCounters[torreKey] % torreEligible.length]
+            roleCounters[torreKey] = (roleCounters[torreKey] || 0) + 1
+            const email = candidate.email?.toLowerCase() || ''
+            if (email && busyEmails.has(email)) continue
+            selectedTorreId = candidate.id
+            found = true
+            break
+          }
+          if (!found && torreEligible.length > 0) {
+            selectedTorreId = torreEligible[0].id
+          }
+        }
+      }
+
+      // For each celebration
+      for (let c = 1; c <= numCelebrations; c++) {
+        const assignedThisCelebration = new Set<string>()
+
+        // Assign Torre first (same for all celebrations)
+        if (selectedTorreId) {
+          assignments.push({
+            event_id: event.id,
+            member_id: selectedTorreId,
+            celebration_number: c,
+            role: 'operator',
+            role_name: 'Torre',
+          })
+          assignedThisCelebration.add(selectedTorreId)
+        }
+
+        // Process remaining roles: intercessor, coluna, suporte
+        // These CANNOT repeat between celebrations on the same day
+        const roleOrder = ['intercessor', 'coluna', 'suporte']
+
+        for (const baseRole of roleOrder) {
+          const roleConfig = config[baseRole]
+          if (!roleConfig || roleConfig.num_people <= 0) continue
+
+          const genderFilter = roleConfig.gender_filter
+          const numPeople = roleConfig.num_people >= 99
+            ? 999 // "all" mode
+            : roleConfig.num_people
+
+          const roleKey = baseRole
+          const eligible = getEligibleMembers(roleKey, genderFilter)
+          if (eligible.length === 0) continue
+
+          // For "all" mode (99+), assign everyone eligible
+          const count = numPeople >= 999 ? eligible.length : numPeople
+
+          let assigned = 0
+          let attempts = 0
+          const maxAttempts = eligible.length * 2
+
+          while (assigned < count && attempts < maxAttempts) {
+            const counterKey = roleKey
+            const member = eligible[roleCounters[counterKey] % eligible.length]
+            roleCounters[counterKey] = (roleCounters[counterKey] || 0) + 1
+            attempts++
+
+            // Skip if already assigned in this celebration
+            if (assignedThisCelebration.has(member.id)) continue
+
+            // Skip if already assigned in another celebration of the same event
+            // (intercessors, coluna, suporte cannot repeat between C1 and C2)
+            if (assignedThisEvent.has(member.id)) continue
+
+            // Skip if busy in main schedule
+            const memberEmail = member.email?.toLowerCase() || ''
+            if (memberEmail && busyEmails.has(memberEmail)) {
+              const dateFormatted = day.date.slice(8, 10) + '/' + day.date.slice(5, 7)
+              conflicts.push(`${member.name} já está no louvor dia ${dateFormatted}`)
+              continue
+            }
+
+            const roleName = baseRole === 'intercessor' ? 'Intercessor'
+              : baseRole === 'coluna' ? 'Coluna'
+              : 'Suporte'
+
+            assignments.push({
+              event_id: event.id,
+              member_id: member.id,
+              celebration_number: c,
+              role: 'operator',
+              role_name: roleName,
+            })
+            assignedThisCelebration.add(member.id)
+            assignedThisEvent.add(member.id)
+            assigned++
+          }
+        }
+      }
+
+      if (assignments.length > 0) {
+        await serviceClient.from('ministry_assignments').insert(assignments)
+      }
+    }
+
+    return NextResponse.json({ success: true, eventsCreated: sortedDays.length, conflicts })
+  }
+
+  // === GENERIC MINISTRIES: Simple round-robin ===
+  let memberIndex = 0
+
+  const { data: scaleConfigs } = await serviceClient
+    .from('ministry_scale_config')
+    .select('scale_name, num_people')
+    .eq('ministry_id', ministry.id)
+
+  const genericConfigMap: Record<string, number> = {}
+  for (const cfg of scaleConfigs || []) {
+    genericConfigMap[cfg.scale_name] = cfg.num_people
+  }
 
   for (const day of sortedDays) {
     const dateObj = new Date(day.date + 'T12:00:00')
     const weekNum = Math.ceil(dateObj.getDate() / 7)
     const numCelebrations = day.numCelebrations || 1
 
-    // Create event
     const { data: event, error: eventErr } = await serviceClient
       .from('ministry_events')
       .insert({
@@ -122,50 +331,36 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
         scale_name: day.scaleName || null,
         num_celebrations: numCelebrations,
       })
-      .select('id')
-      .single()
+      .select('id').single()
 
     if (eventErr || !event) continue
 
-    // Assign one person per celebration (round-robin, skipping members busy in main schedule)
+    const numPeople = genericConfigMap[day.scaleName] || 1
     const assignments: { event_id: string; member_id: string; celebration_number: number }[] = []
     const busyEmails = busyByDate[day.date] || new Set()
 
     for (let c = 1; c <= numCelebrations; c++) {
-      let assigned = false
-      let attempts = 0
-
-      // Try to find a member not busy in the main schedule
-      while (!assigned && attempts < members.length) {
-        const member = members[memberIndex % members.length]
-        const memberEmail = member.email?.toLowerCase() || ''
-        memberIndex++
-        attempts++
-
-        // Skip if this member is in the main worship schedule for this date
-        if (memberEmail && busyEmails.has(memberEmail)) {
-          const dateFormatted = day.date.slice(8,10) + '/' + day.date.slice(5,7)
-          conflicts.push(`${member.name} já está escalado(a) no louvor dia ${dateFormatted}`)
-          continue
+      for (let p = 0; p < numPeople; p++) {
+        let assigned = false
+        let attempts = 0
+        while (!assigned && attempts < members.length) {
+          const member = members[memberIndex % members.length]
+          const memberEmail = member.email?.toLowerCase() || ''
+          memberIndex++
+          attempts++
+          if (memberEmail && busyEmails.has(memberEmail)) {
+            const dateFormatted = day.date.slice(8, 10) + '/' + day.date.slice(5, 7)
+            conflicts.push(`${member.name} já está no louvor dia ${dateFormatted}`)
+            continue
+          }
+          assignments.push({ event_id: event.id, member_id: member.id, celebration_number: c })
+          assigned = true
         }
-
-        assignments.push({
-          event_id: event.id,
-          member_id: member.id,
-          celebration_number: c,
-        })
-        assigned = true
-      }
-
-      // If all members are busy, assign the next in round-robin anyway
-      if (!assigned) {
-        const member = members[memberIndex % members.length]
-        assignments.push({
-          event_id: event.id,
-          member_id: member.id,
-          celebration_number: c,
-        })
-        memberIndex++
+        if (!assigned) {
+          const member = members[memberIndex % members.length]
+          assignments.push({ event_id: event.id, member_id: member.id, celebration_number: c })
+          memberIndex++
+        }
       }
     }
 

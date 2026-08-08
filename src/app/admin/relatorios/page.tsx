@@ -139,7 +139,7 @@ export default function RelatoriosPage() {
         </h3>
 
         {/* Louvor */}
-        <div className="card overflow-hidden">
+        <div className="card">
           <button
             onClick={() => toggleExpand('louvor')}
             className="w-full flex items-center justify-between"
@@ -174,7 +174,7 @@ export default function RelatoriosPage() {
 
         {/* Ministries */}
         {data.ministryStats.map(m => (
-          <div key={m.id} className="card overflow-hidden">
+          <div key={m.id} className="card">
             <button
               onClick={() => toggleExpand(m.slug)}
               className="w-full flex items-center justify-between"
@@ -545,7 +545,7 @@ function CadastroSection({
             .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
             .filter(p => !filterNoRole || (p.ministries.length === 0 && (!p.person_roles || p.person_roles.length === 0 || (p.person_roles.length === 1 && p.person_roles[0] === 'Membro'))))
             .map((person, idx) => (
-            <div key={idx} className="card overflow-hidden">
+            <div key={idx} className="card">
               {editingPerson === person.email ? (
                 <EditPersonForm
                   person={person}
@@ -770,7 +770,7 @@ function EditPersonForm({ person, roles, personRoles, onSave, onCancel, onDelete
       <div className="space-y-3">
         <div>
           <label className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider block mb-1">Nome</label>
-          <input value={name} onChange={e => setName(e.target.value)} placeholder="Nome completo" />
+          <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Nome completo" />
         </div>
         <div>
           <label className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider block mb-1">E-mail</label>
@@ -778,7 +778,7 @@ function EditPersonForm({ person, roles, personRoles, onSave, onCancel, onDelete
         </div>
         <div>
           <label className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider block mb-1">Apelido (usado nas escalas)</label>
-          <input value={nickname} onChange={e => setNickname(e.target.value)} placeholder="Ex: João Silva" />
+          <input type="text" value={nickname} onChange={e => setNickname(e.target.value)} placeholder="Ex: João Silva" />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>

@@ -32,11 +32,16 @@ export default function EscalasMinisteriosAdminPage() {
   const [loading, setLoading] = useState(true)
   const [loadingEvents, setLoadingEvents] = useState(false)
   const [bgImage, setBgImage] = useState<string | null>(null)
+  const [ministriesWithSchedule, setMinistriesWithSchedule] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     loadMinistries()
     loadBackground()
   }, [])
+
+  useEffect(() => {
+    if (ministries.length > 0) loadScheduleStatus()
+  }, [ministries, currentDate])
 
   async function loadBackground() {
     const res = await fetch('/api/app-settings?key=escalas_gerais_bg')
@@ -57,6 +62,16 @@ export default function EscalasMinisteriosAdminPage() {
       setMinistries(data.filter((m: any) => m.slug !== 'louvor'))
     }
     setLoading(false)
+  }
+
+  async function loadScheduleStatus() {
+    const month = currentDate.getMonth() + 1
+    const year = currentDate.getFullYear()
+    const res = await fetch(`/api/ministries/schedule-status-all?month=${month}&year=${year}`)
+    if (res.ok) {
+      const data = await res.json()
+      setMinistriesWithSchedule(new Set(data.ministryIds || []))
+    }
   }
 
   async function loadEvents() {
@@ -125,30 +140,42 @@ export default function EscalasMinisteriosAdminPage() {
                 {allGroups.map((items, idx) => (
                   <div key={idx} className="flex flex-wrap justify-center gap-4">
                     {items.map(m => (
-                      <button
+                      <a
                         key={m.id}
-                        onClick={() => setSelectedMinistry(selectedMinistry === m.id ? null : m.id)}
-                        className={`flex flex-col items-center gap-1.5 transition-all active:scale-90 ${
-                          selectedMinistry === m.id ? 'scale-105' : 'hover:scale-105'
-                        }`}
+                        href={`/admin/ministerios/${m.slug}`}
+                        className="flex flex-col items-center gap-1.5 transition-all active:scale-90 hover:scale-105"
                       >
-                        <div className={`w-[60px] h-[60px] rounded-[14px] flex items-center justify-center shadow-lg transition-all ${
-                          selectedMinistry === m.id
-                            ? 'bg-[#58a6ff]/20 border-2 border-[#58a6ff] shadow-[0_0_16px_rgba(88,166,255,0.3)]'
+                        <div className={`relative w-[60px] h-[60px] rounded-[14px] flex items-center justify-center shadow-lg transition-all ${
+                          ministriesWithSchedule.has(m.id)
+                            ? 'glow-border-green'
                             : 'bg-[#1c2128]/80 border border-[#30363d]/60 hover:border-[#58a6ff]/50'
                         }`}>
-                          <img
-                            src={getMinistryIcon3D(m.slug)}
-                            alt={m.name}
-                            className="w-[36px] h-[36px] object-contain"
-                          />
+                          {ministriesWithSchedule.has(m.id) && (
+                            <div className="absolute inset-[-2px] rounded-[16px] animate-spin-slow" style={{
+                              background: 'conic-gradient(from 0deg, transparent, #22c55e, #4ade80, transparent, #22c55e, transparent)',
+                              mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                              maskComposite: 'xor',
+                              WebkitMaskComposite: 'xor',
+                              padding: '2px',
+                              borderRadius: '16px',
+                            }} />
+                          )}
+                          <div className={`w-full h-full rounded-[14px] flex items-center justify-center ${
+                            ministriesWithSchedule.has(m.id) ? 'bg-[#1c2128]' : ''
+                          }`}>
+                            <img
+                              src={getMinistryIcon3D(m.slug)}
+                              alt={m.name}
+                              className="w-[36px] h-[36px] object-contain"
+                            />
+                          </div>
                         </div>
                         <span className={`text-[9px] text-center leading-tight font-medium w-[65px] break-words ${
-                          selectedMinistry === m.id ? 'text-[#58a6ff]' : 'text-[var(--muted-foreground)]'
+                          ministriesWithSchedule.has(m.id) ? 'text-green-400' : 'text-[var(--muted-foreground)]'
                         }`}>
                           {m.name}
                         </span>
-                      </button>
+                      </a>
                     ))}
                   </div>
                 ))}

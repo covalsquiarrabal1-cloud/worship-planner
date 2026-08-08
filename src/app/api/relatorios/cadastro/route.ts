@@ -15,7 +15,7 @@ export async function GET() {
   // Buscar todos os membros de ministérios
   const { data: ministryMembers } = await serviceClient
     .from('ministry_members')
-    .select('id, name, email, role, ministry_id')
+    .select('id, name, email, role, ministry_id, nickname')
     .order('name')
 
   // Buscar ministérios
@@ -79,11 +79,14 @@ export async function GET() {
       peopleMap[key] = {
         name: mm.name,
         email: mm.email,
-        nickname: signup?.nickname || null,
+        nickname: signup?.nickname || (mm as any).nickname || null,
         phone: signup?.phone || null,
         birth_date: signup?.birth_date || null,
         ministries: [],
       }
+    } else if (!peopleMap[key].nickname && (mm as any).nickname) {
+      // Fill nickname from ministry_members if signup didn't have it
+      peopleMap[key].nickname = (mm as any).nickname
     }
     peopleMap[key].ministries.push({
       ministry_id: mm.ministry_id,
@@ -152,7 +155,7 @@ export async function PUT(request: Request) {
   if (profile?.role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   const body = await request.json()
-  const { old_email, new_name, new_email } = body
+  const { old_email, new_name, new_email, phone, birth_date, nickname, role_ids, ministry_ids } = body
 
   if (!old_email || !new_name) return NextResponse.json({ error: 'Dados incompletos' }, { status: 400 })
 
@@ -168,16 +171,41 @@ export async function PUT(request: Request) {
     .update({ name: capitalizedName, email: normalizedNewEmail })
     .ilike('email', old_email)
 
-  // Atualizar em ministry_signups
+  // Atualizar em ministry_signups (name, email, phone, birth_date, nickname)
+  const signupUpdate: Record<string, any> = { name: capitalizedName, email: normalizedNewEmail }
+  if (phone !== undefined) signupUpdate.phone = phone
+  if (birth_date !== undefined) signupUpdate.birth_date = birth_date
+  if (nickname !== undefined) signupUpdate.nickname = nickname
+
   await serviceClient
     .from('ministry_signups')
-    .update({ name: capitalizedName, email: normalizedNewEmail })
+    .update(signupUpdate)
     .ilike('email', old_email)
 
+  // If no signup record exists, create one
+  const { data: existingSignup } = await serviceClient
+    .from('ministry_signups')
+    .select('id')
+    .ilike('email', old_email)
+    .limit(1)
+    .single()
+
+  if (!existingSignup) {
+    await serviceClient.from('ministry_signups').insert({
+      name: capitalizedName,
+      email: normalizedNewEmail,
+      phone: phone || null,
+      birth_date: birth_date || null,
+      nickname: nickname || null,
+    })
+  }
+
   // Atualizar em members (louvor)
+  const membersUpdate: Record<string, any> = { name: capitalizedName, email: normalizedNewEmail }
+  if (nickname !== undefined) membersUpdate.nickname = nickname
   await serviceClient
     .from('members')
-    .update({ name: capitalizedName, email: normalizedNewEmail })
+    .update(membersUpdate)
     .ilike('email', old_email)
 
   // Atualizar em profiles
@@ -185,6 +213,53 @@ export async function PUT(request: Request) {
     .from('profiles')
     .update({ full_name: capitalizedName, email: normalizedNewEmail })
     .ilike('email', old_email)
+
+  // Update person roles if provided
+  if (role_ids && Array.isArray(role_ids)) {
+    await serviceClient
+      .from('member_person_roles')
+      .delete()
+      .eq('member_email', old_email.toLowerCase())
+
+    if (role_ids.length > 0) {
+      const roleRows = role_ids.map((role_id: string) => ({
+        member_email: normalizedNewEmail,
+        role_id,
+      }))
+      await serviceClient.from('member_person_roles').insert(roleRows)
+    }
+  }
+
+  // Update ministry memberships if provided
+  if (ministry_ids && Array.isArray(ministry_ids)) {
+    // Get current ministries for this person
+    const { data: currentMemberships } = await serviceClient
+      .from('ministry_members')
+      .select('id, ministry_id')
+      .ilike('email', old_email)
+
+    const currentMinistryIds = (currentMemberships || []).map(m => m.ministry_id)
+    const targetMinistryIds = ministry_ids as string[]
+
+    // Add new ones
+    for (const mid of targetMinistryIds) {
+      if (!currentMinistryIds.includes(mid)) {
+        await serviceClient.from('ministry_members').insert({
+          ministry_id: mid,
+          name: capitalizedName,
+          email: normalizedNewEmail,
+          is_blocked: false,
+        })
+      }
+    }
+
+    // Remove old ones
+    for (const membership of currentMemberships || []) {
+      if (!targetMinistryIds.includes(membership.ministry_id)) {
+        await serviceClient.from('ministry_members').delete().eq('id', membership.id)
+      }
+    }
+  }
 
   return NextResponse.json({ success: true })
 }

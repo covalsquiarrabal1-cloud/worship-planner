@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -176,7 +176,9 @@ export default function MinhaEscalaPage() {
           {days.map((day, idx) => {
             const dateObj = new Date(day.date + 'T12:00:00')
             return (
-              <div key={idx} className="card flex items-center gap-4">
+              <div key={idx} className="card relative flex items-center gap-4">
+                <div className="absolute inset-0 rounded-2xl border-flow-card" style={{ '--flow-color': day.type === 'louvor' ? '#22c55e' : '#58a6ff' } as React.CSSProperties} />
+                <div className="relative flex items-center gap-4 w-full">
                 {/* Date */}
                 <div className="shrink-0 text-center min-w-[50px]">
                   <p className="text-lg font-bold">{format(dateObj, 'dd')}</p>
@@ -192,6 +194,7 @@ export default function MinhaEscalaPage() {
                       : `⛪ ${day.ministryName}`
                     }
                   </p>
+                </div>
                 </div>
               </div>
             )

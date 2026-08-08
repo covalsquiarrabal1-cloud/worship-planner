@@ -81,12 +81,13 @@ export async function PUT(request: Request) {
 
   const capitalizedName = capitalizeName(new_name)
   const normalizedNewEmail = new_email ? new_email.trim().toLowerCase() : old_email.toLowerCase()
-  const finalNickname = nickname?.trim() || generateNickname(capitalizedName)
+  // Use exactly what the user typed - don't auto-generate
+  const finalNickname = nickname !== undefined && nickname !== null ? nickname.trim() : null
 
   // Update ministry_members (name + nickname)
   await serviceClient
     .from('ministry_members')
-    .update({ name: capitalizedName, email: normalizedNewEmail, nickname: finalNickname })
+    .update({ name: capitalizedName, email: normalizedNewEmail, nickname: finalNickname || generateNickname(capitalizedName) })
     .ilike('email', old_email)
 
   // Update ministry_signups
@@ -96,21 +97,29 @@ export async function PUT(request: Request) {
     .ilike('email', old_email)
     .limit(1)
 
+  const signupData = {
+    name: capitalizedName,
+    email: normalizedNewEmail,
+    phone: phone || null,
+    birth_date: birth_date || null,
+    nickname: finalNickname || generateNickname(capitalizedName),
+  }
+
   if (existingSignup && existingSignup.length > 0) {
     await serviceClient
       .from('ministry_signups')
-      .update({ name: capitalizedName, email: normalizedNewEmail, phone: phone || null, birth_date: birth_date || null, nickname: finalNickname })
+      .update(signupData)
       .ilike('email', old_email)
   } else {
     await serviceClient
       .from('ministry_signups')
-      .insert({ name: capitalizedName, email: normalizedNewEmail, phone: phone || null, birth_date: birth_date || null, nickname: finalNickname })
+      .insert(signupData)
   }
 
-  // Update members (louvor)
+  // Update members (louvor) - include nickname
   await serviceClient
     .from('members')
-    .update({ name: capitalizedName, email: normalizedNewEmail })
+    .update({ name: capitalizedName, email: normalizedNewEmail, nickname: finalNickname || generateNickname(capitalizedName) })
     .ilike('email', old_email)
 
   // Update profiles

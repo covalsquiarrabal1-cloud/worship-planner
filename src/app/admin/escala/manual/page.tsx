@@ -106,19 +106,24 @@ export default function EscalaManualPage() {
       .select('id')
       .eq('month', monthNum)
       .eq('year', yearNum)
-      .single()
+      .maybeSingle()
 
     let scheduleId: string
 
     if (existingSchedule) {
       scheduleId = existingSchedule.id
     } else {
-      const { data: newSchedule } = await supabase
+      const { data: newSchedule, error: schedErr } = await supabase
         .from('schedules')
         .insert({ month: monthNum, year: yearNum })
         .select('id')
         .single()
-      scheduleId = newSchedule!.id
+      if (schedErr || !newSchedule) {
+        alert('Erro ao criar escala: ' + (schedErr?.message || 'Erro desconhecido'))
+        setSaving(false)
+        return
+      }
+      scheduleId = newSchedule.id
     }
 
     // Check if event already exists for this date
@@ -127,7 +132,7 @@ export default function EscalaManualPage() {
       .select('id')
       .eq('schedule_id', scheduleId)
       .eq('event_date', selectedDate)
-      .single()
+      .maybeSingle()
 
     let eventId: string
 
@@ -145,7 +150,7 @@ export default function EscalaManualPage() {
         })
         .eq('id', eventId)
     } else {
-      const { data: newEvent } = await supabase
+      const { data: newEvent, error: evErr } = await supabase
         .from('schedule_events')
         .insert({
           schedule_id: scheduleId,
@@ -156,7 +161,12 @@ export default function EscalaManualPage() {
         })
         .select('id')
         .single()
-      eventId = newEvent!.id
+      if (evErr || !newEvent) {
+        alert('Erro ao criar evento: ' + (evErr?.message || 'Erro desconhecido'))
+        setSaving(false)
+        return
+      }
+      eventId = newEvent.id
     }
 
     // Insert assignments

@@ -53,13 +53,13 @@ export default async function MemberLayout({
 
   return (
     <div className="min-h-screen pb-safe">
-      <header className="sticky top-0 z-40 bg-[var(--background)] border-b border-[var(--border)] px-4 py-3 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-[var(--background)] border-b border-[var(--border)] px-6 py-3 flex items-center justify-between">
         <div className="w-8" />
         <h1 className="text-lg font-bold">Worship Planner</h1>
         <LogoutButton />
       </header>
       {isLeader && (
-        <div className="px-4 pt-3">
+        <div className="px-6 pt-3">
           <Link
             href="/lider"
             className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-[#58a6ff]/10 border border-[#58a6ff]/30 text-[#58a6ff] text-sm font-medium hover:bg-[#58a6ff]/20 transition-colors"
@@ -68,7 +68,7 @@ export default async function MemberLayout({
           </Link>
         </div>
       )}
-      <main className="px-4 py-4">
+      <main className="px-6 py-4">
         {children}
       </main>
       <MemberBottomNav showMusicas={isWorshipMember} showAllSchedules={canViewAllSchedules} />

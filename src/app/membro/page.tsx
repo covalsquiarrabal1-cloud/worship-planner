@@ -241,7 +241,9 @@ export default function MemberSchedulePage() {
             const shouldHideNames = hideOtherMembers && !imOnThisDay
 
             return (
-              <div key={event.id} className={`card ${imOnThisDay ? 'border-green-500/40' : ''}`}>
+              <div key={event.id} className={`card relative ${imOnThisDay ? 'border-green-500/40' : ''}`}>
+                {imOnThisDay && <div className="absolute inset-0 rounded-2xl border-flow-card" style={{ '--flow-color': '#22c55e' } as React.CSSProperties} />}
+                <div className="relative">
                 <div className="mb-3">
                   <span className="text-xs text-[var(--muted-foreground)] capitalize">
                     {event.day_of_week}, {format(new Date(event.event_date + 'T12:00:00'), 'dd/MM')}
@@ -299,6 +301,7 @@ export default function MemberSchedulePage() {
                       )
                     })}
                   </div>
+                </div>
                 </div>
               </div>
             )

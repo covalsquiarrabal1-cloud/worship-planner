@@ -40,7 +40,7 @@ interface ScheduleEvent {
   assignments: {
     id: string
     role: string
-    member: { id: string; name: string } | null
+    member: { id: string; name: string; nickname?: string | null } | null
   }[]
   songs: {
     id: string
@@ -166,13 +166,13 @@ export default function AdminPage() {
   // Helper to get assignment by role
   function getAssignment(event: ScheduleEvent, role: string): string {
     const a = event.assignments.find(a => a.role === role)
-    return a?.member?.name || '-'
+    return a?.member?.nickname || a?.member?.name || '-'
   }
 
   function getAssignmentData(event: ScheduleEvent, role: string): { id: string; name: string; memberId: string } | null {
     const a = event.assignments.find(a => a.role === role)
     if (!a) return null
-    return { id: a.id, name: a.member?.name || '-', memberId: a.member?.id || '' }
+    return { id: a.id, name: a.member?.nickname || a.member?.name || '-', memberId: a.member?.id || '' }
   }
 
   function renderEditableCell(event: ScheduleEvent, role: string) {
@@ -683,7 +683,7 @@ function WeeklyView({ events, members, onUpdateAssignment }: {
               <div className="flex flex-wrap gap-2">
                 {event.assignments.filter(a => a.role.startsWith('vocal_')).sort((a, b) => a.role.localeCompare(b.role)).map(a => (
                   <span key={a.id} className="badge-vocal">
-                    🎤 {a.role === 'vocal_1' ? 'Vocal 1' : a.role === 'vocal_2' ? 'Vocal 2' : 'Vocal 3'} {a.member?.name || '-'}
+                    🎤 {a.role === 'vocal_1' ? 'Vocal 1' : a.role === 'vocal_2' ? 'Vocal 2' : 'Vocal 3'} {a.member?.nickname || a.member?.name || '-'}
                   </span>
                 ))}
               </div>
@@ -721,7 +721,7 @@ function WeeklyView({ events, members, onUpdateAssignment }: {
                   const icon = a.role === 'guitarra' ? '🎸' : a.role === 'baixo' ? '🎸' : a.role === 'bateria' ? '🥁' : '🎹'
                   return (
                     <span key={a.id} className={badgeClass}>
-                      {icon} {roleLabels[a.role] || a.role} {a.member?.name || '-'}
+                      {icon} {roleLabels[a.role] || a.role} {a.member?.nickname || a.member?.name || '-'}
                     </span>
                   )
                 })}

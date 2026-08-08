@@ -30,6 +30,11 @@ export default function MinistryPage() {
   const [newRoleName, setNewRoleName] = useState('')
   const [momentos, setMomentos] = useState<any[]>([])
   const [loadingMomentos, setLoadingMomentos] = useState(false)
+  // Intercessão event config
+  const [eventConfig, setEventConfig] = useState<Record<string, Record<string, number>>>({})
+  const [repeatTorre, setRepeatTorre] = useState(true)
+  const [swappingAssignment, setSwappingAssignment] = useState<string | null>(null)
+  const [isPublished, setIsPublished] = useState(false)
 
   async function loadMomentos() {
     // Handled by MomentosTab component
@@ -71,6 +76,30 @@ export default function MinistryPage() {
       setScaleConfig(map)
     }
     if (rolesRes.ok) setMinistryRoles(await rolesRes.json())
+
+    // Load schedule publish status
+    const schedRes = await fetch(`/api/ministries/${slug}/schedule-status?month=${month}&year=${year}`)
+    if (schedRes.ok) {
+      const schedData = await schedRes.json()
+      setIsPublished(schedData.is_published || false)
+    } else {
+      setIsPublished(false)
+    }
+
+    // Load intercessão event config
+    if (slug === 'intercessao' || slug === 'intercessao-alive') {
+      const ecRes = await fetch(`/api/ministries/${slug}/event-config`)
+      if (ecRes.ok) {
+        const ecData = await ecRes.json()
+        const map: Record<string, Record<string, number>> = {}
+        for (const cfg of ecData) {
+          if (!map[cfg.scale_name]) map[cfg.scale_name] = {}
+          map[cfg.scale_name][cfg.role_type] = cfg.num_people
+        }
+        setEventConfig(map)
+      }
+    }
+
     setLoading(false)
   }
 
@@ -189,7 +218,7 @@ export default function MinistryPage() {
       ...event,
       assignments: event.assignments.map(a =>
         a.id === assignmentId
-          ? { ...a, member: members.find(m => m.id === newMemberId) ? { id: newMemberId, name: members.find(m => m.id === newMemberId)!.name } : a.member }
+          ? { ...a, member: members.find(m => m.id === newMemberId) ? { id: newMemberId, name: members.find(m => m.id === newMemberId)!.name, nickname: null } : a.member }
           : a
       ),
     })))
@@ -203,6 +232,42 @@ export default function MinistryPage() {
     if (!res.ok) {
       alert('Erro ao trocar membro. Recarregando...')
       loadData()
+    }
+  }
+
+  async function handleAddMember(eventId: string, celebrationNumber: number, roleName: string, memberId: string) {
+    const res = await fetch(`/api/ministries/${slug}/assignments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventId, memberId, celebrationNumber, roleName }),
+    })
+    if (res.ok) {
+      const newAssignment = await res.json()
+      const member = members.find(m => m.id === memberId)
+      // Update state immediately
+      setEvents(prev => prev.map(event =>
+        event.id === eventId
+          ? { ...event, assignments: [...event.assignments, { id: newAssignment.id, celebration_number: celebrationNumber, role_name: roleName, member: member ? { id: member.id, name: member.name, nickname: null } : null }] }
+          : event
+      ))
+    } else {
+      alert('Erro ao adicionar membro')
+    }
+  }
+
+  async function handleRemoveMember(assignmentId: string) {
+    // Update state immediately (optimistic)
+    setEvents(prev => prev.map(event => ({
+      ...event,
+      assignments: event.assignments.filter(a => a.id !== assignmentId),
+    })))
+
+    const res = await fetch(`/api/ministries/${slug}/assignments?id=${assignmentId}`, {
+      method: 'DELETE',
+    })
+    if (!res.ok) {
+      alert('Erro ao remover membro')
+      loadData() // revert on error
     }
   }
 
@@ -222,6 +287,18 @@ export default function MinistryPage() {
     } else {
       const data = await res.json()
       alert('Erro: ' + (data.error || 'Erro desconhecido'))
+    }
+  }
+
+  async function togglePublish() {
+    const newStatus = !isPublished
+    const res = await fetch(`/api/ministries/${slug}/schedule-status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month, year, is_published: newStatus }),
+    })
+    if (res.ok) {
+      setIsPublished(newStatus)
     }
   }
 
@@ -477,7 +554,7 @@ export default function MinistryPage() {
           </div>
 
           {/* Actions */}
-          <div className={`grid gap-3 ${slug === 'intercessao' ? 'grid-cols-5' : 'grid-cols-4'}`}>
+          <div className={`grid gap-3 ${(slug === 'intercessao' || slug === 'intercessao-alive') ? 'grid-cols-6' : 'grid-cols-5'}`}>
             <Link
               href={`/admin/ministerios/${slug}/gerar?month=${month}&year=${year}`}
               className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-[#58a6ff] transition-colors"
@@ -485,9 +562,9 @@ export default function MinistryPage() {
               <Plus className="w-5 h-5 text-[#58a6ff]" />
               <span className="text-xs font-semibold">GERAR</span>
             </Link>
-            {slug === 'intercessao' && (
+            {(slug === 'intercessao' || slug === 'intercessao-alive') && (
               <Link
-                href={`/admin/ministerios/intercessao/equipes`}
+                href={`/admin/ministerios/${slug}/equipes`}
                 className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-amber-400 transition-colors"
               >
                 <Users className="w-5 h-5 text-amber-400" />
@@ -510,6 +587,23 @@ export default function MinistryPage() {
               <span className="text-xs font-semibold">PDF</span>
             </button>
             <button
+              onClick={togglePublish}
+              disabled={events.length === 0}
+              className={`flex flex-col items-center justify-center gap-2 bg-[#1c2128] border py-5 rounded-2xl transition-colors disabled:opacity-40 ${isPublished ? 'border-green-500/50 hover:border-orange-400' : 'border-[#30363d] hover:border-green-400'}`}
+            >
+              {isPublished ? (
+                <>
+                  <svg className="w-5 h-5 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                  <span className="text-xs font-semibold text-green-400">PUBLICADA</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                  <span className="text-xs font-semibold text-orange-400">OCULTA</span>
+                </>
+              )}
+            </button>
+            <button
               onClick={deleteSchedule}
               disabled={events.length === 0}
               className="flex flex-col items-center justify-center gap-2 bg-[#1c2128] border border-[#30363d] py-5 rounded-2xl hover:border-[#f85149] transition-colors disabled:opacity-40"
@@ -519,8 +613,142 @@ export default function MinistryPage() {
             </button>
           </div>
 
+          {/* Insert members button - shows when events exist but have few/no assignments */}
+          {events.length > 0 && slug !== 'intercessao' && slug !== 'intercessao-alive' && (
+            <button
+              onClick={async () => {
+                if (!confirm('Inserir membros automaticamente nos dias sem escala?')) return
+                const res = await fetch(`/api/ministries/${slug}/auto-assign`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ month, year }),
+                })
+                if (res.ok) {
+                  const result = await res.json()
+                  alert(`✓ ${result.totalAssigned} membros inseridos!`)
+                  loadData()
+                } else {
+                  const d = await res.json()
+                  alert('Erro: ' + (d.error || 'Erro desconhecido'))
+                }
+              }}
+              className="w-full py-3 rounded-xl bg-[#58a6ff] text-white font-semibold text-sm flex items-center justify-center gap-2 hover:bg-[#4c94e0] transition-colors"
+            >
+              <Users className="w-4 h-4" /> Inserir Membros
+            </button>
+          )}
+
           {/* Config modal */}
-          {showConfig && (
+          {showConfig && (slug === 'intercessao' || slug === 'intercessao-alive') && (
+            <div className="card space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold">Configurar Escalas</h3>
+                <button onClick={() => setShowConfig(false)} className="text-xs text-[var(--muted-foreground)]">✕</button>
+              </div>
+              <p className="text-xs text-[var(--muted-foreground)]">Defina quantas pessoas por função em cada tipo de evento.</p>
+
+              {/* Header row */}
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-[var(--border)]">
+                      <th className="text-left py-2 px-2 font-semibold">Evento</th>
+                      <th className="py-2 px-2 text-center font-semibold text-amber-400">Torre</th>
+                      <th className="py-2 px-2 text-center font-semibold text-blue-400">Intercessão</th>
+                      <th className="py-2 px-2 text-center font-semibold text-red-400">Coluna</th>
+                      <th className="py-2 px-2 text-center font-semibold text-green-400">Suporte</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(() => {
+                      // Get scale names from current month events + existing config
+                      const scaleNamesFromEvents = [...new Set(events.map(e => e.scale_name).filter(Boolean))] as string[]
+                      const scaleNamesFromConfig = Object.keys(eventConfig)
+                      const allScaleNames = [...new Set([...scaleNamesFromEvents, ...scaleNamesFromConfig])].sort()
+
+                      // Ensure new event types get default config
+                      for (const name of scaleNamesFromEvents) {
+                        if (!eventConfig[name]) {
+                          eventConfig[name] = { torre: 1, intercessor: 2, coluna: 1, suporte: 2 }
+                        }
+                      }
+
+                      return allScaleNames.map(scaleName => (
+                        <tr key={scaleName} className="border-b border-[var(--border)]">
+                          <td className="py-2 px-2 font-medium text-xs">{scaleName}</td>
+                          {['torre', 'intercessor', 'coluna', 'suporte'].map(role => (
+                            <td key={role} className="py-1 px-1 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() => setEventConfig(prev => {
+                                    const copy = { ...prev, [scaleName]: { ...prev[scaleName] } }
+                                    copy[scaleName][role] = Math.max(0, (copy[scaleName]?.[role] || 0) - 1)
+                                    return copy
+                                  })}
+                                  className="w-6 h-6 rounded bg-[var(--accent)] border border-[var(--border)] text-xs font-bold"
+                                >-</button>
+                                <span className="w-5 text-center font-bold text-sm">{eventConfig[scaleName]?.[role] ?? 0}</span>
+                                <button
+                                  onClick={() => setEventConfig(prev => {
+                                    const copy = { ...prev, [scaleName]: { ...prev[scaleName] } }
+                                    copy[scaleName][role] = (copy[scaleName]?.[role] || 0) + 1
+                                    return copy
+                                  })}
+                                  className="w-6 h-6 rounded bg-[var(--accent)] border border-[var(--border)] text-xs font-bold"
+                                >+</button>
+                              </div>
+                            </td>
+                          ))}
+                        </tr>
+                      ))
+                    })()}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Repeat torre option */}
+              <label className="flex items-center gap-3 cursor-pointer py-2">
+                <div
+                  onClick={() => setRepeatTorre(!repeatTorre)}
+                  className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors ${
+                    repeatTorre ? 'bg-amber-500 border-amber-500' : 'border-[var(--border)]'
+                  }`}
+                >
+                  {repeatTorre && (
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+                <span className="text-xs font-medium">Repetir líder de Torre nas 2 celebrações (C1 e C2 = mesmo Torre)</span>
+              </label>
+
+              <button
+                onClick={async () => {
+                  setSavingConfig(true)
+                  const configs: any[] = []
+                  for (const [scaleName, roles] of Object.entries(eventConfig)) {
+                    for (const [roleType, numPeople] of Object.entries(roles)) {
+                      configs.push({ scale_name: scaleName, role_type: roleType, num_people: numPeople, gender_filter: 'any' })
+                    }
+                  }
+                  await fetch(`/api/ministries/${slug}/event-config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ configs }),
+                  })
+                  setSavingConfig(false)
+                  setShowConfig(false)
+                }}
+                disabled={savingConfig}
+                className="w-full bg-[#58a6ff] text-white py-2.5 rounded-xl text-sm font-medium disabled:opacity-40"
+              >
+                {savingConfig ? 'Salvando...' : 'Salvar Configuração'}
+              </button>
+            </div>
+          )}
+
+          {showConfig && slug !== 'intercessao' && slug !== 'intercessao-alive' && (
             <div className="card space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-bold">Configurar Escalas</h3>
@@ -663,14 +891,68 @@ export default function MinistryPage() {
 
                             return (
                               <td key={col} className="px-3 py-2.5 border-r border-[var(--border)] last:border-r-0">
-                                <div className="flex flex-wrap gap-x-1.5 gap-y-0.5">
+                                <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
                                   {colAssignments.map((a, idx) => (
-                                    <span key={a.id} className={`text-xs font-medium ${roleColors[a.role_name || ''] || 'text-white'}`}>
-                                      {a.member?.nickname || a.member?.name || '-'}{idx < colAssignments.length - 1 ? ',' : ''}
-                                    </span>
+                                    swappingAssignment === a.id ? (
+                                      <select
+                                        key={a.id}
+                                        autoFocus
+                                        className="!py-0.5 !px-1 !text-xs !w-auto !min-w-[100px] !rounded"
+                                        defaultValue={a.member?.id || ''}
+                                        onChange={e => {
+                                          handleSwapMember(a.id, e.target.value)
+                                          setSwappingAssignment(null)
+                                        }}
+                                        onBlur={() => setSwappingAssignment(null)}
+                                      >
+                                        <option value="">— Selecionar —</option>
+                                        {members.filter(m => !m.is_blocked).map(m => (
+                                          <option key={m.id} value={m.id}>{m.name}</option>
+                                        ))}
+                                      </select>
+                                    ) : (
+                                      <span key={a.id} className="inline-flex items-center gap-0.5">
+                                        <button
+                                          onClick={() => setSwappingAssignment(a.id)}
+                                          className={`text-xs font-medium hover:underline cursor-pointer ${roleColors[a.role_name || ''] || 'text-white'}`}
+                                          title="Clique para trocar"
+                                        >
+                                          {a.member?.nickname || a.member?.name || '-'}{idx < colAssignments.length - 1 ? ',' : ''}
+                                        </button>
+                                        {colAssignments.length > 1 && (
+                                          <button
+                                            onClick={() => handleRemoveMember(a.id)}
+                                            className="text-red-400 hover:text-red-300 text-sm font-bold w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-500/10"
+                                            title="Remover"
+                                          >×</button>
+                                        )}
+                                      </span>
+                                    )
                                   ))}
                                   {colAssignments.length === 0 && <span className="text-xs text-[var(--muted-foreground)]">-</span>}
+                                  <button
+                                    onClick={() => setSwappingAssignment(`add-${event.id}-${celNum}-${col}`)}
+                                    className="text-[#58a6ff] text-sm font-bold hover:bg-[#58a6ff]/10 w-8 h-8 rounded-lg flex items-center justify-center"
+                                    title="Adicionar membro"
+                                  >+</button>
                                 </div>
+                                {swappingAssignment === `add-${event.id}-${celNum}-${col}` && (
+                                  <select
+                                    autoFocus
+                                    className="!py-0.5 !px-1 !text-xs !w-full !rounded mt-1"
+                                    defaultValue=""
+                                    onChange={e => {
+                                      if (e.target.value) handleAddMember(event.id, celNum, col, e.target.value)
+                                      setSwappingAssignment(null)
+                                    }}
+                                    onBlur={() => setSwappingAssignment(null)}
+                                  >
+                                    <option value="">— Selecionar membro —</option>
+                                    {members.filter(m => !m.is_blocked).map(m => (
+                                      <option key={m.id} value={m.id}>{m.name}</option>
+                                    ))}
+                                  </select>
+                                )}
                               </td>
                             )
                           })}
@@ -703,6 +985,7 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
   const [saving, setSaving] = useState(false)
   const [newMemberName, setNewMemberName] = useState('')
   const [showMembers, setShowMembers] = useState(false)
+  const [momentosPublished, setMomentosPublished] = useState(false)
 
   useEffect(() => { loadMomentos(); loadMembers() }, [month, year])
 
@@ -710,6 +993,14 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
     setLoading(true)
     const res = await fetch(`/api/ministries/${slug}/momentos?month=${month}&year=${year}`)
     if (res.ok) setMomentos(await res.json())
+
+    // Load publish status
+    const pubRes = await fetch(`/api/ministries/${slug}/momentos/publish?month=${month}&year=${year}`)
+    if (pubRes.ok) {
+      const pubData = await pubRes.json()
+      setMomentosPublished(pubData.is_published || false)
+    }
+
     setLoading(false)
   }
 
@@ -723,7 +1014,7 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
     const res = await fetch(`/api/ministries/${slug}/momentos-members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newMemberName.trim() }),
+      body: JSON.stringify({ name: newMemberName.trim(), auto_find_email: true }),
     })
     if (res.ok) {
       setNewMemberName('')
@@ -748,19 +1039,102 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
 
   async function generateMomentos() {
     setSaving(true)
-    // Generate momentos for all sundays of the month
-    const start = new Date(year, month - 1, 1)
-    const end = new Date(year, month, 0)
-    const newMomentos: any[] = []
+    const start = `${year}-${String(month).padStart(2,'0')}-01`
+    const end = `${year}-${String(month).padStart(2,'0')}-${new Date(year, month, 0).getDate()}`
 
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const dayOfWeek = d.getDay()
-      const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+    // Get main schedule events for celebrations info AND conflict checking
+    const eventsRes = await fetch(`/api/schedule-events?start=${start}&end=${end}`)
+    let mainEvents: any[] = []
+    if (eventsRes.ok) mainEvents = await eventsRes.json()
 
-      if (dayOfWeek === 0) { // Domingo
-        newMomentos.push({ event_date: dateStr, culto: 'Celebração Domingo', momento: 'Sobrenatural', member_id: null })
-        newMomentos.push({ event_date: dateStr, culto: 'Celebração Domingo', momento: 'Dízimos e Ofertas', member_id: null })
+    // Build busy map from louvor schedule (email -> dates)
+    const busyByDate: Record<string, Set<string>> = {}
+    for (const ev of mainEvents) {
+      if (ev.assignments) {
+        for (const a of ev.assignments) {
+          if (a.member?.email) {
+            if (!busyByDate[ev.event_date]) busyByDate[ev.event_date] = new Set()
+            busyByDate[ev.event_date].add(a.member.email.toLowerCase())
+          }
+        }
       }
+    }
+
+    // Load momentos members for auto-assignment
+    const membersRes = await fetch(`/api/ministries/${slug}/momentos-members`)
+    let mMembers: { id: string; name: string; nickname: string | null; email?: string }[] = []
+    if (membersRes.ok) {
+      const rawMembers = await membersRes.json()
+      const seen = new Set<string>()
+      for (const m of rawMembers) {
+        const key = (m.nickname || m.name).toLowerCase().trim()
+        if (!seen.has(key)) {
+          seen.add(key)
+          mMembers.push(m)
+        }
+      }
+    }
+
+    const newMomentos: any[] = []
+    const startDate = new Date(year, month - 1, 1)
+    const endDate = new Date(year, month, 0)
+
+    // Collect all sundays
+    const sundays: string[] = []
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      if (d.getDay() === 0) {
+        sundays.push(`${year}-${String(month).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`)
+      }
+    }
+
+    // Round-robin assignment: alternate members between Sobrenatural and Dízimos
+    // Ensure different people for each momento on the same day
+    // Skip members busy in louvor schedule
+    let memberIndex = 0
+
+    for (const dateStr of sundays) {
+      const mainEvent = mainEvents.find((e: any) => e.event_date === dateStr)
+      const cultoName = mainEvent?.scale_type?.name?.toLowerCase().includes('dois')
+        ? 'Celebração Domingo (Dois Horários)'
+        : 'Celebração Domingo'
+
+      const busyEmails = busyByDate[dateStr] || new Set<string>()
+
+      // Filter available members (not in louvor this day)
+      const available = mMembers.filter(m => !m.email || !busyEmails.has(m.email.toLowerCase()))
+      const pool = available.length > 0 ? available : mMembers // fallback if everyone is busy
+
+      // Assign Sobrenatural
+      const sobrenaturalMember = pool.length > 0
+        ? pool[memberIndex % pool.length]
+        : null
+      memberIndex++
+
+      // Assign Dízimos e Ofertas (next member, skip if same as sobrenatural)
+      let dizimosMember = null
+      if (pool.length > 1) {
+        dizimosMember = pool[memberIndex % pool.length]
+        if (dizimosMember?.id === sobrenaturalMember?.id) {
+          memberIndex++
+          dizimosMember = pool[memberIndex % pool.length]
+        }
+        memberIndex++
+      } else if (pool.length === 1) {
+        dizimosMember = pool[0]
+      }
+
+      newMomentos.push({
+        event_date: dateStr,
+        culto: cultoName,
+        momento: 'Sobrenatural',
+        member_id: sobrenaturalMember?.id || null,
+      })
+      newMomentos.push({
+        event_date: dateStr,
+        culto: cultoName,
+        momento: 'Dízimos e Ofertas',
+        member_id: dizimosMember?.id || null,
+      })
     }
 
     await fetch(`/api/ministries/${slug}/momentos`, {
@@ -771,6 +1145,19 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
 
     await loadMomentos()
     setSaving(false)
+  }
+
+  async function addExtraDay(date: string, cultoName: string) {
+    const newMomentos = [
+      { event_date: date, culto: cultoName, momento: 'Sobrenatural', member_id: null },
+      { event_date: date, culto: cultoName, momento: 'Dízimos e Ofertas', member_id: null },
+    ]
+    await fetch(`/api/ministries/${slug}/momentos/add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ momentos: newMomentos }),
+    })
+    await loadMomentos()
   }
 
   return (
@@ -794,17 +1181,11 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
         </button>
         {showMembers && (
           <div className="space-y-2">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Nome do membro"
-                value={newMemberName}
-                onChange={e => setNewMemberName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addMember())}
-                className="flex-1 !py-2 !text-xs"
-              />
-              <button onClick={addMember} disabled={!newMemberName.trim()} className="px-3 py-2 bg-[#58a6ff] text-white rounded-lg text-xs font-medium disabled:opacity-40">+</button>
-            </div>
+            <MemberSearchAdd
+              slug={slug}
+              existingIds={momentosMembers.map(m => m.id)}
+              onAdd={() => loadMembers()}
+            />
             <div className="flex flex-wrap gap-1.5">
               {momentosMembers.map(m => (
                 <span key={m.id} className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--accent)] border border-[var(--border)] text-xs">
@@ -828,9 +1209,63 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
         </button>
       )}
 
+      {/* Actions when momentos exist */}
+      {momentos.length > 0 && !loading && (
+        <div className="grid grid-cols-3 gap-3">
+          <button
+            onClick={async () => {
+              const newStatus = !momentosPublished
+              const res = await fetch(`/api/ministries/${slug}/momentos/publish`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ month, year, is_published: newStatus }),
+              })
+              if (res.ok) setMomentosPublished(newStatus)
+            }}
+            className={`flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border transition-colors ${momentosPublished ? 'border-green-500/50 bg-[#1c2128]' : 'border-[#30363d] bg-[#1c2128]'}`}
+          >
+            {momentosPublished ? (
+              <>
+                <svg className="w-4 h-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                <span className="text-[10px] font-semibold text-green-400">PUBLICADA</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4 text-orange-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
+                <span className="text-[10px] font-semibold text-orange-400">OCULTA</span>
+              </>
+            )}
+          </button>
+          <button
+            onClick={generateMomentos}
+            disabled={saving}
+            className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border border-[#30363d] bg-[#1c2128] hover:border-[#58a6ff] transition-colors"
+          >
+            <Plus className="w-4 h-4 text-[#58a6ff]" />
+            <span className="text-[10px] font-semibold">REGERAR</span>
+          </button>
+          <button
+            onClick={async () => {
+              if (!confirm('Excluir toda a escala de Momentos deste mês?')) return
+              await fetch(`/api/ministries/${slug}/momentos/delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ month, year }),
+              })
+              setMomentos([])
+            }}
+            className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border border-[#30363d] bg-[#1c2128] hover:border-[#f85149] transition-colors"
+          >
+            <Trash2 className="w-4 h-4 text-[#f85149]" />
+            <span className="text-[10px] font-semibold text-[#f85149]">EXCLUIR</span>
+          </button>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin" /></div>
       ) : momentos.length > 0 && (
+        <>
         <div className="card p-0 overflow-x-auto">
           <table className="w-full text-sm border-collapse">
             <thead>
@@ -889,6 +1324,169 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
               })}
             </tbody>
           </table>
+        </div>
+
+        {/* Add extra day */}
+        <AddExtraDayButton
+          month={month}
+          year={year}
+          existingDates={[...new Set(momentos.map(m => m.event_date))]}
+          onAdd={addExtraDay}
+        />
+        </>
+      )}
+    </div>
+  )
+}
+
+function AddExtraDayButton({ month, year, existingDates, onAdd }: {
+  month: number; year: number; existingDates: string[]; onAdd: (date: string, culto: string) => void
+}) {
+  const [showForm, setShowForm] = useState(false)
+  const [selectedDate, setSelectedDate] = useState('')
+  const [cultoName, setCultoName] = useState('')
+
+  // Get available dates from main schedule that aren't already in momentos
+  const [availableDates, setAvailableDates] = useState<{ date: string; dayOfWeek: string; scaleName: string }[]>([])
+
+  useEffect(() => {
+    async function loadDates() {
+      const start = `${year}-${String(month).padStart(2, '0')}-01`
+      const end = `${year}-${String(month).padStart(2, '0')}-${new Date(year, month, 0).getDate()}`
+      const res = await fetch(`/api/schedule-events?start=${start}&end=${end}`)
+      if (res.ok) {
+        const events = await res.json()
+        const dates = events
+          .filter((e: any) => !existingDates.includes(e.event_date))
+          .map((e: any) => ({
+            date: e.event_date,
+            dayOfWeek: e.day_of_week,
+            scaleName: e.scale_type?.name || e.day_of_week,
+          }))
+        setAvailableDates(dates)
+      }
+    }
+    if (showForm) loadDates()
+  }, [showForm])
+
+  if (!showForm) {
+    return (
+      <button
+        onClick={() => setShowForm(true)}
+        className="w-full py-3 rounded-xl border border-dashed border-[var(--border)] text-sm text-[var(--muted-foreground)] hover:border-[#58a6ff] hover:text-[#58a6ff] transition-colors flex items-center justify-center gap-2"
+      >
+        + Adicionar outro dia
+      </button>
+    )
+  }
+
+  return (
+    <div className="card space-y-3">
+      <p className="text-xs font-semibold">Adicionar dia à escala de Momentos</p>
+      <select
+        value={selectedDate}
+        onChange={e => {
+          setSelectedDate(e.target.value)
+          const found = availableDates.find(d => d.date === e.target.value)
+          if (found) setCultoName(found.scaleName || found.dayOfWeek)
+        }}
+        className="text-xs w-full"
+      >
+        <option value="">— Selecione um dia —</option>
+        {availableDates.map(d => (
+          <option key={d.date} value={d.date}>
+            {d.date.slice(8,10)}/{d.date.slice(5,7)} - {d.dayOfWeek} ({d.scaleName})
+          </option>
+        ))}
+      </select>
+      <input
+        type="text"
+        placeholder="Nome do culto (ex: Alive, Conferência...)"
+        value={cultoName}
+        onChange={e => setCultoName(e.target.value)}
+        className="!text-xs"
+      />
+      <div className="flex gap-2">
+        <button
+          onClick={() => { if (selectedDate && cultoName) { onAdd(selectedDate, cultoName); setShowForm(false); setSelectedDate(''); setCultoName('') } }}
+          disabled={!selectedDate || !cultoName}
+          className="flex-1 py-2 bg-[#58a6ff] text-white rounded-xl text-xs font-medium disabled:opacity-40"
+        >
+          Adicionar
+        </button>
+        <button onClick={() => setShowForm(false)} className="px-4 py-2 text-xs text-[var(--muted-foreground)]">Cancelar</button>
+      </div>
+    </div>
+  )
+}
+
+function MemberSearchAdd({ slug, existingIds, onAdd }: { slug: string; existingIds: string[]; onAdd: () => void }) {
+  const [search, setSearch] = useState('')
+  const [results, setResults] = useState<{ name: string; email: string; nickname: string | null }[]>([])
+  const [allPeople, setAllPeople] = useState<{ name: string; email: string; nickname: string | null }[]>([])
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    if (!loaded) {
+      fetch('/api/relatorios/cadastro')
+        .then(r => r.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setAllPeople(data.map((p: any) => ({ name: p.name, email: p.email, nickname: p.nickname })))
+          }
+          setLoaded(true)
+        })
+    }
+  }, [loaded])
+
+  useEffect(() => {
+    if (search.trim().length < 2) { setResults([]); return }
+    const q = search.toLowerCase()
+    const filtered = allPeople.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.nickname && p.nickname.toLowerCase().includes(q)) ||
+      p.email.toLowerCase().includes(q)
+    ).slice(0, 8)
+    setResults(filtered)
+  }, [search, allPeople])
+
+  async function selectPerson(person: { name: string; email: string; nickname: string | null }) {
+    const res = await fetch(`/api/ministries/${slug}/momentos-members`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: person.name, email: person.email, nickname: person.nickname }),
+    })
+    if (res.ok) {
+      setSearch('')
+      setResults([])
+      onAdd()
+    } else {
+      const d = await res.json()
+      alert(d.error || 'Erro ao adicionar')
+    }
+  }
+
+  return (
+    <div className="relative">
+      <input
+        type="text"
+        placeholder="Pesquisar pessoa do cadastro..."
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        className="flex-1 !py-2 !text-xs w-full"
+      />
+      {results.length > 0 && (
+        <div className="absolute top-full left-0 right-0 z-20 mt-1 bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-lg max-h-48 overflow-y-auto">
+          {results.map(p => (
+            <button
+              key={p.email}
+              onClick={() => selectPerson(p)}
+              className="w-full text-left px-3 py-2 text-xs hover:bg-[var(--accent)] border-b border-[var(--border)] last:border-b-0"
+            >
+              <span className="font-medium">{p.nickname || p.name}</span>
+              <span className="text-[var(--muted-foreground)] ml-2">{p.email}</span>
+            </button>
+          ))}
         </div>
       )}
     </div>

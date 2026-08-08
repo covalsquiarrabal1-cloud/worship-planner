@@ -50,6 +50,8 @@ interface UnifiedDay {
   role: string
   ministryName?: string
   ministrySlug?: string
+  celebrationNumber?: number
+  numCelebrations?: number
   // For louvor events (expandable details)
   event?: ScheduleEvent
 }
@@ -123,6 +125,10 @@ export default function MeusDiasPage() {
     if (ministryRes.ok) {
       const ministryEvents: MinistryEvent[] = await ministryRes.json()
       for (const mEvent of ministryEvents) {
+        // Find which celebration this member is in
+        const myAssignment = mEvent.assignments?.[0]
+        const celNum = myAssignment?.celebration_number || 1
+
         unified.push({
           date: mEvent.event_date,
           dayOfWeek: mEvent.day_of_week,
@@ -131,6 +137,8 @@ export default function MeusDiasPage() {
           role: mEvent.ministry_name,
           ministryName: mEvent.ministry_name,
           ministrySlug: mEvent.ministry_slug,
+          celebrationNumber: celNum,
+          numCelebrations: mEvent.num_celebrations || 1,
         })
       }
     }
@@ -215,9 +223,22 @@ export default function MeusDiasPage() {
 function MinistryDayCard({ item }: { item: UnifiedDay }) {
   const icon = ministryIcons[item.ministrySlug || ''] || '🎭'
 
+  // Determine the label: Manhã/Noite for 2 celebrations, or scale_name for 1
+  let timeLabel = ''
+  if (item.numCelebrations && item.numCelebrations >= 2) {
+    timeLabel = item.celebrationNumber === 1 ? 'Manhã' : 'Noite'
+  } else if (item.scaleName && item.scaleName !== '-') {
+    // Use scale_name if it indicates time (Manhã, Noite)
+    const sn = item.scaleName.toLowerCase()
+    if (sn.includes('manhã') || sn.includes('manha')) timeLabel = 'Manhã'
+    else if (sn.includes('noite')) timeLabel = 'Noite'
+    else timeLabel = item.scaleName
+  }
+
   return (
-    <div className="card">
-      <div className="flex items-center gap-3">
+    <div className="card relative">
+      <div className="absolute inset-0 rounded-2xl border-flow-card" style={{ '--flow-color': '#58a6ff' } as React.CSSProperties} />
+      <div className="relative flex items-center gap-3">
         <div className="w-12 h-12 rounded-lg bg-[var(--accent)] flex flex-col items-center justify-center shrink-0">
           <span className="text-lg font-bold">
             {format(new Date(item.date + 'T12:00:00'), 'dd')}
@@ -233,9 +254,11 @@ function MinistryDayCard({ item }: { item: UnifiedDay }) {
             <span className="text-xs text-[#58a6ff] font-medium">{item.ministryName}</span>
           </div>
         </div>
-        <span className="text-xs px-2 py-1 rounded-lg bg-[#58a6ff]/10 text-[#58a6ff] font-medium shrink-0">
-          Ministério
-        </span>
+        {timeLabel && (
+          <span className="text-xs px-2 py-1 rounded-lg bg-amber-500/10 text-amber-400 font-medium shrink-0">
+            {timeLabel}
+          </span>
+        )}
       </div>
     </div>
   )
@@ -253,7 +276,9 @@ function ExpandableWorshipDay({ item, roleLabels, memberName }: {
   const songs = (item.event?.songs || []).sort((a: any, b: any) => a.order_num - b.order_num)
 
   return (
-    <div className="card cursor-pointer" onClick={() => setExpanded(!expanded)}>
+    <div className="card cursor-pointer relative" onClick={() => setExpanded(!expanded)}>
+      <div className="absolute inset-0 rounded-2xl border-flow-card" style={{ '--flow-color': '#22c55e' } as React.CSSProperties} />
+      <div className="relative">
       <div className="flex items-center gap-3">
         <div className="w-12 h-12 rounded-lg bg-[var(--accent)] flex flex-col items-center justify-center shrink-0">
           <span className="text-lg font-bold">
@@ -271,7 +296,10 @@ function ExpandableWorshipDay({ item, roleLabels, memberName }: {
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-xs px-2 py-1 rounded-lg bg-green-500/10 text-green-400 font-medium">
-            Louvor
+            {item.scaleName?.toLowerCase().includes('noite') ? 'Noite'
+              : item.scaleName?.toLowerCase().includes('manhã') || item.scaleName?.toLowerCase().includes('manha') ? 'Manhã'
+              : item.scaleName?.toLowerCase().includes('dois') ? 'Manhã e Noite'
+              : 'Louvor'}
           </span>
           <ChevronDown className={`w-4 h-4 text-[var(--muted-foreground)] transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </div>
@@ -318,6 +346,7 @@ function ExpandableWorshipDay({ item, roleLabels, memberName }: {
           )}
         </div>
       )}
+      </div>
     </div>
   )
 }

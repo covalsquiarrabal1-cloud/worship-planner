@@ -285,7 +285,7 @@ export default function AdminFormularioPage() {
             )}
 
             {stats.ministryStats.map(m => (
-              <div key={m.id} className="card overflow-hidden">
+              <div key={m.id} className="card">
                 <button
                   onClick={() => setExpandedMinistry(prev => prev === m.id ? null : m.id)}
                   className="w-full"

@@ -19,7 +19,6 @@
 
 * {
   box-sizing: border-box;
-  padding: 0;
   margin: 0;
 }
 
@@ -57,6 +56,7 @@ input[type="url"],
 input[type="number"],
 input[type="tel"],
 input[type="date"],
+input:not([type]),
 select,
 textarea {
   background: var(--input);
@@ -78,6 +78,7 @@ input[type="url"]:focus,
 input[type="number"]:focus,
 input[type="tel"]:focus,
 input[type="date"]:focus,
+input:not([type]):focus,
 select:focus,
 textarea:focus {
   outline: none;
@@ -154,9 +155,13 @@ button {
   background: var(--card);
   border: 1px solid rgba(48, 54, 61, 0.6);
   border-radius: var(--radius);
-  padding: 20px;
+  padding: 20px 32px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 1px 3px rgba(0, 0, 0, 0.15);
   transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.card.p-0 {
+  padding: 0;
 }
 
 .card:hover {
@@ -233,4 +238,58 @@ button {
 
 .input-with-icon {
   padding-left: 44px;
+}
+
+
+/* Animated flowing border */
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin-slow 3s linear infinite;
+}
+
+/* Glow pulse animation for icons */
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2.5s ease-in-out infinite;
+}
+
+/* Flowing connection animations */
+@keyframes flow-dash {
+  0% { stroke-dashoffset: 40; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.animate-border-flow {
+  stroke-dasharray: 6 8;
+  animation: flow-dash 2s linear infinite;
+}
+
+/* Card border with flowing light */
+@keyframes border-travel {
+  0% { background-position: 0% 0%; }
+  25% { background-position: 100% 0%; }
+  50% { background-position: 100% 100%; }
+  75% { background-position: 0% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+.border-flow-card {
+  pointer-events: none;
+  border: 2px solid transparent;
+  background: linear-gradient(90deg, transparent 30%, var(--flow-color, #58a6ff) 50%, transparent 70%);
+  background-size: 300% 300%;
+  animation: border-travel 4s linear infinite;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: xor;
+  -webkit-mask-composite: xor;
+  padding: 2px;
+  border-radius: inherit;
 }
