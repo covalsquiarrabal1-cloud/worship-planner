@@ -13,16 +13,16 @@ export async function POST(request: Request) {
 
   const { month, year, publish } = await request.json()
 
+  // Update ALL schedules for this month/year (there may be multiple)
   const { data, error } = await serviceClient
     .from('schedules')
     .update({ is_published: publish })
     .eq('month', month)
     .eq('year', year)
     .select()
-    .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  if (!data) return NextResponse.json({ error: 'Escala não encontrada' }, { status: 404 })
+  if (!data || data.length === 0) return NextResponse.json({ error: 'Escala não encontrada' }, { status: 404 })
 
   return NextResponse.json({ success: true, is_published: publish })
 }

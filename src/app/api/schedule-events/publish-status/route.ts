@@ -15,16 +15,17 @@ export async function GET(request: Request) {
   }
 
   const serviceClient = await createServiceRoleClient()
-  const { data: schedule } = await serviceClient
+  const { data: schedules } = await serviceClient
     .from('schedules')
     .select('id, is_published')
     .eq('month', parseInt(month))
     .eq('year', parseInt(year))
-    .single()
 
-  if (!schedule) {
+  if (!schedules || schedules.length === 0) {
     return NextResponse.json({ is_published: false })
   }
 
-  return NextResponse.json({ is_published: schedule.is_published })
+  // Consider published if ALL schedules for the month are published
+  const allPublished = schedules.every((s: any) => s.is_published)
+  return NextResponse.json({ is_published: allPublished })
 }
