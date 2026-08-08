@@ -169,7 +169,7 @@ export default function LoginPage() {
     setLoading(true)
 
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/criar-senha`,
+      redirectTo: 'https://worshipplannerpro.vercel.app/criar-senha',
     })
 
     if (resetError) {
