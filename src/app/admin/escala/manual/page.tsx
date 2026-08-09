@@ -63,11 +63,17 @@ export default function EscalaManualPage() {
 
   async function loadData() {
     const [membersRes, scaleTypesRes] = await Promise.all([
-      supabase.from('members').select('*').eq('is_blocked', false).order('name'),
-      supabase.from('scale_types').select('id, name').order('name'),
+      fetch('/api/members'),
+      fetch('/api/scale-types'),
     ])
-    setMembers(membersRes.data || [])
-    setScaleTypes(scaleTypesRes.data || [])
+    if (membersRes.ok) {
+      const data = await membersRes.json()
+      setMembers(Array.isArray(data) ? data.filter((m: any) => !m.is_blocked) : [])
+    }
+    if (scaleTypesRes.ok) {
+      const data = await scaleTypesRes.json()
+      setScaleTypes(Array.isArray(data) ? data : [])
+    }
     setLoading(false)
   }
 
