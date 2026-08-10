@@ -13,7 +13,7 @@ export async function GET() {
     serviceClient.from('ministries').select('id, name, slug, leader_name').order('name'),
     serviceClient.from('person_roles').select('id, name').order('name'),
     serviceClient.from('member_person_roles').select('member_email, role_id'),
-    serviceClient.from('ministry_members').select('name, email, ministry_id'),
+    serviceClient.from('ministry_members').select('name, email, ministry_id, role'),
     serviceClient.from('members').select('name, email'),
     serviceClient.from('ministry_signups').select('name, email'),
   ])
@@ -73,9 +73,22 @@ export async function GET() {
       // For "Ministro" role, show only ministries where they are leader
       let personMinistries: string[]
       if (role.name === 'Ministro') {
-        personMinistries = ministries
-          .filter(m => m.leader_name && m.leader_name.toLowerCase() === name.toLowerCase())
-          .map(m => m.name)
+        const leaderMinistries = new Set<string>()
+        // Source 1: ministries.leader_name
+        for (const m of ministries) {
+          if (m.leader_name && m.leader_name.toLowerCase() === name.toLowerCase()) {
+            leaderMinistries.add(m.name)
+          }
+        }
+        // Source 2: ministry_members.role = 'lider' (by email)
+        const leaderEntries = ministryMembers.filter(
+          mm => mm.email && mm.email.toLowerCase() === a.member_email && mm.role === 'lider'
+        )
+        for (const entry of leaderEntries) {
+          const ministry = ministries.find(m => m.id === entry.ministry_id)
+          if (ministry) leaderMinistries.add(ministry.name)
+        }
+        personMinistries = Array.from(leaderMinistries).sort()
       } else {
         personMinistries = emailToMinistries[a.member_email] || []
       }
