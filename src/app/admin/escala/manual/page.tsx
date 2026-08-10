@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { format, getDay } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -46,7 +45,6 @@ const dayNames: Record<number, string> = {
 
 export default function EscalaManualPage() {
   const router = useRouter()
-  const supabase = createClient()
 
   const [members, setMembers] = useState<Member[]>([])
   const [scaleTypes, setScaleTypes] = useState<ScaleType[]>([])
@@ -101,91 +99,27 @@ export default function EscalaManualPage() {
     setSaving(true)
 
     const dateObj = new Date(selectedDate + 'T12:00:00')
-    const monthNum = dateObj.getMonth() + 1
-    const yearNum = dateObj.getFullYear()
     const weekNum = Math.ceil(dateObj.getDate() / 7)
     const dayOfWeek = dayNames[getDay(dateObj)] || ''
 
-    // Get or create schedule for the month
-    const { data: existingSchedule } = await supabase
-      .from('schedules')
-      .select('id')
-      .eq('month', monthNum)
-      .eq('year', yearNum)
-      .maybeSingle()
+    const res = await fetch('/api/schedule-events/save-manual', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        date: selectedDate,
+        scaleTypeId: selectedScaleTypeId || null,
+        dayOfWeek,
+        weekNumber: weekNum,
+        assignments,
+      }),
+    })
 
-    let scheduleId: string
+    const data = await res.json()
 
-    if (existingSchedule) {
-      scheduleId = existingSchedule.id
-    } else {
-      const { data: newSchedule, error: schedErr } = await supabase
-        .from('schedules')
-        .insert({ month: monthNum, year: yearNum })
-        .select('id')
-        .single()
-      if (schedErr || !newSchedule) {
-        alert('Erro ao criar escala: ' + (schedErr?.message || 'Erro desconhecido'))
-        setSaving(false)
-        return
-      }
-      scheduleId = newSchedule.id
-    }
-
-    // Check if event already exists for this date
-    const { data: existingEvent } = await supabase
-      .from('schedule_events')
-      .select('id')
-      .eq('schedule_id', scheduleId)
-      .eq('event_date', selectedDate)
-      .maybeSingle()
-
-    let eventId: string
-
-    if (existingEvent) {
-      eventId = existingEvent.id
-      // Delete existing assignments
-      await supabase.from('schedule_assignments').delete().eq('event_id', eventId)
-      // Update the event
-      await supabase
-        .from('schedule_events')
-        .update({
-          day_of_week: dayOfWeek,
-          week_number: weekNum,
-          scale_type_id: selectedScaleTypeId || null,
-        })
-        .eq('id', eventId)
-    } else {
-      const { data: newEvent, error: evErr } = await supabase
-        .from('schedule_events')
-        .insert({
-          schedule_id: scheduleId,
-          event_date: selectedDate,
-          day_of_week: dayOfWeek,
-          week_number: weekNum,
-          scale_type_id: selectedScaleTypeId || null,
-        })
-        .select('id')
-        .single()
-      if (evErr || !newEvent) {
-        alert('Erro ao criar evento: ' + (evErr?.message || 'Erro desconhecido'))
-        setSaving(false)
-        return
-      }
-      eventId = newEvent.id
-    }
-
-    // Insert assignments
-    const assignmentRows = Object.entries(assignments)
-      .filter(([, memberId]) => memberId)
-      .map(([role, memberId]) => ({
-        event_id: eventId,
-        member_id: memberId,
-        role,
-      }))
-
-    if (assignmentRows.length > 0) {
-      await supabase.from('schedule_assignments').insert(assignmentRows)
+    if (!res.ok) {
+      alert('Erro ao criar escala: ' + (data.error || 'Erro desconhecido'))
+      setSaving(false)
+      return
     }
 
     setSaving(false)
