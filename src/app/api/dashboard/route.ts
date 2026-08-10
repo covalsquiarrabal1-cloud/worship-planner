@@ -10,7 +10,7 @@ export async function GET() {
 
   // Buscar tudo em paralelo
   const [ministriesRes, rolesRes, assignmentsRes, ministryMembersRes, membersRes, signupsRes] = await Promise.all([
-    serviceClient.from('ministries').select('id, name, slug').order('name'),
+    serviceClient.from('ministries').select('id, name, slug, leader_name').order('name'),
     serviceClient.from('person_roles').select('id, name').order('name'),
     serviceClient.from('member_person_roles').select('member_email, role_id'),
     serviceClient.from('ministry_members').select('name, email, ministry_id'),
@@ -68,11 +68,23 @@ export async function GET() {
   for (const role of roles) {
     if (role.name === 'Membro') continue // Skip "Membro" card
     const roleAssignments = assignments.filter(a => a.role_id === role.id)
-    const people = roleAssignments.map(a => ({
-      name: emailToName[a.member_email] || a.member_email,
-      email: a.member_email,
-      ministries: emailToMinistries[a.member_email] || [],
-    })).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
+    const people = roleAssignments.map(a => {
+      const name = emailToName[a.member_email] || a.member_email
+      // For "Ministro" role, show only ministries where they are leader
+      let personMinistries: string[]
+      if (role.name === 'Ministro') {
+        personMinistries = ministries
+          .filter(m => m.leader_name && m.leader_name.toLowerCase() === name.toLowerCase())
+          .map(m => m.name)
+      } else {
+        personMinistries = emailToMinistries[a.member_email] || []
+      }
+      return {
+        name,
+        email: a.member_email,
+        ministries: personMinistries,
+      }
+    }).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
     roleCounts.push({ id: role.id, name: role.name, count: people.length, people })
   }
 
