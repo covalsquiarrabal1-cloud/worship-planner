@@ -127,6 +127,20 @@ export default function ConfigLouvorPage() {
         </div>
       </div>
 
+      {/* ========== ESCALA POR MEMBRO ========== */}
+      <section>
+        <Link href="/admin/config/louvor/escala-membro" className="card flex items-center justify-between hover:border-[#22c55e] transition-colors">
+          <div className="flex items-center gap-3">
+            <span className="text-lg">👤</span>
+            <div>
+              <p className="text-sm font-medium">Escala por Membro</p>
+              <p className="text-xs text-[var(--muted-foreground)]">Visualize a escala como cada membro vê</p>
+            </div>
+          </div>
+          <span className="text-xs text-[var(--muted-foreground)]">→</span>
+        </Link>
+      </section>
+
       {/* ========== INSTRUMENTOS ========== */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
