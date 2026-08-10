@@ -11,7 +11,22 @@ export async function POST(request: Request) {
     .from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
-  const { month, year } = await request.json()
+  const body = await request.json()
+
+  // Delete individual events by IDs
+  if (body.eventIds && Array.isArray(body.eventIds) && body.eventIds.length > 0) {
+    // Delete songs for these events
+    await serviceClient.from('songs').delete().in('event_id', body.eventIds)
+    // Delete assignments for these events
+    await serviceClient.from('schedule_assignments').delete().in('event_id', body.eventIds)
+    // Delete the events
+    const { error } = await serviceClient.from('schedule_events').delete().in('id', body.eventIds)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true, deleted: body.eventIds.length })
+  }
+
+  // Delete all events for a month (legacy behavior)
+  const { month, year } = body
 
   // Find the schedule
   const { data: schedule } = await serviceClient

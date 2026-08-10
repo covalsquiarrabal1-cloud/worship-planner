@@ -61,6 +61,8 @@ export default function AdminPage() {
   const [currentWeek, setCurrentWeek] = useState(() => Math.ceil(new Date().getDate() / 7))
   const [members, setMembers] = useState<{ id: string; name: string }[]>([])
   const [editingCell, setEditingCell] = useState<{ eventId: string; assignmentId: string; role: string } | null>(null)
+  const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set())
+  const [deletingEvents, setDeletingEvents] = useState(false)
   const supabase = createClient()
   const router = useRouter()
 
@@ -126,6 +128,45 @@ export default function AdminPage() {
     })
     setEditingCell(null)
     loadEvents()
+  }
+
+  function toggleEventSelection(eventId: string) {
+    setSelectedEventIds(prev => {
+      const next = new Set(prev)
+      if (next.has(eventId)) next.delete(eventId)
+      else next.add(eventId)
+      return next
+    })
+  }
+
+  function toggleAllEvents() {
+    if (selectedEventIds.size === events.length) {
+      setSelectedEventIds(new Set())
+    } else {
+      setSelectedEventIds(new Set(events.map(e => e.id)))
+    }
+  }
+
+  async function deleteSelectedEvents() {
+    if (selectedEventIds.size === 0) return
+    const count = selectedEventIds.size
+    if (!confirm(`Excluir ${count} escala(s) selecionada(s)? Isso apagará também os louvores e membros atribuídos.`)) return
+
+    setDeletingEvents(true)
+    const res = await fetch('/api/schedule-events/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventIds: Array.from(selectedEventIds) }),
+    })
+
+    if (res.ok) {
+      setSelectedEventIds(new Set())
+      loadEvents()
+    } else {
+      const data = await res.json()
+      alert('Erro: ' + (data.error || 'Erro desconhecido'))
+    }
+    setDeletingEvents(false)
   }
 
   // Calendar grid
@@ -426,9 +467,29 @@ export default function AdminPage() {
         />
       ) : (
         <div className="card p-0 overflow-x-auto">
+          {selectedEventIds.size > 0 && (
+            <div className="flex items-center justify-between px-4 py-2 bg-red-500/10 border-b border-red-500/20">
+              <span className="text-xs text-red-400 font-medium">{selectedEventIds.size} selecionado(s)</span>
+              <button
+                onClick={deleteSelectedEvents}
+                disabled={deletingEvents}
+                className="text-xs font-semibold text-red-400 hover:text-red-300 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+              >
+                {deletingEvents ? 'Excluindo...' : '🗑 Excluir Selecionados'}
+              </button>
+            </div>
+          )}
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--accent)]">
+                <th className="px-2 py-2.5 w-8">
+                  <input
+                    type="checkbox"
+                    checked={events.length > 0 && selectedEventIds.size === events.length}
+                    onChange={toggleAllEvents}
+                    className="w-3.5 h-3.5 rounded cursor-pointer"
+                  />
+                </th>
                 <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Sem</th>
                 <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Data</th>
                 <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Dia</th>
@@ -450,8 +511,16 @@ export default function AdminPage() {
                 return (
                   <tr
                     key={event.id}
-                    className={`border-b border-[var(--border)] hover:bg-[var(--accent)]/50 ${showWeekSeparator ? 'border-t-2 border-t-[var(--muted-foreground)]/30' : ''}`}
+                    className={`border-b border-[var(--border)] hover:bg-[var(--accent)]/50 ${showWeekSeparator ? 'border-t-2 border-t-[var(--muted-foreground)]/30' : ''} ${selectedEventIds.has(event.id) ? 'bg-red-500/5' : ''}`}
                   >
+                    <td className="px-2 py-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedEventIds.has(event.id)}
+                        onChange={() => toggleEventSelection(event.id)}
+                        className="w-3.5 h-3.5 rounded cursor-pointer"
+                      />
+                    </td>
                     <td className="px-3 py-2 text-xs text-[var(--muted-foreground)]">{event.week_number}</td>
                     <td className="px-3 py-2 text-xs font-medium">{format(new Date(event.event_date + 'T12:00:00'), 'dd/MM')}</td>
                     <td className="px-3 py-2 text-xs capitalize">{event.day_of_week}</td>
