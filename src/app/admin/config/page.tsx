@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Loader2, LogOut, Tag, CalendarOff, Guitar, Users } from 'lucide-react'
+import { Loader2, LogOut, Tag, CalendarOff, Guitar, Users, Edit2, ImagePlus } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
