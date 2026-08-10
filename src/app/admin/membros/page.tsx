@@ -388,7 +388,7 @@ function MemberForm({
                   checked={form.is_general_leader}
                   onChange={(e) => setForm({ ...form, is_general_leader: e.target.checked })}
                 />
-                <span className="text-sm">Líder geral</span>
+                <span className="text-sm">Líder Adoração</span>
               </label>
 
               <label className="flex items-center gap-4 cursor-pointer px-4 py-3.5">

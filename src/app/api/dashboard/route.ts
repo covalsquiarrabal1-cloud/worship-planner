@@ -14,7 +14,7 @@ export async function GET() {
     serviceClient.from('person_roles').select('id, name').order('name'),
     serviceClient.from('member_person_roles').select('member_email, role_id'),
     serviceClient.from('ministry_members').select('name, email, ministry_id, role'),
-    serviceClient.from('members').select('name, email'),
+    serviceClient.from('members').select('name, email, is_leader, is_general_leader'),
     serviceClient.from('ministry_signups').select('name, email'),
   ])
 
@@ -87,6 +87,11 @@ export async function GET() {
         for (const entry of leaderEntries) {
           const ministry = ministries.find(m => m.id === entry.ministry_id)
           if (ministry) leaderMinistries.add(ministry.name)
+        }
+        // Source 3: members.is_general_leader = true means leader of "Adoração" (worship)
+        const memberRecord = members.find(m => m.email && m.email.toLowerCase() === a.member_email)
+        if (memberRecord?.is_general_leader) {
+          leaderMinistries.add('Adoração')
         }
         personMinistries = Array.from(leaderMinistries).sort()
       } else {
