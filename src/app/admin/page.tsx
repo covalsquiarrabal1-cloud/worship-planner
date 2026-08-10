@@ -392,13 +392,20 @@ export default function AdminPage() {
             </button>
           </div>
           {/* Secondary actions */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <Link
               href="/admin/escala/manual"
               className="flex flex-col items-center justify-center gap-2 bg-[var(--card)] border border-[var(--border)] py-4 rounded-2xl hover:border-[var(--muted-foreground)] transition-colors"
             >
               <Calendar className="w-5 h-5 text-[var(--muted-foreground)]" />
               <span className="text-xs font-medium text-[var(--muted-foreground)]">Escala Manual</span>
+            </Link>
+            <Link
+              href="/admin/config/louvor"
+              className="flex flex-col items-center justify-center gap-2 bg-[var(--card)] border border-[var(--border)] py-4 rounded-2xl hover:border-[#58a6ff]/50 transition-colors"
+            >
+              <Settings className="w-5 h-5 text-[var(--muted-foreground)]" />
+              <span className="text-xs font-medium text-[var(--muted-foreground)]">Configuração</span>
             </Link>
             <button
               onClick={async () => {
