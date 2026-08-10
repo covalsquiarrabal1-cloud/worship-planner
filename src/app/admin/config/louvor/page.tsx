@@ -248,6 +248,31 @@ export default function ConfigLouvorPage() {
           <ScaleTypeEditForm scaleType={editingScaleType} onClose={() => setEditingScaleType(null)} onSave={() => { setEditingScaleType(null); loadAll() }} />
         )}
       </section>
+
+      {/* ========== PRIVACIDADE DA ESCALA ========== */}
+      <section className="space-y-4">
+        <h3 className="font-semibold flex items-center gap-2 text-base">👁 Privacidade da Escala</h3>
+        <div className="card flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium">Ocultar nomes nas escalas alheias</p>
+            <p className="text-xs text-[var(--muted-foreground)] mt-1">
+              Quando ativado, cada membro só vê os nomes dos participantes nos dias em que ele está escalado.
+            </p>
+          </div>
+          <PrivacyToggle />
+        </div>
+      </section>
+
+      {/* ========== BLOQUEIOS ========== */}
+      <section>
+        <Link href="/admin/membros/bloqueios" className="card flex items-center gap-4 w-full hover:border-[#444] transition-colors">
+          <span className="text-red-400 text-lg">🚫</span>
+          <div>
+            <p className="font-medium text-sm">Bloqueios Específicos</p>
+            <p className="text-xs text-[var(--muted-foreground)]">Bloquear membros em datas específicas</p>
+          </div>
+        </Link>
+      </section>
     </div>
   )
 }
@@ -341,5 +366,35 @@ function ScaleTypeEditForm({ scaleType, onClose, onSave }: { scaleType: ScaleTyp
         </div>
       </form>
     </div>
+  )
+}
+
+
+function PrivacyToggle() {
+  const [enabled, setEnabled] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/app-settings?key=hide_other_members')
+      .then(r => r.json())
+      .then(data => { setEnabled(data.value === 'true'); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [])
+
+  async function toggle() {
+    const newValue = !enabled
+    setSaving(true)
+    setEnabled(newValue)
+    await fetch('/api/app-settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 'hide_other_members', value: String(newValue) }) })
+    setSaving(false)
+  }
+
+  if (loading) return <Loader2 className="w-5 h-5 animate-spin" />
+
+  return (
+    <button onClick={toggle} disabled={saving} className={`relative w-12 h-7 rounded-full transition-colors shrink-0 ${enabled ? 'bg-[#58a6ff]' : 'bg-[#30363d]'}`}>
+      <span className={`absolute top-1 w-5 h-5 rounded-full bg-white transition-transform ${enabled ? 'left-6' : 'left-1'}`} />
+    </button>
   )
 }

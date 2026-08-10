@@ -55,23 +55,6 @@ export default function ConfigPage() {
       {/* ========== FOTOS / PERSONALIZAÇÃO ========== */}
       <PhotoSettings />
 
-      {/* ========== CONFIG LOUVOR (link) ========== */}
-      <section className="space-y-4">
-        <Link
-          href="/admin/config/louvor"
-          className="card flex items-center justify-between hover:border-[#58a6ff] transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <Guitar className="w-5 h-5 text-[#58a6ff]" />
-            <div>
-              <p className="text-sm font-medium">Configuração do Louvor</p>
-              <p className="text-xs text-[var(--muted-foreground)]">Instrumentos, Padrão de Banda, Escala por Dia, Tipos de Escala</p>
-            </div>
-          </div>
-          <span className="text-xs text-[var(--muted-foreground)]">→</span>
-        </Link>
-      </section>
-
       {/* ========== LÍDERES DOS MINISTÉRIOS ========== */}
       <section className="space-y-4">
         <h3 className="font-semibold flex items-center gap-2 text-base">
@@ -93,34 +76,6 @@ export default function ConfigPage() {
           Aparece na tela inicial dos membros e líderes.
         </p>
         <VerseEditor />
-      </section>
-
-      {/* ========== VISIBILIDADE MEMBROS ========== */}
-      <section className="space-y-4">
-        <h3 className="font-semibold flex items-center gap-2 text-base">
-          <Users className="w-5 h-5" />
-          Privacidade da Escala
-        </h3>
-        <div className="card flex items-center justify-between gap-4">
-          <div>
-            <p className="text-sm font-medium">Ocultar nomes nas escalas alheias</p>
-            <p className="text-xs text-[var(--muted-foreground)] mt-1">
-              Quando ativado, cada membro só vê os nomes dos participantes nos dias em que ele está escalado.
-            </p>
-          </div>
-          <PrivacyToggle />
-        </div>
-      </section>
-
-      {/* ========== BLOQUEIOS ========== */}
-      <section>
-        <Link href="/admin/membros/bloqueios" className="card flex items-center gap-4 w-full hover:border-[#444] transition-colors">
-          <CalendarOff className="w-5 h-5 text-red-400 shrink-0" />
-          <div>
-            <p className="font-medium text-sm">Bloqueios Específicos</p>
-            <p className="text-xs text-[var(--muted-foreground)]">Bloquear membros em datas específicas</p>
-          </div>
-        </Link>
       </section>
 
       {/* ========== LOGOUT ========== */}
