@@ -15,11 +15,24 @@ export async function GET(request: Request) {
   const serviceClient = await createServiceRoleClient()
   let myEvents: any[] = []
 
+  // Allow admin to query another member's schedule by email
+  const memberEmail = searchParams.get('memberEmail')
+  let targetEmail = user.email || ''
+
+  if (memberEmail) {
+    // Verify caller is admin
+    const { data: profile } = await serviceClient
+      .from('profiles').select('role').eq('id', user.id).single()
+    if (profile?.role === 'admin') {
+      targetEmail = memberEmail
+    }
+  }
+
   // === 1. Ministry schedule events ===
   const { data: myMemberships } = await serviceClient
     .from('ministry_members')
     .select('id, ministry_id, name')
-    .ilike('email', user.email || '')
+    .ilike('email', targetEmail)
 
   if (myMemberships && myMemberships.length > 0) {
     const memberIds = myMemberships.map(m => m.id)
@@ -79,7 +92,7 @@ export async function GET(request: Request) {
   const { data: myMomentosMembers } = await serviceClient
     .from('momentos_members')
     .select('id')
-    .ilike('email', user.email || '')
+    .ilike('email', targetEmail)
 
   const momentosMemberIds = (myMomentosMembers || []).map(m => m.id)
 

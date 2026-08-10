@@ -30,6 +30,15 @@ interface ScheduleEvent {
 interface Member {
   id: string
   name: string
+  email: string
+}
+
+interface MinistryDay {
+  event_date: string
+  day_of_week: string
+  scale_name: string
+  ministry_name: string
+  ministry_slug: string
 }
 
 const roleLabels: Record<string, string> = {
@@ -43,6 +52,7 @@ const instrumentRoles = ['bateria', 'guitarra', 'baixo', 'teclado']
 export default function EscalaMembroPage() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState<ScheduleEvent[]>([])
+  const [ministryDays, setMinistryDays] = useState<MinistryDay[]>([])
   const [members, setMembers] = useState<Member[]>([])
   const [selectedMember, setSelectedMember] = useState<string>('')
   const [search, setSearch] = useState('')
@@ -68,10 +78,20 @@ export default function EscalaMembroPage() {
   async function loadEvents() {
     const start = format(startOfMonth(currentDate), 'yyyy-MM-dd')
     const end = format(endOfMonth(currentDate), 'yyyy-MM-dd')
-    const res = await fetch(`/api/schedule-events?start=${start}&end=${end}`, { cache: 'no-store' })
-    if (res.ok) {
-      const data = await res.json()
+    const memberEmail = members.find(m => m.id === selectedMember)?.email || ''
+
+    const [worshipRes, ministryRes] = await Promise.all([
+      fetch(`/api/schedule-events?start=${start}&end=${end}`, { cache: 'no-store' }),
+      fetch(`/api/minha-escala-ministerio?start=${start}&end=${end}&memberEmail=${encodeURIComponent(memberEmail)}`, { cache: 'no-store' }),
+    ])
+
+    if (worshipRes.ok) {
+      const data = await worshipRes.json()
       setEvents(Array.isArray(data) ? data : [])
+    }
+    if (ministryRes.ok) {
+      const data = await ministryRes.json()
+      setMinistryDays(Array.isArray(data) ? data : [])
     }
   }
 
@@ -161,7 +181,7 @@ export default function EscalaMembroPage() {
           </div>
 
           {/* Results */}
-          {memberEvents.length === 0 ? (
+          {memberEvents.length === 0 && ministryDays.length === 0 ? (
             <div className="card text-center py-8">
               <p className="text-sm text-[var(--muted-foreground)]">
                 {memberName} não está escalado(a) neste mês.
@@ -169,84 +189,112 @@ export default function EscalaMembroPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-xs text-[var(--muted-foreground)]">{memberEvents.length} dia(s) escalado(a)</p>
+              <p className="text-xs text-[var(--muted-foreground)]">{memberEvents.length + ministryDays.length} escalação(ões) no mês</p>
 
-              {memberEvents.map(event => {
-                const myRole = event.assignments.find(a => a.member?.id === selectedMember)?.role || ''
-                const vocals = event.assignments.filter(a => vocalRoles.includes(a.role)).sort((a, b) => a.role.localeCompare(b.role))
-                const instruments = event.assignments.filter(a => instrumentRoles.includes(a.role))
-                const songs = [...(event.songs || [])].sort((a, b) => a.order_num - b.order_num)
+              {/* Merge and sort by date */}
+              {(() => {
+                const allItems: { date: string; type: 'louvor' | 'ministerio'; event?: typeof memberEvents[0]; ministry?: MinistryDay }[] = []
+                for (const event of memberEvents) {
+                  allItems.push({ date: event.event_date, type: 'louvor', event })
+                }
+                for (const md of ministryDays) {
+                  allItems.push({ date: md.event_date, type: 'ministerio', ministry: md })
+                }
+                allItems.sort((a, b) => a.date.localeCompare(b.date))
 
-                return (
-                  <div key={event.id} className="card relative space-y-3">
-                    <div className="absolute inset-0 rounded-2xl border-flow-card" style={{ '--flow-color': '#22c55e' } as React.CSSProperties} />
-                    <div className="relative space-y-3">
-                      {/* Header */}
-                      <div className="flex items-center gap-3">
-                        <div className="shrink-0 text-center min-w-[50px]">
-                          <p className="text-lg font-bold">{format(new Date(event.event_date + 'T12:00:00'), 'dd')}</p>
-                          <p className="text-[10px] text-[var(--muted-foreground)] capitalize">{event.day_of_week}</p>
-                        </div>
-                        <div className="flex-1 border-l border-[var(--border)] pl-3">
-                          <p className="font-bold text-green-400">{event.scale_type?.name || '-'}</p>
-                          <p className="text-xs text-[var(--muted-foreground)]">🎵 {roleLabels[myRole] || myRole}</p>
+                return allItems.map((item, idx) => {
+                  if (item.type === 'ministerio' && item.ministry) {
+                    const md = item.ministry
+                    return (
+                      <div key={`m-${idx}`} className="card relative">
+                        <div className="absolute inset-0 rounded-2xl border-flow-card" style={{ '--flow-color': '#58a6ff' } as React.CSSProperties} />
+                        <div className="relative flex items-center gap-3">
+                          <div className="shrink-0 text-center min-w-[50px]">
+                            <p className="text-lg font-bold">{format(new Date(md.event_date + 'T12:00:00'), 'dd')}</p>
+                            <p className="text-[10px] text-[var(--muted-foreground)] capitalize">{md.day_of_week}</p>
+                          </div>
+                          <div className="flex-1 border-l border-[var(--border)] pl-3">
+                            <p className="font-bold text-[#58a6ff]">{md.scale_name || '-'}</p>
+                            <p className="text-xs text-[var(--muted-foreground)]">⛪ {md.ministry_name}</p>
+                          </div>
                         </div>
                       </div>
+                    )
+                  }
 
-                      {/* Vocais */}
-                      {vocals.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                          {vocals.map(a => (
-                            <span key={a.id} className={`text-xs px-2 py-1 rounded-lg ${a.member?.id === selectedMember ? 'bg-green-500/20 text-green-400 font-bold' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}>
-                              🎤 {roleLabels[a.role]} {a.member?.name || '-'}
-                            </span>
-                          ))}
+                  if (item.type === 'louvor' && item.event) {
+                    const event = item.event
+                    const myRole = event.assignments.find(a => a.member?.id === selectedMember)?.role || ''
+                    const vocals = event.assignments.filter(a => vocalRoles.includes(a.role)).sort((a, b) => a.role.localeCompare(b.role))
+                    const instruments = event.assignments.filter(a => instrumentRoles.includes(a.role))
+                    const songs = [...(event.songs || [])].sort((a, b) => a.order_num - b.order_num)
+
+                    return (
+                      <div key={`w-${event.id}`} className="card relative space-y-3">
+                        <div className="absolute inset-0 rounded-2xl border-flow-card" style={{ '--flow-color': '#22c55e' } as React.CSSProperties} />
+                        <div className="relative space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="shrink-0 text-center min-w-[50px]">
+                              <p className="text-lg font-bold">{format(new Date(event.event_date + 'T12:00:00'), 'dd')}</p>
+                              <p className="text-[10px] text-[var(--muted-foreground)] capitalize">{event.day_of_week}</p>
+                            </div>
+                            <div className="flex-1 border-l border-[var(--border)] pl-3">
+                              <p className="font-bold text-green-400">{event.scale_type?.name || '-'}</p>
+                              <p className="text-xs text-[var(--muted-foreground)]">🎵 {roleLabels[myRole] || myRole}</p>
+                            </div>
+                          </div>
+                          {vocals.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {vocals.map(a => (
+                                <span key={a.id} className={`text-xs px-2 py-1 rounded-lg ${a.member?.id === selectedMember ? 'bg-green-500/20 text-green-400 font-bold' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}>
+                                  🎤 {roleLabels[a.role]} {a.member?.name || '-'}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          {songs.length > 0 && (
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-[var(--border)]">
+                                  <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold w-8">#</th>
+                                  <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold">Louvor</th>
+                                  <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold">Versão</th>
+                                  <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold">Ministro</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {songs.map(song => (
+                                  <tr key={song.id} className="border-b border-[var(--border)]/30">
+                                    <td className="py-2 px-1 text-center font-bold">{song.order_num}</td>
+                                    <td className="py-2 px-1 font-medium">{song.title}</td>
+                                    <td className="py-2 px-1 text-[var(--muted-foreground)]">{song.version || '-'}</td>
+                                    <td className={`py-2 px-1 ${song.minister && memberName && song.minister.toUpperCase().includes(memberName.toUpperCase()) ? 'text-green-400 font-bold' : ''}`}>
+                                      {song.minister || '-'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          )}
+                          {instruments.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5 pt-2 border-t border-[var(--border)]">
+                              {instruments.map(a => {
+                                const icon = a.role === 'guitarra' ? '🎸' : a.role === 'baixo' ? '🎸' : a.role === 'bateria' ? '🥁' : '🎹'
+                                return (
+                                  <span key={a.id} className={`text-xs px-2 py-1 rounded-lg ${a.member?.id === selectedMember ? 'bg-green-500/20 text-green-400 font-bold' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}>
+                                    {icon} {roleLabels[a.role]} {a.member?.name || '-'}
+                                  </span>
+                                )
+                              })}
+                            </div>
+                          )}
                         </div>
-                      )}
-
-                      {/* Louvores */}
-                      {songs.length > 0 && (
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="border-b border-[var(--border)]">
-                              <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold w-8">#</th>
-                              <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold">Louvor</th>
-                              <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold">Versão</th>
-                              <th className="text-left py-1.5 px-1 text-[var(--muted-foreground)] font-semibold">Ministro</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {songs.map(song => (
-                              <tr key={song.id} className="border-b border-[var(--border)]/30">
-                                <td className="py-2 px-1 text-center font-bold">{song.order_num}</td>
-                                <td className="py-2 px-1 font-medium">{song.title}</td>
-                                <td className="py-2 px-1 text-[var(--muted-foreground)]">{song.version || '-'}</td>
-                                <td className={`py-2 px-1 ${song.minister && memberName && song.minister.toUpperCase().includes(memberName.toUpperCase()) ? 'text-green-400 font-bold' : ''}`}>
-                                  {song.minister || '-'}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      )}
-
-                      {/* Músicos */}
-                      {instruments.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-2 border-t border-[var(--border)]">
-                          {instruments.map(a => {
-                            const icon = a.role === 'guitarra' ? '🎸' : a.role === 'baixo' ? '🎸' : a.role === 'bateria' ? '🥁' : '🎹'
-                            return (
-                              <span key={a.id} className={`text-xs px-2 py-1 rounded-lg ${a.member?.id === selectedMember ? 'bg-green-500/20 text-green-400 font-bold' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}>
-                                {icon} {roleLabels[a.role]} {a.member?.name || '-'}
-                              </span>
-                            )
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
+                      </div>
+                    )
+                  }
+                  return null
+                })
+              })()}
             </div>
           )}
         </>
