@@ -92,7 +92,7 @@ export default function AdminPage() {
     const start = format(startOfMonth(currentDate), 'yyyy-MM-dd')
     const end = format(endOfMonth(currentDate), 'yyyy-MM-dd')
 
-    const res = await fetch(`/api/schedule-events?start=${start}&end=${end}`)
+    const res = await fetch(`/api/schedule-events?start=${start}&end=${end}`, { cache: 'no-store' })
     if (res.ok) {
       const data = await res.json()
       setEvents(Array.isArray(data) ? data : [])
@@ -101,7 +101,7 @@ export default function AdminPage() {
     }
 
     // Check publish status
-    const pubRes = await fetch(`/api/schedule-events/publish-status?month=${month}&year=${year}`)
+    const pubRes = await fetch(`/api/schedule-events/publish-status?month=${month}&year=${year}`, { cache: 'no-store' })
     if (pubRes.ok) {
       const pubData = await pubRes.json()
       setIsPublished(pubData.is_published ?? false)
@@ -127,7 +127,14 @@ export default function AdminPage() {
       body: JSON.stringify({ assignment_id: assignmentId, member_id: memberId }),
     })
     setEditingCell(null)
-    loadEvents()
+    // Reload to get updated member names
+    const start = format(startOfMonth(currentDate), 'yyyy-MM-dd')
+    const end = format(endOfMonth(currentDate), 'yyyy-MM-dd')
+    const res = await fetch(`/api/schedule-events?start=${start}&end=${end}`, { cache: 'no-store' })
+    if (res.ok) {
+      const data = await res.json()
+      setEvents(Array.isArray(data) ? data : [])
+    }
   }
 
   function toggleEventSelection(eventId: string) {
@@ -160,8 +167,9 @@ export default function AdminPage() {
     })
 
     if (res.ok) {
+      // Update local state immediately (optimistic)
+      setEvents(prev => prev.filter(e => !selectedEventIds.has(e.id)))
       setSelectedEventIds(new Set())
-      loadEvents()
     } else {
       const data = await res.json()
       alert('Erro: ' + (data.error || 'Erro desconhecido'))
@@ -402,7 +410,7 @@ export default function AdminPage() {
                   body: JSON.stringify({ month, year }),
                 })
                 const data = await res.json()
-                if (res.ok) { alert('Escala excluída.'); loadEvents() }
+                if (res.ok) { setEvents([]); setIsPublished(false) }
                 else alert('Erro: ' + data.error)
               }}
               className="flex flex-col items-center justify-center gap-2 bg-[var(--card)] border border-[var(--border)] py-4 rounded-2xl hover:border-[#f85149]/50 transition-colors"
