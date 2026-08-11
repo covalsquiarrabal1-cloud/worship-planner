@@ -180,7 +180,7 @@ export default function MensagensPage() {
 
       {/* Week events summary */}
       {weekEvents.length > 0 && (
-        <div className="card py-3 px-4">
+        <div className="card py-3 px-4 space-y-3">
           <div className="flex flex-wrap gap-2">
             {weekEvents.map(e => (
               <span key={e.id} className="text-xs bg-[var(--accent)] px-2 py-1 rounded">
@@ -188,6 +188,31 @@ export default function MensagensPage() {
               </span>
             ))}
           </div>
+          <button
+            onClick={async () => {
+              if (!confirm('Enviar notificação push para TODOS os escalados desta semana?')) return
+              const ids = memberMessages.map(m => m.id)
+              const res = await fetch('/api/push/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  title: '🎵 Escala da Semana',
+                  body: `Você está escalado(a) esta semana! Confira os detalhes no app.`,
+                  url: '/membro',
+                  memberIds: ids,
+                }),
+              })
+              const data = await res.json()
+              if (res.ok) {
+                alert(`Notificação enviada! ✅\n${data.sent} receberam, ${data.failed} falharam.`)
+              } else {
+                alert('Erro: ' + (data.error || 'Falha ao enviar'))
+              }
+            }}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#58a6ff] text-white text-sm font-semibold hover:bg-[#4c94e0] transition-colors"
+          >
+            🔔 Notificar Todos (Push)
+          </button>
         </div>
       )}
 

@@ -6,6 +6,7 @@ import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns
 import { ptBR } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { playClick } from '@/lib/sounds'
+import PushNotificationToggle from '@/components/PushNotificationToggle'
 
 interface ScheduleEvent {
   id: string
@@ -173,6 +174,9 @@ export default function MemberSchedulePage() {
           )}
         </div>
       )}
+
+      {/* Push Notifications */}
+      <PushNotificationToggle />
 
       {/* Month Navigation */}
       <div className="flex items-center justify-between">
