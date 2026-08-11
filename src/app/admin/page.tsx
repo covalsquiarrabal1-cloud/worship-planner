@@ -282,6 +282,9 @@ export default function AdminPage() {
         <Link href="/admin/minha-escala" className="px-4 py-2 rounded-xl text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] bg-[var(--card)] border border-[var(--border)]">
           Minha Escala
         </Link>
+        <Link href="/admin/mensagens" className="px-4 py-2 rounded-xl text-sm font-medium text-[var(--muted-foreground)] hover:text-[var(--foreground)] bg-[var(--card)] border border-[var(--border)]">
+          💬 Mensagens
+        </Link>
       </div>
 
       {/* Month Navigation */}

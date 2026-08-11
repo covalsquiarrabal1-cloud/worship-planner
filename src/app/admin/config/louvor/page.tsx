@@ -141,6 +141,20 @@ export default function ConfigLouvorPage() {
         </Link>
       </section>
 
+      {/* ========== MENSAGENS WHATSAPP ========== */}
+      <section>
+        <Link href="/admin/config/louvor/mensagens" className="card flex items-center justify-between hover:border-[#25d366] transition-colors">
+          <div className="flex items-center gap-3">
+            <span className="text-lg">💬</span>
+            <div>
+              <p className="text-sm font-medium">Mensagens da Semana</p>
+              <p className="text-xs text-[var(--muted-foreground)]">Envie lembretes via WhatsApp para os escalados</p>
+            </div>
+          </div>
+          <span className="text-xs text-[var(--muted-foreground)]">→</span>
+        </Link>
+      </section>
+
       {/* ========== INSTRUMENTOS ========== */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">

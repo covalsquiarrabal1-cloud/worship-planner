@@ -15,6 +15,7 @@ interface Member {
   is_musician: boolean
   instrument: string | null
   email: string | null
+  phone: string | null
 }
 
 export default function MembrosPage() {
@@ -219,6 +220,7 @@ function MemberForm({
     is_musician: member?.is_musician || false,
     instrument: member?.instrument || '',
     email: member?.email || '',
+    phone: member?.phone || '',
   })
 
   useEffect(() => {
@@ -346,6 +348,17 @@ function MemberForm({
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               placeholder="opcional"
+            />
+          </div>
+
+          {/* Telefone */}
+          <div>
+            <label className="text-sm font-medium text-[var(--muted-foreground)] block mb-2">Telefone</label>
+            <input
+              type="tel"
+              value={form.phone || ''}
+              onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              placeholder="(18) 99999-9999"
             />
           </div>
 
