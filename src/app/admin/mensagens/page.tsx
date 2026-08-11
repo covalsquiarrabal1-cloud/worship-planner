@@ -75,13 +75,12 @@ export default function MensagensPage() {
         if (!assignment.member) continue
         const memberId = assignment.member.id
         const memberData = members.find(m => m.id === memberId)
-        if (!memberData?.phone) continue
 
         if (!memberMap.has(memberId)) {
           memberMap.set(memberId, {
             id: memberId,
             name: assignment.member.name,
-            phone: memberData.phone,
+            phone: memberData?.phone || '',
             days: [],
           })
         }
@@ -245,20 +244,24 @@ export default function MensagensPage() {
                   <p className="text-sm font-semibold">{member.name}</p>
                   <p className="text-xs text-[var(--muted-foreground)] truncate">{daysLabel}</p>
                 </div>
-                <a
-                  href={getWhatsAppLink(member)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() => markSent(member.id)}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold shrink-0 transition-all ${
-                    isSent
-                      ? 'bg-green-500/10 text-green-400 border border-green-500/30'
-                      : 'bg-[#25d366] text-white hover:bg-[#20bd5a] shadow-lg shadow-[#25d366]/20'
-                  }`}
-                >
-                  {isSent ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-                  {isSent ? 'Enviado' : 'Enviar'}
-                </a>
+                {member.phone ? (
+                  <a
+                    href={getWhatsAppLink(member)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => markSent(member.id)}
+                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold shrink-0 transition-all ${
+                      isSent
+                        ? 'bg-green-500/10 text-green-400 border border-green-500/30'
+                        : 'bg-[#25d366] text-white hover:bg-[#20bd5a] shadow-lg shadow-[#25d366]/20'
+                    }`}
+                  >
+                    {isSent ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                    {isSent ? 'Enviado' : 'Enviar'}
+                  </a>
+                ) : (
+                  <span className="text-[10px] text-red-400 px-3 py-2 shrink-0">Sem telefone</span>
+                )}
               </div>
             )
           })}
