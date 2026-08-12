@@ -99,127 +99,127 @@ export default function SobrePage() {
           </div>
 
           {/* Phone Mockups */}
-          <div className="flex justify-center gap-6 mt-12 px-4 overflow-hidden">
+          <div className="flex flex-col md:flex-row justify-center items-center gap-8 mt-12 px-4">
             {/* Phone 1 - Member View */}
-            <div className="w-[220px] shrink-0 hidden md:block">
-              <div className="bg-[#0d1117] border-2 border-[#30363d] rounded-[2rem] p-3 shadow-2xl">
-                <div className="bg-black rounded-[1.5rem] overflow-hidden">
-                  <div className="h-6 bg-black flex items-center justify-center">
-                    <div className="w-16 h-3 bg-[#1c2128] rounded-full" />
+            <div className="w-[280px]">
+              <div className="bg-[#0d1117] border-2 border-[#30363d] rounded-[2.5rem] p-4 shadow-2xl">
+                <div className="bg-black rounded-[2rem] overflow-hidden">
+                  <div className="h-7 bg-black flex items-center justify-center">
+                    <div className="w-20 h-4 bg-[#1c2128] rounded-full" />
                   </div>
-                  <div className="p-3 space-y-2">
-                    <p className="text-[9px] font-bold text-center">Worship Planner</p>
-                    <div className="bg-[#161b22] rounded-lg p-2">
-                      <p className="text-[8px] font-bold">Olá, Michele! 👋</p>
-                      <p className="text-[7px] text-gray-400 italic">&ldquo;Cantai ao Senhor um cântico novo&rdquo;</p>
+                  <div className="p-4 space-y-3">
+                    <p className="text-xs font-bold text-center">Worship Planner</p>
+                    <div className="bg-[#161b22] rounded-xl p-3">
+                      <p className="text-[10px] font-bold">Olá, Michele! 👋</p>
+                      <p className="text-[9px] text-gray-400 italic mt-1">&ldquo;Cantai ao Senhor um cântico novo&rdquo;</p>
                     </div>
-                    <div className="flex gap-1">
-                      <div className="flex-1 bg-[#1c2128] rounded-lg py-2 text-center"><p className="text-[7px] text-gray-400">Mensal</p></div>
-                      <div className="flex-1 bg-[#58a6ff] rounded-lg py-2 text-center"><p className="text-[7px] text-white font-bold">Semanal</p></div>
+                    <div className="flex gap-2">
+                      <div className="flex-1 bg-[#1c2128] rounded-xl py-2.5 text-center"><p className="text-[9px] text-gray-400">Mensal</p></div>
+                      <div className="flex-1 bg-[#58a6ff] rounded-xl py-2.5 text-center"><p className="text-[9px] text-white font-bold">Semanal</p></div>
                     </div>
-                    <div className="bg-[#161b22] border border-[#22c55e]/30 rounded-lg p-2 space-y-1">
-                      <p className="text-[7px] text-gray-400">Sábado, 15/08</p>
-                      <p className="text-[9px] font-bold text-[#22c55e]">ALIVE</p>
+                    <div className="bg-[#161b22] border border-[#22c55e]/30 rounded-xl p-3 space-y-1.5">
+                      <p className="text-[9px] text-gray-400">Sábado, 15/08</p>
+                      <p className="text-xs font-bold text-[#22c55e]">ALIVE</p>
                       <div className="flex gap-1 flex-wrap">
-                        <span className="text-[6px] bg-[#22c55e]/20 text-[#22c55e] px-1 rounded">🎤 Vocal 2 Michele</span>
+                        <span className="text-[8px] bg-[#22c55e]/20 text-[#22c55e] px-1.5 py-0.5 rounded-md">🎤 Vocal 2 Michele</span>
                       </div>
-                      <div className="border-t border-[#30363d] pt-1 mt-1 space-y-0.5">
-                        <p className="text-[6px] text-gray-400">1. O Vento Encontra o Fogo</p>
-                        <p className="text-[6px] text-gray-400">2. No Trono</p>
-                        <p className="text-[6px] text-gray-400">3. Em Volta do Teu Trono</p>
+                      <div className="border-t border-[#30363d] pt-2 mt-2 space-y-1">
+                        <p className="text-[8px] text-gray-400">1. O Vento Encontra o Fogo</p>
+                        <p className="text-[8px] text-gray-400">2. No Trono</p>
+                        <p className="text-[8px] text-gray-400">3. Em Volta do Teu Trono</p>
                       </div>
                     </div>
-                    <div className="bg-[#161b22] border border-[#22c55e]/30 rounded-lg p-2 space-y-1">
-                      <p className="text-[7px] text-gray-400">Domingo, 16/08</p>
-                      <p className="text-[9px] font-bold text-[#22c55e]">CELEBRAÇÃO</p>
+                    <div className="bg-[#161b22] border border-[#22c55e]/30 rounded-xl p-3 space-y-1.5">
+                      <p className="text-[9px] text-gray-400">Domingo, 16/08</p>
+                      <p className="text-xs font-bold text-[#22c55e]">CELEBRAÇÃO</p>
                       <div className="flex gap-1 flex-wrap">
-                        <span className="text-[6px] bg-[#1c2128] text-gray-400 px-1 rounded">🎤 V1 Covalsqui</span>
-                        <span className="text-[6px] bg-[#1c2128] text-gray-400 px-1 rounded">🎤 V3 Érica</span>
+                        <span className="text-[8px] bg-[#1c2128] text-gray-400 px-1.5 py-0.5 rounded-md">🎤 V1 Covalsqui</span>
+                        <span className="text-[8px] bg-[#1c2128] text-gray-400 px-1.5 py-0.5 rounded-md">🎤 V3 Érica</span>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-              <p className="text-center text-xs text-gray-500 mt-3">Visão do Membro</p>
+              <p className="text-center text-sm text-gray-500 mt-3 font-medium">Visão do Membro</p>
             </div>
 
             {/* Phone 2 - Admin View */}
-            <div className="w-[220px] shrink-0">
-              <div className="bg-[#0d1117] border-2 border-[#30363d] rounded-[2rem] p-3 shadow-2xl">
-                <div className="bg-black rounded-[1.5rem] overflow-hidden">
-                  <div className="h-6 bg-black flex items-center justify-center">
-                    <div className="w-16 h-3 bg-[#1c2128] rounded-full" />
+            <div className="w-[280px]">
+              <div className="bg-[#0d1117] border-2 border-[#30363d] rounded-[2.5rem] p-4 shadow-2xl">
+                <div className="bg-black rounded-[2rem] overflow-hidden">
+                  <div className="h-7 bg-black flex items-center justify-center">
+                    <div className="w-20 h-4 bg-[#1c2128] rounded-full" />
                   </div>
-                  <div className="p-3 space-y-2">
-                    <p className="text-[9px] font-bold text-center">Worship Planner</p>
+                  <div className="p-4 space-y-3">
+                    <p className="text-xs font-bold text-center">Worship Planner</p>
                     <div className="flex gap-1">
-                      <div className="flex-1 bg-[#58a6ff] rounded py-1 text-center"><p className="text-[6px] text-white font-bold">Escalas</p></div>
-                      <div className="flex-1 bg-[#1c2128] rounded py-1 text-center"><p className="text-[6px] text-gray-400">Membros</p></div>
-                      <div className="flex-1 bg-[#1c2128] rounded py-1 text-center"><p className="text-[6px] text-gray-400">Músicas</p></div>
+                      <div className="flex-1 bg-[#58a6ff] rounded-lg py-1.5 text-center"><p className="text-[8px] text-white font-bold">Escalas</p></div>
+                      <div className="flex-1 bg-[#1c2128] rounded-lg py-1.5 text-center"><p className="text-[8px] text-gray-400">Membros</p></div>
+                      <div className="flex-1 bg-[#1c2128] rounded-lg py-1.5 text-center"><p className="text-[8px] text-gray-400">Músicas</p></div>
                     </div>
-                    <p className="text-[8px] text-center font-semibold">Agosto 2026</p>
-                    <div className="bg-[#161b22] rounded-lg overflow-hidden">
-                      <div className="grid grid-cols-5 gap-px bg-[#30363d] text-[5px] text-gray-400">
-                        <div className="bg-[#1c2128] p-1">Sem</div>
-                        <div className="bg-[#1c2128] p-1">Data</div>
-                        <div className="bg-[#1c2128] p-1">Culto</div>
-                        <div className="bg-[#1c2128] p-1">V1</div>
-                        <div className="bg-[#1c2128] p-1">V2</div>
+                    <p className="text-[10px] text-center font-semibold">Agosto 2026</p>
+                    <div className="bg-[#161b22] rounded-xl overflow-hidden">
+                      <div className="grid grid-cols-5 gap-px bg-[#30363d] text-[7px] text-gray-400">
+                        <div className="bg-[#1c2128] p-1.5">Sem</div>
+                        <div className="bg-[#1c2128] p-1.5">Data</div>
+                        <div className="bg-[#1c2128] p-1.5">Culto</div>
+                        <div className="bg-[#1c2128] p-1.5">V1</div>
+                        <div className="bg-[#1c2128] p-1.5">V2</div>
                       </div>
-                      {[['1','01','ALIVE','Cova','Érica'],['1','02','CELEB','Edu','Mavi'],['2','07','STRNG','Mat','Edu'],['2','09','CELEB','Mat','Mich']].map(([sem,d,c,v1,v2],i) => (
-                        <div key={i} className="grid grid-cols-5 gap-px bg-[#30363d] text-[5px]">
-                          <div className="bg-[#0d1117] p-1 text-gray-500">{sem}</div>
-                          <div className="bg-[#0d1117] p-1">{d}/08</div>
-                          <div className="bg-[#0d1117] p-1 text-[#22c55e] font-bold">{c}</div>
-                          <div className="bg-[#0d1117] p-1 text-gray-300">{v1}</div>
-                          <div className="bg-[#0d1117] p-1 text-gray-300">{v2}</div>
+                      {[['1','01/08','ALIVE','Cova','Érica'],['1','02/08','CELEB','Edu','Mavi'],['2','07/08','STRNG','Mat','Edu'],['2','09/08','CELEB','Mat','Mich'],['3','15/08','ALIVE','Mat','Nicole']].map(([sem,d,c,v1,v2],i) => (
+                        <div key={i} className="grid grid-cols-5 gap-px bg-[#30363d] text-[7px]">
+                          <div className="bg-[#0d1117] p-1.5 text-gray-500">{sem}</div>
+                          <div className="bg-[#0d1117] p-1.5">{d}</div>
+                          <div className="bg-[#0d1117] p-1.5 text-[#22c55e] font-bold">{c}</div>
+                          <div className="bg-[#0d1117] p-1.5 text-gray-300">{v1}</div>
+                          <div className="bg-[#0d1117] p-1.5 text-gray-300">{v2}</div>
                         </div>
                       ))}
                     </div>
-                    <div className="grid grid-cols-2 gap-1">
-                      <div className="bg-[#1c2128] border border-[#30363d] rounded-lg py-2 text-center">
-                        <p className="text-[7px]">+ GERAR</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-[#1c2128] border border-[#30363d] rounded-xl py-3 text-center">
+                        <p className="text-[9px] font-semibold">+ GERAR</p>
                       </div>
-                      <div className="bg-[#1c2128] border border-[#2ea043]/40 rounded-lg py-2 text-center">
-                        <p className="text-[7px] text-[#3fb950]">✓ PUBLICAR</p>
+                      <div className="bg-[#1c2128] border border-[#2ea043]/40 rounded-xl py-3 text-center">
+                        <p className="text-[9px] text-[#3fb950] font-semibold">✓ PUBLICAR</p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-              <p className="text-center text-xs text-gray-500 mt-3">Painel Admin</p>
+              <p className="text-center text-sm text-gray-500 mt-3 font-medium">Painel Admin</p>
             </div>
 
             {/* Phone 3 - Messages */}
-            <div className="w-[220px] shrink-0 hidden lg:block">
-              <div className="bg-[#0d1117] border-2 border-[#30363d] rounded-[2rem] p-3 shadow-2xl">
-                <div className="bg-black rounded-[1.5rem] overflow-hidden">
-                  <div className="h-6 bg-black flex items-center justify-center">
-                    <div className="w-16 h-3 bg-[#1c2128] rounded-full" />
+            <div className="w-[280px]">
+              <div className="bg-[#0d1117] border-2 border-[#30363d] rounded-[2.5rem] p-4 shadow-2xl">
+                <div className="bg-black rounded-[2rem] overflow-hidden">
+                  <div className="h-7 bg-black flex items-center justify-center">
+                    <div className="w-20 h-4 bg-[#1c2128] rounded-full" />
                   </div>
-                  <div className="p-3 space-y-2">
-                    <p className="text-[9px] font-bold text-center">Envio de Mensagens</p>
-                    <p className="text-[7px] text-center text-gray-400">Semana 3 - Agosto</p>
-                    <div className="bg-[#161b22] rounded-lg p-2 space-y-1.5">
-                      {['Covalsqui','Érica','Francieli','José Vitor','Mateus Luna'].map((name,i) => (
+                  <div className="p-4 space-y-3">
+                    <p className="text-xs font-bold text-center">Envio de Mensagens</p>
+                    <p className="text-[9px] text-center text-gray-400">Semana 3 - Agosto 2026</p>
+                    <div className="bg-[#161b22] rounded-xl p-3 space-y-2.5">
+                      {['Covalsqui Arrabal','Érica Alencar','Francieli Morais','José Vitor','Mateus Luna','Nicole Nunes'].map((name,i) => (
                         <div key={i} className="flex items-center justify-between">
                           <div>
-                            <p className="text-[7px] font-medium">{name}</p>
-                            <p className="text-[5px] text-gray-500">Sáb 15, Dom 16</p>
+                            <p className="text-[9px] font-medium">{name}</p>
+                            <p className="text-[7px] text-gray-500">Sáb 15/08, Dom 16/08</p>
                           </div>
-                          <div className="bg-[#25d366] text-white text-[5px] px-1.5 py-0.5 rounded font-bold">
+                          <div className="bg-[#25d366] text-white text-[7px] px-2 py-1 rounded-lg font-bold">
                             Enviar
                           </div>
                         </div>
                       ))}
                     </div>
-                    <div className="bg-[#58a6ff] rounded-lg py-2 text-center">
-                      <p className="text-[7px] text-white font-bold">🔔 Notificar Todos</p>
+                    <div className="bg-[#58a6ff] rounded-xl py-3 text-center">
+                      <p className="text-[9px] text-white font-bold">🔔 Notificar Todos (Push)</p>
                     </div>
                   </div>
                 </div>
               </div>
-              <p className="text-center text-xs text-gray-500 mt-3">Mensagens WhatsApp</p>
+              <p className="text-center text-sm text-gray-500 mt-3 font-medium">Mensagens WhatsApp</p>
             </div>
           </div>
         </div>
