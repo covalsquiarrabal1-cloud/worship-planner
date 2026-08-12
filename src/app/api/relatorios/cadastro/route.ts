@@ -8,9 +8,24 @@ export async function GET() {
 
   const serviceClient = await createServiceRoleClient()
 
+  // Check admin or staff role
   const { data: profile } = await serviceClient
     .from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
+  
+  let hasAccess = profile?.role === 'admin'
+  
+  if (!hasAccess) {
+    const { data: personRoles } = await serviceClient
+      .from('member_person_roles')
+      .select('role_id, person_roles(name)')
+      .eq('member_email', user.email?.toLowerCase() || '')
+    
+    const userRoles = (personRoles || []).map((pr: any) => pr.person_roles?.name).filter(Boolean)
+    const staffRoles = ['Pastor', 'Ministro', 'Secretaria']
+    hasAccess = userRoles.some((r: string) => staffRoles.includes(r))
+  }
+
+  if (!hasAccess) return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
   // Buscar todos os membros de ministérios
   const { data: ministryMembers } = await serviceClient
