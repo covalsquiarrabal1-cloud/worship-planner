@@ -404,7 +404,7 @@ export default function MinistryPage() {
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <div className="w-full max-w-7xl mx-auto px-4 space-y-5">
       <div className="flex items-center gap-3">
         <Link href="/admin/ministerios" className="p-2 rounded-xl bg-[#1c2128] border border-[#30363d]">
           <ArrowLeft className="w-5 h-5" />
@@ -847,16 +847,16 @@ export default function MinistryPage() {
             }
 
             return (
-            <div className="card p-0 overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
+            <div className="card p-0 overflow-x-auto border-2 border-[#30363d] rounded-xl">
+              <table className="w-full text-sm border-collapse text-center">
                 <thead>
-                  <tr className="border-b border-[var(--border)] bg-[var(--accent)]">
-                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Data</th>
-                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Dia</th>
-                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Escala</th>
-                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Cel.</th>
+                  <tr className="border-b-2 border-[var(--border)] bg-[var(--accent)]">
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Data</th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Dia</th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Escala</th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Cel.</th>
                     {displayColumns.map(col => (
-                      <th key={col} className={`text-center px-3 py-2.5 text-xs font-semibold border-r border-[var(--border)] last:border-r-0 ${roleColors[col] || 'text-[var(--muted-foreground)]'}`}>
+                      <th key={col} className={`text-center px-4 py-3 text-xs font-semibold border-r border-[var(--border)] last:border-r-0 ${roleColors[col] || 'text-[var(--muted-foreground)]'}`}>
                         {col === 'Intercessor' ? 'Intercessão' : col === 'Orar pelo Ministro' ? 'Orar p/ Ministro' : col}
                       </th>
                     ))}
@@ -872,69 +872,72 @@ export default function MinistryPage() {
                         <tr key={`${event.id}-${celNum}`} className="border-b border-[var(--border)] hover:bg-[var(--accent)]/50">
                           {celIdx === 0 && (
                             <>
-                              <td className="text-center px-3 py-2.5 text-xs font-medium border-r border-[var(--border)]" rowSpan={event.num_celebrations}>
+                              <td className="text-center px-4 py-3 text-xs font-medium border-r border-[var(--border)]" rowSpan={event.num_celebrations}>
                                 {event.event_date.slice(8,10)}/{event.event_date.slice(5,7)}
                               </td>
-                              <td className="text-center px-3 py-2.5 text-xs capitalize border-r border-[var(--border)]" rowSpan={event.num_celebrations}>
+                              <td className="text-center px-4 py-3 text-xs capitalize border-r border-[var(--border)]" rowSpan={event.num_celebrations}>
                                 {event.day_of_week}
                               </td>
-                              <td className="text-center px-3 py-2.5 text-xs font-semibold text-green-400 border-r border-[var(--border)]" rowSpan={event.num_celebrations}>
+                              <td className="text-center px-4 py-3 text-xs font-semibold text-green-400 border-r border-[var(--border)]" rowSpan={event.num_celebrations}>
                                 {event.scale_name || '-'}
                               </td>
                             </>
                           )}
-                          <td className="text-center px-3 py-2.5 text-xs text-[var(--muted-foreground)] border-r border-[var(--border)]">
+                          <td className="text-center px-4 py-3 text-xs text-[var(--muted-foreground)] border-r border-[var(--border)]">
                             {event.num_celebrations > 1 ? `C${celNum}` : '-'}
                           </td>
                           {displayColumns.map(col => {
                             const colAssignments = celAssignments.filter(a => a.role_name === col)
 
                             return (
-                              <td key={col} className="px-3 py-2.5 border-r border-[var(--border)] last:border-r-0">
-                                <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5">
+                              <td key={col} className="px-2 py-1 border-r border-[var(--border)] last:border-r-0 text-center align-middle">
+                                <div className="flex flex-col items-center">
                                   {colAssignments.map((a, idx) => (
                                     swappingAssignment === a.id ? (
-                                      <select
-                                        key={a.id}
-                                        autoFocus
-                                        className="!py-0.5 !px-1 !text-xs !w-auto !min-w-[100px] !rounded"
-                                        defaultValue={a.member?.id || ''}
-                                        onChange={e => {
-                                          handleSwapMember(a.id, e.target.value)
-                                          setSwappingAssignment(null)
-                                        }}
-                                        onBlur={() => setSwappingAssignment(null)}
-                                      >
-                                        <option value="">— Selecionar —</option>
-                                        {members.filter(m => !m.is_blocked).map(m => (
-                                          <option key={m.id} value={m.id}>{m.name}</option>
-                                        ))}
-                                      </select>
+                                      <div key={a.id} className={`py-2 w-full ${idx > 0 ? 'border-t border-[#30363d]' : ''}`}>
+                                        <select
+                                          autoFocus
+                                          className="!py-0.5 !px-1 !text-xs !w-auto !min-w-[100px] !rounded mx-auto block"
+                                          defaultValue={a.member?.id || ''}
+                                          onChange={e => {
+                                            handleSwapMember(a.id, e.target.value)
+                                            setSwappingAssignment(null)
+                                          }}
+                                          onBlur={() => setSwappingAssignment(null)}
+                                        >
+                                          <option value="">— Selecionar —</option>
+                                          {members.filter(m => !m.is_blocked).map(m => (
+                                            <option key={m.id} value={m.id}>{m.name}</option>
+                                          ))}
+                                        </select>
+                                      </div>
                                     ) : (
-                                      <span key={a.id} className="inline-flex items-center gap-0.5">
+                                      <div key={a.id} className={`flex items-center justify-center gap-1 py-2 w-full ${idx > 0 ? 'border-t border-[#30363d]' : ''}`}>
                                         <button
                                           onClick={() => setSwappingAssignment(a.id)}
                                           className={`text-xs font-medium hover:underline cursor-pointer ${roleColors[a.role_name || ''] || 'text-white'}`}
                                           title="Clique para trocar"
                                         >
-                                          {a.member?.nickname || a.member?.name || '-'}{idx < colAssignments.length - 1 ? ',' : ''}
+                                          {a.member?.nickname || a.member?.name || '-'}
                                         </button>
                                         {colAssignments.length > 1 && (
                                           <button
                                             onClick={() => handleRemoveMember(a.id)}
-                                            className="text-red-400 hover:text-red-300 text-sm font-bold w-7 h-7 rounded-lg flex items-center justify-center hover:bg-red-500/10"
+                                            className="text-red-400 hover:text-red-300 text-sm font-bold w-5 h-5 rounded flex items-center justify-center hover:bg-red-500/10"
                                             title="Remover"
                                           >×</button>
                                         )}
-                                      </span>
+                                      </div>
                                     )
                                   ))}
-                                  {colAssignments.length === 0 && <span className="text-xs text-[var(--muted-foreground)]">-</span>}
-                                  <button
-                                    onClick={() => setSwappingAssignment(`add-${event.id}-${celNum}-${col}`)}
-                                    className="text-[#58a6ff] text-sm font-bold hover:bg-[#58a6ff]/10 w-8 h-8 rounded-lg flex items-center justify-center"
-                                    title="Adicionar membro"
-                                  >+</button>
+                                  {colAssignments.length === 0 && <div className="py-2"><span className="text-xs text-[var(--muted-foreground)]">-</span></div>}
+                                  <div className={`py-1.5 ${colAssignments.length > 0 ? 'border-t border-[#30363d]' : ''} w-full flex justify-center`}>
+                                    <button
+                                      onClick={() => setSwappingAssignment(`add-${event.id}-${celNum}-${col}`)}
+                                      className="text-[#58a6ff] text-sm font-bold hover:bg-[#58a6ff]/10 w-6 h-6 rounded flex items-center justify-center"
+                                      title="Adicionar membro"
+                                    >+</button>
+                                  </div>
                                 </div>
                                 {swappingAssignment === `add-${event.id}-${celNum}-${col}` && (
                                   <select
