@@ -32,6 +32,7 @@ export default function RelatoriosPage() {
   const [data, setData] = useState<ReportData | null>(null)
   const [loading, setLoading] = useState(true)
   const [expandedArea, setExpandedArea] = useState<string | null>(null)
+  const [tab, setTab] = useState<'visao' | 'multi'>('visao')
 
   useEffect(() => {
     fetch('/api/relatorios')
@@ -66,10 +67,25 @@ export default function RelatoriosPage() {
         </div>
       </div>
 
-      {/* Content */}
-      {data && (
-      <>
+      {/* Tabs */}
+      <div className="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-1.5 flex gap-1">
+        <button
+          onClick={() => setTab('visao')}
+          className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all text-center ${tab === 'visao' ? 'bg-[#58a6ff] text-white shadow-[0_2px_8px_rgba(88,166,255,0.3)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
+        >
+          Visão Geral
+        </button>
+        <button
+          onClick={() => setTab('multi')}
+          className={`flex-1 py-3 rounded-xl text-sm font-semibold transition-all text-center ${tab === 'multi' ? 'bg-[#58a6ff] text-white shadow-[0_2px_8px_rgba(88,166,255,0.3)]' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
+        >
+          +1 Ministério ({data.multiArea.length})
+        </button>
+      </div>
 
+      {/* Tab: Visão Geral */}
+      {tab === 'visao' && data && (
+      <>
       {/* Resumo Geral */}
       <div className="grid grid-cols-2 gap-3">
         <div className="card text-center py-5">
@@ -91,10 +107,7 @@ export default function RelatoriosPage() {
 
         {/* Louvor */}
         <div className="card">
-          <button
-            onClick={() => toggleExpand('louvor')}
-            className="w-full flex items-center justify-between"
-          >
+          <button onClick={() => toggleExpand('louvor')} className="w-full flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-lg bg-[#1c2128] border border-[#30363d] flex items-center justify-center">
                 <img src={getMinistryIcon3D('louvor')} alt="Louvor" className="w-6 h-6 object-contain" />
@@ -126,19 +139,14 @@ export default function RelatoriosPage() {
         {/* Ministries */}
         {data.ministryStats.map(m => (
           <div key={m.id} className="card">
-            <button
-              onClick={() => toggleExpand(m.slug)}
-              className="w-full flex items-center justify-between"
-            >
+            <button onClick={() => toggleExpand(m.slug)} className="w-full flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-lg bg-[#1c2128] border border-[#30363d] flex items-center justify-center">
                   <img src={getMinistryIcon3D(m.slug)} alt={m.name} className="w-6 h-6 object-contain" />
                 </div>
                 <div className="text-left">
                   <span className="text-sm font-medium">{m.name}</span>
-                  {m.leader_name && (
-                    <p className="text-[10px] text-[var(--muted-foreground)]">Líder: {m.leader_name}</p>
-                  )}
+                  {m.leader_name && <p className="text-[10px] text-[var(--muted-foreground)]">Líder: {m.leader_name}</p>}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -148,15 +156,11 @@ export default function RelatoriosPage() {
             </button>
             {expandedArea === m.slug && (
               <div className="mt-3 pt-3 border-t border-[var(--border)] space-y-1">
-                {m.leader_name && (
-                  <p className="text-xs font-medium text-yellow-400 py-0.5">{m.leader_name} (Líder)</p>
-                )}
+                {m.leader_name && <p className="text-xs font-medium text-yellow-400 py-0.5">{m.leader_name} (Líder)</p>}
                 {m.members.map((name, i) => (
                   <p key={i} className="text-xs text-[var(--muted-foreground)] py-0.5">{name}</p>
                 ))}
-                {m.members.length === 0 && (
-                  <p className="text-xs text-[var(--muted-foreground)] italic">Nenhum membro cadastrado.</p>
-                )}
+                {m.members.length === 0 && <p className="text-xs text-[var(--muted-foreground)] italic">Nenhum membro cadastrado.</p>}
               </div>
             )}
           </div>
@@ -167,16 +171,23 @@ export default function RelatoriosPage() {
           <span className="text-sm font-bold">{data.worshipCount + totalMinistries}</span>
         </div>
       </section>
+      </>
+      )}
 
-      {/* Membros em múltiplas áreas */}
-      {data.multiArea.length > 0 && (
-        <section className="space-y-3">
-          <h3 className="font-semibold flex items-center gap-2">
-            <Users className="w-5 h-5" />
-            Servem em mais de 1 área ({data.multiArea.length})
-          </h3>
+      {/* Tab: Servem em +1 Ministério */}
+      {tab === 'multi' && data && (
+      <section className="space-y-3">
+        <h3 className="font-semibold flex items-center gap-2">
+          <Users className="w-5 h-5" />
+          Servem em mais de 1 área ({data.multiArea.length})
+        </h3>
 
-          {data.multiArea.map((m, idx) => (
+        {data.multiArea.length === 0 ? (
+          <div className="card text-center py-8 text-[var(--muted-foreground)]">
+            <p className="text-sm">Nenhum membro serve em mais de 1 área.</p>
+          </div>
+        ) : (
+          data.multiArea.map((m, idx) => (
             <div key={idx} className="card flex items-center justify-between">
               <div className="flex-1">
                 <p className="text-sm font-medium">{m.name}</p>
@@ -192,14 +203,12 @@ export default function RelatoriosPage() {
                 {String(m.areas.length).padStart(2, '0')}
               </span>
             </div>
-          ))}
-        </section>
+          ))
+        )}
+      </section>
       )}
 
       <div className="h-24" />
-      </>
-      )}
-
     </div>
   )
 }
