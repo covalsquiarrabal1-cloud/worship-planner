@@ -59,7 +59,10 @@ export default function EscalasGeraisStaffPage() {
     const res = await fetch('/api/ministries')
     if (res.ok) {
       const data = await res.json()
-      setMinistries(Array.isArray(data) ? data : [])
+      // Add Louvor as a virtual ministry (it uses separate tables)
+      const louvor = { id: 'louvor', name: 'Louvor', slug: 'louvor', group_name: 'Culto' }
+      const all = Array.isArray(data) ? [louvor, ...data] : [louvor]
+      setMinistries(all)
     }
     setLoading(false)
   }
