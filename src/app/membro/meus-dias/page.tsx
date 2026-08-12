@@ -223,12 +223,18 @@ export default function MeusDiasPage() {
 function MinistryDayCard({ item }: { item: UnifiedDay }) {
   const icon = ministryIcons[item.ministrySlug || ''] || '🎭'
 
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const eventDate = new Date(item.date + 'T12:00:00')
+  const isPast = eventDate < today
+
   // Determine the label: Manhã/Noite for 2 celebrations, or scale_name for 1
   let timeLabel = ''
-  if (item.numCelebrations && item.numCelebrations >= 2) {
+  if (isPast) {
+    timeLabel = '✓ Finalizado'
+  } else if (item.numCelebrations && item.numCelebrations >= 2) {
     timeLabel = item.celebrationNumber === 1 ? 'Manhã' : 'Noite'
   } else if (item.scaleName && item.scaleName !== '-') {
-    // Use scale_name if it indicates time (Manhã, Noite)
     const sn = item.scaleName.toLowerCase()
     if (sn.includes('manhã') || sn.includes('manha')) timeLabel = 'Manhã'
     else if (sn.includes('noite')) timeLabel = 'Noite'
@@ -236,8 +242,8 @@ function MinistryDayCard({ item }: { item: UnifiedDay }) {
   }
 
   return (
-    <div className="card relative">
-      <div className="absolute inset-0 rounded-2xl border-flow-card" style={{ '--flow-color': '#58a6ff' } as React.CSSProperties} />
+    <div className={`card relative ${isPast ? 'opacity-50' : ''}`}>
+      <div className="absolute inset-0 rounded-2xl border-flow-card" style={{ '--flow-color': isPast ? '#666' : '#58a6ff' } as React.CSSProperties} />
       <div className="relative flex items-center gap-3">
         <div className="w-12 h-12 rounded-lg bg-[var(--accent)] flex flex-col items-center justify-center shrink-0">
           <span className="text-lg font-bold">
@@ -248,14 +254,14 @@ function MinistryDayCard({ item }: { item: UnifiedDay }) {
           </span>
         </div>
         <div className="flex-1">
-          <p className="font-medium text-green-400">{item.scaleName}</p>
+          <p className={`font-medium ${isPast ? 'text-[var(--muted-foreground)]' : 'text-green-400'}`}>{item.scaleName}</p>
           <div className="flex items-center gap-1.5">
             <span className="text-sm">{icon}</span>
-            <span className="text-xs text-[#58a6ff] font-medium">{item.ministryName}</span>
+            <span className={`text-xs font-medium ${isPast ? 'text-[var(--muted-foreground)]' : 'text-[#58a6ff]'}`}>{item.ministryName}</span>
           </div>
         </div>
         {timeLabel && (
-          <span className="text-xs px-2 py-1 rounded-lg bg-amber-500/10 text-amber-400 font-medium shrink-0">
+          <span className={`text-xs px-2 py-1 rounded-lg font-medium shrink-0 ${isPast ? 'bg-[var(--accent)] text-[var(--muted-foreground)]' : 'bg-amber-500/10 text-amber-400'}`}>
             {timeLabel}
           </span>
         )}
@@ -275,9 +281,14 @@ function ExpandableWorshipDay({ item, roleLabels, memberName }: {
   const instruments = (item.event?.assignments || []).filter((a: any) => instrumentRoles.includes(a.role))
   const songs = (item.event?.songs || []).sort((a: any, b: any) => a.order_num - b.order_num)
 
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const eventDate = new Date(item.date + 'T12:00:00')
+  const isPast = eventDate < today
+
   return (
-    <div className="card cursor-pointer relative" onClick={() => setExpanded(!expanded)}>
-      <div className="absolute inset-0 rounded-2xl border-flow-card" style={{ '--flow-color': '#22c55e' } as React.CSSProperties} />
+    <div className={`card cursor-pointer relative ${isPast ? 'opacity-50' : ''}`} onClick={() => setExpanded(!expanded)}>
+      <div className="absolute inset-0 rounded-2xl border-flow-card" style={{ '--flow-color': isPast ? '#666' : '#22c55e' } as React.CSSProperties} />
       <div className="relative">
       <div className="flex items-center gap-3">
         <div className="w-12 h-12 rounded-lg bg-[var(--accent)] flex flex-col items-center justify-center shrink-0">
@@ -289,14 +300,15 @@ function ExpandableWorshipDay({ item, roleLabels, memberName }: {
           </span>
         </div>
         <div className="flex-1">
-          <p className="font-medium text-green-400">{item.scaleName}</p>
+          <p className={`font-medium ${isPast ? 'text-[var(--muted-foreground)]' : 'text-green-400'}`}>{item.scaleName}</p>
           <div className="flex items-center gap-1.5">
             <span className="text-xs text-[var(--muted-foreground)]">🎵 {roleLabels[item.role] || item.role}</span>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs px-2 py-1 rounded-lg bg-green-500/10 text-green-400 font-medium">
-            {item.scaleName?.toLowerCase().includes('noite') ? 'Noite'
+          <span className={`text-xs px-2 py-1 rounded-lg font-medium ${isPast ? 'bg-[var(--accent)] text-[var(--muted-foreground)]' : 'bg-green-500/10 text-green-400'}`}>
+            {isPast ? '✓ Finalizado'
+              : item.scaleName?.toLowerCase().includes('noite') ? 'Noite'
               : item.scaleName?.toLowerCase().includes('manhã') || item.scaleName?.toLowerCase().includes('manha') ? 'Manhã'
               : item.scaleName?.toLowerCase().includes('dois') ? 'Manhã e Noite'
               : 'Louvor'}
