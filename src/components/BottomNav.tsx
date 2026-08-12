@@ -61,13 +61,18 @@ export function AdminBottomNav() {
   )
 }
 
-export function MemberBottomNav({ showMusicas = false, showAllSchedules = false }: { showMusicas?: boolean; showAllSchedules?: boolean }) {
+export function MemberBottomNav({ showMusicas = false, showAllSchedules = false, isStaff = false }: { showMusicas?: boolean; showAllSchedules?: boolean; isStaff?: boolean }) {
   const pathname = usePathname()
 
   const items: NavItem[] = [
     { href: '/membro', icon: <Calendar className="w-7 h-7" />, label: 'Escala' },
     { href: '/membro/meus-dias', icon: <User className="w-7 h-7" />, label: 'Meus Dias' },
-    ...(showAllSchedules ? [{ href: '/membro/escalas-ministerios', icon: <Home className="w-7 h-7" />, label: 'Ministérios' }] : []),
+    ...(showAllSchedules || isStaff ? [{ href: '/membro/escalas-ministerios', icon: <Home className="w-7 h-7" />, label: 'Ministérios' }] : []),
+    ...(isStaff ? [
+      { href: '/membro/escalas-gerais', icon: <Users className="w-7 h-7" />, label: 'Escalas Gerais' },
+      { href: '/membro/relatorios', icon: <ClipboardList className="w-7 h-7" />, label: 'Relatórios' },
+      { href: '/membro/config', icon: <Settings className="w-7 h-7" />, label: 'Config' },
+    ] : []),
     ...(showMusicas ? [{ href: '/membro/musicas', icon: <Music className="w-7 h-7" />, label: 'Músicas' }] : []),
   ]
 

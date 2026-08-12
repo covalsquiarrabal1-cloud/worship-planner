@@ -51,6 +51,10 @@ export default async function MemberLayout({
   const allowedRoles: string[] = setting?.value && Array.isArray(setting.value) ? setting.value : ['Pastor', 'Ministro']
   const canViewAllSchedules = userRoles.some((r: string) => allowedRoles.includes(r))
 
+  // Staff roles: Pastor, Ministro, Secretaria - can view all schedules, ministries, reports, config (read-only)
+  const staffRoles = ['Pastor', 'Ministro', 'Secretaria']
+  const isStaff = userRoles.some((r: string) => staffRoles.includes(r))
+
   return (
     <div className="min-h-screen pb-safe">
       <header className="sticky top-0 z-40 bg-[var(--background)] border-b border-[var(--border)] px-6 py-3 flex items-center justify-between">
@@ -71,7 +75,7 @@ export default async function MemberLayout({
       <main className="px-6 py-4">
         {children}
       </main>
-      <MemberBottomNav showMusicas={isWorshipMember} showAllSchedules={canViewAllSchedules} />
+      <MemberBottomNav showMusicas={isWorshipMember} showAllSchedules={canViewAllSchedules} isStaff={isStaff} />
     </div>
   )
 }
