@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Worship Planner - Apresentação</title>
+<style>
+  @page { size: A4 landscape; margin: 0; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #000; color: #fff; }
+  
+  .page {
+    width: 297mm;
+    height: 210mm;
+    padding: 20mm;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+  }
+  .page:last-child { page-break-after: avoid; }
+
+  /* Page 1 - Cover */
+  .cover {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background: radial-gradient(ellipse at center, #0d1117 0%, #000 70%);
+  }
+  .cover img { width: 80px; height: 80px; border-radius: 16px; margin-bottom: 20px; }
+  .cover h1 { font-size: 48px; font-weight: 800; margin-bottom: 12px; }
+  .cover p { font-size: 20px; color: #8b949e; max-width: 500px; line-height: 1.5; }
+  .cover .subtitle { margin-top: 30px; font-size: 14px; color: #58a6ff; letter-spacing: 2px; text-transform: uppercase; }
+
+  /* Page 2 - Features */
+  .features-page { background: #000; }
+  .features-page h2 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  .features-page .subtitle { font-size: 14px; color: #8b949e; margin-bottom: 24px; }
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+  }
+  .feature-card {
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .feature-card .icon {
+    width: 36px; height: 36px;
+    background: rgba(88, 166, 255, 0.1);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 10px;
+    font-size: 18px;
+  }
+  .feature-card h3 { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+  .feature-card p { font-size: 11px; color: #8b949e; line-height: 1.4; }
+
+  /* Page 3 - Admin vs Member */
+  .comparison-page { background: #000; }
+  .comparison-page h2 { font-size: 28px; font-weight: 700; margin-bottom: 24px; text-align: center; }
+  .comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .comparison-box {
+    background: #0d1117;
+    border-radius: 16px;
+    padding: 24px;
+  }
+  .comparison-box.admin { border: 1px solid rgba(88, 166, 255, 0.3); }
+  .comparison-box.member { border: 1px solid rgba(34, 197, 94, 0.3); }
+  .comparison-box h3 { font-size: 18px; font-weight: 700; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .comparison-box h3 .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 10px; font-weight: 600;
+  }
+  .comparison-box.admin h3 { color: #58a6ff; }
+  .comparison-box.admin h3 .badge { background: rgba(88, 166, 255, 0.1); color: #58a6ff; }
+  .comparison-box.member h3 { color: #22c55e; }
+  .comparison-box.member h3 .badge { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+  .comparison-box ul { list-style: none; }
+  .comparison-box li {
+    font-size: 12px;
+    padding: 5px 0;
+    border-bottom: 1px solid #1c2128;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .comparison-box li:last-child { border-bottom: none; }
+  .comparison-box.admin li::before { content: "→"; color: #58a6ff; font-weight: bold; }
+  .comparison-box.member li::before { content: "✓"; color: #22c55e; font-weight: bold; }
+
+  /* Footer on each page */
+  .page-footer {
+    position: absolute;
+    bottom: 12mm;
+    left: 20mm;
+    right: 20mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: #484f58;
+  }
+</style>
+</head>
+<body>
+
+<!-- PAGE 1: Cover -->
+<div class="page cover">
+  <img src="/icon-512.png" alt="Worship Planner">
+  <h1>Worship Planner</h1>
+  <p>A plataforma completa para gestão de escalas, louvores e ministérios da sua igreja.</p>
+  <div class="subtitle">Igreja Amor e Cuidado - Valparaíso</div>
+  <div class="page-footer">
+    <span>worshipplannerpro.vercel.app</span>
+    <span>2026</span>
+  </div>
+</div>
+
+<!-- PAGE 2: Features -->
+<div class="page features-page">
+  <h2>Funcionalidades</h2>
+  <p class="subtitle">Tudo que sua equipe de louvor e ministérios precisa em uma única plataforma.</p>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="icon">📅</div>
+      <h3>Escalas Inteligentes</h3>
+      <p>Gere escalas automaticamente respeitando bloqueios, gênero dos vocais e padrão de banda.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🎵</div>
+      <h3>Gestão de Louvores</h3>
+      <p>Set list completo com versão, ministro, links do YouTube e geração automática de repertório.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">⛪</div>
+      <h3>Múltiplos Ministérios</h3>
+      <p>Gerencie louvor, intercessão, som, iluminação, projeção e todos os ministérios.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🔔</div>
+      <h3>Notificações Push</h3>
+      <p>Membros recebem avisos automáticos no celular quando estão escalados.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">💬</div>
+      <h3>WhatsApp Integrado</h3>
+      <p>Envie lembretes personalizados via WhatsApp para todos os escalados da semana.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📱</div>
+      <h3>App Instalável (PWA)</h3>
+      <p>Instale na tela inicial do celular. Funciona como app nativo sem precisar da loja.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🔒</div>
+      <h3>Controle de Acesso</h3>
+      <p>Área do admin, líder e membro. Cada um vê apenas o que precisa.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📊</div>
+      <h3>Dashboard e Relatórios</h3>
+      <p>Visão geral dos ministérios, membros, líderes e frequência de escalas.</p>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Worship Planner</span>
+    <span>Funcionalidades</span>
+  </div>
+</div>
+
+<!-- PAGE 3: Admin vs Member -->
+<div class="page comparison-page">
+  <h2>Para cada perfil, uma experiência</h2>
+  <div class="comparison-grid">
+    <div class="comparison-box admin">
+      <h3><span class="badge">ADM</span> Área do Administrador</h3>
+      <ul>
+        <li>Gerar escalas automáticas ou manuais</li>
+        <li>Gerenciar membros, bloqueios e funções</li>
+        <li>Cadastrar e gerar louvores por evento</li>
+        <li>Publicar/ocultar escalas para membros</li>
+        <li>Enviar lembretes via WhatsApp</li>
+        <li>Enviar notificações push em massa</li>
+        <li>Exportar escalas em PDF e CSV</li>
+        <li>Configurar padrão de banda e tipos de escala</li>
+        <li>Dashboard com visão geral de todos os ministérios</li>
+        <li>Visualizar escala como qualquer membro vê</li>
+        <li>Editar membros inline na tabela de escalas</li>
+        <li>Selecionar e excluir escalas individuais</li>
+      </ul>
+    </div>
+    <div class="comparison-box member">
+      <h3><span class="badge">MEMBRO</span> Área do Membro</h3>
+      <ul>
+        <li>Ver escala do mês (visão semanal e mensal)</li>
+        <li>Consultar louvores com versão e ministro</li>
+        <li>Ver equipe completa de cada dia</li>
+        <li>Receber notificações push no celular</li>
+        <li>Ver todos os dias em que está escalado</li>
+        <li>Escalas de louvor e ministérios unificadas</li>
+        <li>Sugerir louvores para o repertório</li>
+        <li>Destaque visual quando é o ministro do louvor</li>
+        <li>Escalas passadas marcadas como finalizadas</li>
+        <li>App instalável na tela inicial</li>
+        <li>Sessão permanente (não precisa logar toda vez)</li>
+        <li>Redefinir senha pelo app</li>
+      </ul>
+    </div>
+  </div>
+  <div class="page-footer">
+    <span>Worship Planner</span>
+    <span>Admin vs Membro</span>
+  </div>
+</div>
+
+</body>
+</html>
