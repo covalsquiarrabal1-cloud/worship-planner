@@ -53,7 +53,7 @@ export default function MensagensPage() {
   })
   const [sentMessages, setSentMessages] = useState<Set<string>>(new Set())
   const [customMessage, setCustomMessage] = useState(
-    'Olá "{nome}", Graça e Paz! 🙏\n\nEstamos passando para lembrar que nessa semana você está escalado(a) {dias}.\n\nPara mais detalhes da escala acesse seu aplicativo Worship Planner. 🎵'
+    'Olá "{nome}", Graça e Paz!\n\nEstamos passando para lembrar que nessa semana você está escalado(a) {dias}.\n\nPara mais detalhes da escala acesse seu aplicativo Worship Planner.'
   )
   const [showTemplate, setShowTemplate] = useState(false)
 
