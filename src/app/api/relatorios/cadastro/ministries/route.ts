@@ -60,5 +60,42 @@ export async function POST(request: Request) {
     }
   }
 
+  // Ensure user has auth + profile so they can login
+  const INTERNAL_PASSWORD = 'adoração26'
+  const { data: existingProfile } = await serviceClient
+    .from('profiles')
+    .select('id')
+    .ilike('email', normalizedEmail)
+    .single()
+
+  if (!existingProfile) {
+    const { data: newUser, error: createError } = await serviceClient.auth.admin.createUser({
+      email: normalizedEmail,
+      password: INTERNAL_PASSWORD,
+      email_confirm: true,
+      user_metadata: { full_name: capitalizedName, password_set: false },
+    })
+
+    if (newUser?.user) {
+      await serviceClient.from('profiles').upsert({
+        id: newUser.user.id,
+        email: normalizedEmail,
+        full_name: capitalizedName,
+        role: 'member',
+      }, { onConflict: 'id' })
+    } else if (createError?.message?.includes('already been registered')) {
+      const { data: { users } } = await serviceClient.auth.admin.listUsers()
+      const existingUser = users?.find((u: any) => u.email?.toLowerCase() === normalizedEmail)
+      if (existingUser) {
+        await serviceClient.from('profiles').upsert({
+          id: existingUser.id,
+          email: normalizedEmail,
+          full_name: capitalizedName,
+          role: 'member',
+        }, { onConflict: 'id' })
+      }
+    }
+  }
+
   return NextResponse.json({ success: true })
 }

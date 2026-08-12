@@ -22,7 +22,7 @@ export async function POST(request: Request) {
 
     const serviceClient = await createServiceRoleClient()
 
-    // Check if email exists in members table or profiles table
+    // Check if email exists in members, profiles, ministry_members or ministry_signups
     const { data: member } = await serviceClient
       .from('members')
       .select('id, name')
@@ -39,11 +39,32 @@ export async function POST(request: Request) {
         .ilike('email', normalizedEmail)
         .single()
 
-      if (!profile) {
-        return NextResponse.json({ error: 'E-mail não cadastrado' }, { status: 404 })
+      if (profile) {
+        isAdmin = profile.role === 'admin'
+        memberName = profile.full_name || ''
+      } else {
+        const { data: ministryMember } = await serviceClient
+          .from('ministry_members')
+          .select('id, name')
+          .ilike('email', normalizedEmail)
+          .limit(1)
+          .single()
+
+        if (ministryMember) {
+          memberName = ministryMember.name
+        } else {
+          const { data: signup } = await serviceClient
+            .from('ministry_signups')
+            .select('id, name')
+            .ilike('email', normalizedEmail)
+            .single()
+
+          if (!signup) {
+            return NextResponse.json({ error: 'E-mail não cadastrado' }, { status: 404 })
+          }
+          memberName = signup.name
+        }
       }
-      isAdmin = profile.role === 'admin'
-      memberName = profile.full_name || ''
     }
 
     // Try to sign in directly (fastest path)
