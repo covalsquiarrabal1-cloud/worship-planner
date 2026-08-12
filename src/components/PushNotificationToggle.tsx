@@ -30,9 +30,17 @@ export default function PushNotificationToggle() {
       if (perm !== 'granted') { setLoading(false); return }
 
       const registration = await navigator.serviceWorker.ready
+      
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BIcxSbyFtaq6MIB_qO8cg2B6seLjVQjBzr6K1SU2fJJkpLBPpexoawyvTfxNyWg9yJJ5hcU8xj_F9x5T5okqXlk'
+      if (!vapidKey) {
+        console.error('VAPID key not configured')
+        setLoading(false)
+        return
+      }
+
       const sub = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+        applicationServerKey: vapidKey,
       })
 
       const res = await fetch('/api/push/subscribe', {
@@ -42,8 +50,10 @@ export default function PushNotificationToggle() {
       })
 
       if (res.ok) setSubscribed(true)
+      else console.error('Subscribe API failed:', await res.text())
     } catch (err) {
       console.error('Push subscribe error:', err)
+      alert('Erro ao ativar notificações. Tente novamente.')
     }
     setLoading(false)
   }
