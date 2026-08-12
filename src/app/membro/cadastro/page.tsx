@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, Search, ChevronDown, Users } from 'lucide-react'
+import { Loader2, Search, ChevronDown, Users, FileDown, FileSpreadsheet } from 'lucide-react'
 
 export default function CadastroStaffPage() {
   const [cadastro, setCadastro] = useState<any[]>([])
@@ -16,6 +16,35 @@ export default function CadastroStaffPage() {
       .catch(() => setLoading(false))
   }, [])
 
+  async function exportExcel() {
+    const XLSX = await import('xlsx')
+    const rows = cadastro.map(p => ({
+      Nome: p.name,
+      Email: p.email,
+      Telefone: p.phone || '',
+      Nascimento: p.birth_date ? new Date(p.birth_date + 'T12:00:00').toLocaleDateString('pt-BR') : '',
+      Funções: (p.person_roles || []).join(', '),
+      Ministérios: (p.ministries || []).map((m: any) => m.ministry_name).join(', '),
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Cadastro')
+    XLSX.writeFile(wb, 'cadastro.xlsx')
+  }
+
+  async function exportPDF() {
+    const { jsPDF } = await import('jspdf')
+    const { default: autoTable } = await import('jspdf-autotable')
+    const doc = new jsPDF({ orientation: 'landscape' })
+    doc.setFontSize(14)
+    doc.text('Cadastro de Membros', doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' })
+    doc.setFontSize(9)
+    doc.text(`${cadastro.length} pessoas`, doc.internal.pageSize.getWidth() / 2, 18, { align: 'center' })
+    const rows = cadastro.map(p => [p.name, p.email, p.phone || '-', (p.person_roles || []).filter((r: string) => r !== 'Membro').join(', ') || 'Membro', (p.ministries || []).map((m: any) => m.ministry_name).join(', ') || '-'])
+    autoTable(doc, { startY: 22, head: [['Nome', 'Email', 'Telefone', 'Funções', 'Ministérios']], body: rows, styles: { fontSize: 7, cellPadding: 2 }, headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], halign: 'center', fontStyle: 'bold' } })
+    doc.save('cadastro.pdf')
+  }
+
   if (loading) {
     return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
   }
@@ -24,9 +53,19 @@ export default function CadastroStaffPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-bold">Cadastro</h2>
-        <p className="text-sm text-[var(--muted-foreground)] mt-1">Visualização dos membros cadastrados (somente leitura)</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold">Cadastro</h2>
+          <p className="text-sm text-[var(--muted-foreground)] mt-1">Visualização dos membros cadastrados</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={exportExcel} disabled={cadastro.length === 0} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-medium hover:bg-green-500/20 disabled:opacity-40">
+            <FileSpreadsheet className="w-4 h-4" /> Excel
+          </button>
+          <button onClick={exportPDF} disabled={cadastro.length === 0} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium hover:bg-red-500/20 disabled:opacity-40">
+            <FileDown className="w-4 h-4" /> PDF
+          </button>
+        </div>
       </div>
 
       {/* Search */}
