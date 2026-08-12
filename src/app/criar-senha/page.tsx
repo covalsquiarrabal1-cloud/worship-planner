@@ -12,27 +12,51 @@ export default function CriarSenhaPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [ready, setReady] = useState(false)
   const [checking, setChecking] = useState(true)
   const supabase = createClient()
   const router = useRouter()
 
   useEffect(() => {
-    // Supabase automatically handles the token from the URL hash
-    // We just need to check if we have a valid session
-    async function checkSession() {
+    // Listen for auth state changes - Supabase processes the URL hash automatically
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
+        // Token was processed successfully, user can now set new password
+        setReady(true)
+        setChecking(false)
+      }
+    })
+
+    // Also check if already have a session (e.g., page refresh)
+    const timer = setTimeout(async () => {
       const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        // Try to get session from URL (Supabase handles this automatically)
-        const { data, error } = await supabase.auth.getSession()
-        if (!data.session) {
-          setError('Link inválido ou expirado. Solicite um novo link de redefinição.')
+      if (session) {
+        setReady(true)
+      } else {
+        // Check URL hash manually
+        const hash = window.location.hash
+        if (hash && hash.includes('access_token')) {
+          // Wait a bit more for Supabase to process
+          setTimeout(async () => {
+            const { data: { session: s2 } } = await supabase.auth.getSession()
+            if (s2) {
+              setReady(true)
+            } else {
+              setError('Link inválido ou expirado. Solicite um novo link de redefinição.')
+            }
+            setChecking(false)
+          }, 2000)
+          return
         }
+        setError('Link inválido ou expirado. Solicite um novo link de redefinição.')
       }
       setChecking(false)
+    }, 1500)
+
+    return () => {
+      subscription.unsubscribe()
+      clearTimeout(timer)
     }
-    
-    // Small delay to let Supabase process the URL hash
-    setTimeout(checkSession, 1000)
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -64,7 +88,6 @@ export default function CriarSenhaPage() {
     setSuccess(true)
     setLoading(false)
 
-    // Redirect to home after 2 seconds
     setTimeout(() => {
       router.push('/')
       router.refresh()
@@ -73,8 +96,9 @@ export default function CriarSenhaPage() {
 
   if (checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin" />
+      <div className="min-h-screen flex flex-col items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin mb-4" />
+        <p className="text-sm text-[var(--muted-foreground)]">Verificando link...</p>
       </div>
     )
   }
@@ -82,7 +106,6 @@ export default function CriarSenhaPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
-        {/* Logo */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl mb-6 overflow-hidden">
             <img src="/icon-512.png" alt="Worship Planner" className="w-full h-full object-cover rounded-2xl" />
@@ -94,18 +117,17 @@ export default function CriarSenhaPage() {
         </div>
 
         {success ? (
-          <div className="space-y-4">
-            <div className="card text-center space-y-3">
-              <span className="text-3xl">✅</span>
-              <p className="text-sm font-medium">Senha redefinida!</p>
-              <p className="text-xs text-[var(--muted-foreground)]">Redirecionando...</p>
-            </div>
+          <div className="card text-center space-y-3">
+            <span className="text-3xl">✅</span>
+            <p className="text-sm font-medium">Senha redefinida!</p>
+            <p className="text-xs text-[var(--muted-foreground)]">Redirecionando...</p>
           </div>
-        ) : error && !newPassword ? (
+        ) : !ready ? (
           <div className="space-y-4">
             <div className="card text-center space-y-3">
               <span className="text-3xl">⚠️</span>
-              <p className="text-sm text-red-400">{error}</p>
+              <p className="text-sm text-red-400">{error || 'Link inválido ou expirado.'}</p>
+              <p className="text-xs text-[var(--muted-foreground)]">Volte ao login e solicite um novo link.</p>
             </div>
             <button
               onClick={() => router.push('/login')}
