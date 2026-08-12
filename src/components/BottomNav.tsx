@@ -19,7 +19,8 @@ export function AdminBottomNav() {
     { href: '/admin', icon: <Calendar className="w-7 h-7" />, label: 'Escalas' },
     { href: '/admin/escalas-ministerios', icon: <Users className="w-7 h-7" />, label: 'Escalas Gerais' },
     { href: '/admin/ministerios', icon: <Home className="w-7 h-7" />, label: 'Ministérios' },
-    { href: '/admin/relatorios', icon: <ClipboardList className="w-7 h-7" />, label: 'Relatórios' },
+    { href: '/admin/cadastro', icon: <ClipboardList className="w-7 h-7" />, label: 'Cadastro' },
+    { href: '/admin/relatorios', icon: <BarChart3 className="w-7 h-7" />, label: 'Relatórios' },
     { href: '/admin/config', icon: <Settings className="w-7 h-7" />, label: 'Config' },
   ]
 
