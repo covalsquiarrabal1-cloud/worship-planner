@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Loader2, Users, BarChart3, ArrowLeft, ChevronDown } from 'lucide-react'
+import { Loader2, Users, BarChart3, ArrowLeft, ChevronDown, FileDown, FileSpreadsheet } from 'lucide-react'
 import Link from 'next/link'
 import { getMinistryIcon3D } from '@/lib/ministry-icons'
 
@@ -55,6 +55,85 @@ export default function RelatoriosPage() {
     setExpandedArea(prev => prev === key ? null : key)
   }
 
+  async function exportVisaoExcel() {
+    const XLSX = await import('xlsx')
+    const rows: any[] = []
+    // Louvor
+    for (const name of data!.worshipMembers) rows.push({ Área: 'Louvor', Nome: name, Função: 'Membro' })
+    for (const l of data!.worshipLeaders) rows.push({ Área: 'Louvor', Nome: l.name, Função: 'Líder' })
+    // Ministries
+    for (const m of data!.ministryStats) {
+      if (m.leader_name) rows.push({ Área: m.name, Nome: m.leader_name, Função: 'Líder' })
+      for (const name of m.members) rows.push({ Área: m.name, Nome: name, Função: 'Membro' })
+    }
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Visão Geral')
+    XLSX.writeFile(wb, 'relatorio-visao-geral.xlsx')
+  }
+
+  async function exportVisaoPDF() {
+    const { jsPDF } = await import('jspdf')
+    const { default: autoTable } = await import('jspdf-autotable')
+    const doc = new jsPDF()
+    doc.setFontSize(14)
+    doc.text('Relatório - Visão Geral', doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' })
+    doc.setFontSize(9)
+    doc.text(`Total: ${data!.totalUnique} membros`, doc.internal.pageSize.getWidth() / 2, 18, { align: 'center' })
+
+    const rows: string[][] = []
+    for (const l of data!.worshipLeaders) rows.push(['Louvor', l.name, 'Líder'])
+    for (const name of data!.worshipMembers) rows.push(['Louvor', name, 'Membro'])
+    for (const m of data!.ministryStats) {
+      if (m.leader_name) rows.push([m.name, m.leader_name, 'Líder'])
+      for (const name of m.members) rows.push([m.name, name, 'Membro'])
+    }
+
+    autoTable(doc, {
+      startY: 22,
+      head: [['Ministério', 'Nome', 'Função']],
+      body: rows,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], halign: 'center', fontStyle: 'bold' },
+    })
+    doc.save('relatorio-visao-geral.pdf')
+  }
+
+  async function exportMultiExcel() {
+    const XLSX = await import('xlsx')
+    const rows = data!.multiArea.map(m => ({
+      Nome: m.name,
+      Quantidade: m.areas.length,
+      Ministérios: m.areas.join(', '),
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, '+1 Ministério')
+    XLSX.writeFile(wb, 'relatorio-mais-de-1-ministerio.xlsx')
+  }
+
+  async function exportMultiPDF() {
+    const { jsPDF } = await import('jspdf')
+    const { default: autoTable } = await import('jspdf-autotable')
+    const doc = new jsPDF()
+    doc.setFontSize(14)
+    doc.text('Servem em +1 Ministério', doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' })
+    doc.setFontSize(9)
+    doc.text(`${data!.multiArea.length} pessoas`, doc.internal.pageSize.getWidth() / 2, 18, { align: 'center' })
+
+    const rows = data!.multiArea.map(m => [m.name, String(m.areas.length), m.areas.join(', ')])
+
+    autoTable(doc, {
+      startY: 22,
+      head: [['Nome', 'Qtd', 'Ministérios']],
+      body: rows,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], halign: 'center', fontStyle: 'bold' },
+      columnStyles: { 1: { halign: 'center', cellWidth: 15 } },
+    })
+    doc.save('relatorio-mais-de-1-ministerio.pdf')
+  }
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-3 mb-2">
@@ -86,6 +165,16 @@ export default function RelatoriosPage() {
       {/* Tab: Visão Geral */}
       {tab === 'visao' && data && (
       <>
+      {/* Export buttons */}
+      <div className="flex gap-2 justify-end">
+        <button onClick={exportVisaoExcel} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-medium hover:bg-green-500/20">
+          <FileSpreadsheet className="w-4 h-4" /> Excel
+        </button>
+        <button onClick={exportVisaoPDF} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium hover:bg-red-500/20">
+          <FileDown className="w-4 h-4" /> PDF
+        </button>
+      </div>
+
       {/* Resumo Geral */}
       <div className="grid grid-cols-2 gap-3">
         <div className="card text-center py-5">
@@ -177,10 +266,20 @@ export default function RelatoriosPage() {
       {/* Tab: Servem em +1 Ministério */}
       {tab === 'multi' && data && (
       <section className="space-y-3">
-        <h3 className="font-semibold flex items-center gap-2">
-          <Users className="w-5 h-5" />
-          Servem em mais de 1 área ({data.multiArea.length})
-        </h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold flex items-center gap-2">
+            <Users className="w-5 h-5" />
+            Servem em mais de 1 área ({data.multiArea.length})
+          </h3>
+          <div className="flex gap-2">
+            <button onClick={exportMultiExcel} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-medium hover:bg-green-500/20">
+              <FileSpreadsheet className="w-4 h-4" /> Excel
+            </button>
+            <button onClick={exportMultiPDF} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium hover:bg-red-500/20">
+              <FileDown className="w-4 h-4" /> PDF
+            </button>
+          </div>
+        </div>
 
         {data.multiArea.length === 0 ? (
           <div className="card text-center py-8 text-[var(--muted-foreground)]">
