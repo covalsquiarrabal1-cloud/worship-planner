@@ -16,10 +16,23 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'start e end são obrigatórios' }, { status: 400 })
   }
 
-  // Check if user is admin
+  // Check if user is admin or staff
   const { data: profile } = await serviceClient
     .from('profiles').select('role').eq('id', user.id).single()
-  const isAdmin = profile?.role === 'admin'
+  let isAdmin = profile?.role === 'admin'
+
+  if (!isAdmin) {
+    // Check if user is staff (Pastor, Ministro, Secretaria)
+    const { data: personRoles } = await serviceClient
+      .from('member_person_roles')
+      .select('role_id, person_roles(name)')
+      .eq('member_email', user.email?.toLowerCase() || '')
+    const userRoles = (personRoles || []).map((pr: any) => pr.person_roles?.name).filter(Boolean)
+    const staffRoles = ['Pastor', 'Ministro', 'Secretaria']
+    if (userRoles.some((r: string) => staffRoles.includes(r))) {
+      isAdmin = true // Staff can see all schedules like admin
+    }
+  }
 
   // Get all schedules for the date range to determine which is most recent
   const { data: schedules } = await serviceClient

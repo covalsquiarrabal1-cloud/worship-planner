@@ -59,7 +59,7 @@ export default function EscalasGeraisStaffPage() {
     const res = await fetch('/api/ministries')
     if (res.ok) {
       const data = await res.json()
-      setMinistries(data.filter((m: any) => m.slug !== 'louvor'))
+      setMinistries(Array.isArray(data) ? data : [])
     }
     setLoading(false)
   }
@@ -80,9 +80,34 @@ export default function EscalasGeraisStaffPage() {
     const start = format(startOfMonth(currentDate), 'yyyy-MM-dd')
     const end = format(endOfMonth(currentDate), 'yyyy-MM-dd')
 
-    const res = await fetch(`/api/ministries/${selectedMinistry.slug}/events?start=${start}&end=${end}`)
-    if (res.ok) setEvents(await res.json())
-    else setEvents([])
+    if (selectedMinistry.slug === 'louvor') {
+      // Louvor uses different API
+      const res = await fetch(`/api/schedule-events?start=${start}&end=${end}`)
+      if (res.ok) {
+        const data = await res.json()
+        // Transform louvor events to match MinistryEvent format
+        const transformed = data.map((e: any) => ({
+          id: e.id,
+          event_date: e.event_date,
+          day_of_week: e.day_of_week,
+          scale_name: e.scale_type?.name || null,
+          num_celebrations: 1,
+          assignments: (e.assignments || []).map((a: any) => ({
+            id: a.id,
+            celebration_number: 1,
+            role_name: a.role || 'Membro',
+            member: a.member ? { id: a.member.id, name: a.member.name, nickname: a.member.nickname || null } : null,
+          })),
+        }))
+        setEvents(transformed)
+      } else {
+        setEvents([])
+      }
+    } else {
+      const res = await fetch(`/api/ministries/${selectedMinistry.slug}/events?start=${start}&end=${end}`)
+      if (res.ok) setEvents(await res.json())
+      else setEvents([])
+    }
     setLoadingEvents(false)
   }
 
