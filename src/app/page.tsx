@@ -21,15 +21,18 @@ export default async function Home() {
     redirect('/admin')
   }
 
-  // Check if user is a ministry leader
-  const { data: leaderMinistries } = await serviceClient
-    .from('ministries')
-    .select('id')
-    .eq('leader_user_id', user.id)
-    .limit(1)
+  // Check if user is staff (Pastor, Ministro, Secretaria)
+  const { data: personRoles } = await serviceClient
+    .from('member_person_roles')
+    .select('role_id, person_roles(name)')
+    .eq('member_email', user.email?.toLowerCase() || '')
 
-  if (leaderMinistries && leaderMinistries.length > 0) {
-    redirect('/membro')
+  const userRoles = (personRoles || []).map((pr: any) => pr.person_roles?.name).filter(Boolean)
+  const staffRoles = ['Pastor', 'Ministro', 'Secretaria']
+  const isStaff = userRoles.some((r: string) => staffRoles.includes(r))
+
+  if (isStaff) {
+    redirect('/membro/dashboard')
   }
 
   redirect('/membro')
