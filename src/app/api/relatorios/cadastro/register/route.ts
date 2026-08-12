@@ -61,6 +61,39 @@ export async function POST(request: Request) {
     .update({ nickname: finalNickname })
     .ilike('email', normalizedEmail)
 
+  // Ensure user exists in auth.users + profiles so they can login
+  const INTERNAL_PASSWORD = 'adoração26'
+  const { data: { users } } = await serviceClient.auth.admin.listUsers()
+  const existingAuthUser = users?.find((u: any) => u.email?.toLowerCase() === normalizedEmail)
+
+  if (!existingAuthUser) {
+    // Create auth user
+    const { data: newUser, error: createErr } = await serviceClient.auth.admin.createUser({
+      email: normalizedEmail,
+      password: INTERNAL_PASSWORD,
+      email_confirm: true,
+      user_metadata: { full_name: capitalizedName, password_set: false },
+    })
+
+    if (newUser?.user) {
+      // Create profile
+      await serviceClient.from('profiles').upsert({
+        id: newUser.user.id,
+        email: normalizedEmail,
+        full_name: capitalizedName,
+        role: 'member',
+      }, { onConflict: 'id' })
+    }
+  } else {
+    // Ensure profile exists
+    await serviceClient.from('profiles').upsert({
+      id: existingAuthUser.id,
+      email: normalizedEmail,
+      full_name: capitalizedName,
+      role: 'member',
+    }, { onConflict: 'id' })
+  }
+
   return NextResponse.json({ success: true })
 }
 

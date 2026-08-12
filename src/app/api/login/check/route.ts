@@ -15,7 +15,7 @@ export async function POST(request: Request) {
     const normalizedEmail = email.trim().toLowerCase()
     const serviceClient = await createServiceRoleClient()
 
-    // Check if email exists in members, ministry_members or profiles
+    // Check if email exists in members, ministry_members, ministry_signups or profiles
     const { data: member } = await serviceClient
       .from('members')
       .select('id, name')
@@ -35,16 +35,26 @@ export async function POST(request: Request) {
       if (ministryMember) {
         memberName = ministryMember.name
       } else {
-        const { data: profile } = await serviceClient
-          .from('profiles')
-          .select('id, full_name')
+        const { data: signup } = await serviceClient
+          .from('ministry_signups')
+          .select('id, name, nickname')
           .ilike('email', normalizedEmail)
           .single()
 
-        if (!profile) {
-          return NextResponse.json({ error: 'E-mail não cadastrado' }, { status: 404 })
+        if (signup) {
+          memberName = signup.name
+        } else {
+          const { data: profile } = await serviceClient
+            .from('profiles')
+            .select('id, full_name')
+            .ilike('email', normalizedEmail)
+            .single()
+
+          if (!profile) {
+            return NextResponse.json({ error: 'E-mail não cadastrado' }, { status: 404 })
+          }
+          memberName = profile.full_name || ''
         }
-        memberName = profile.full_name || ''
       }
     }
 
