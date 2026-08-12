@@ -65,6 +65,7 @@ export function MemberBottomNav({ showMusicas = false, showAllSchedules = false,
   const pathname = usePathname()
 
   const items: NavItem[] = [
+    ...(isStaff ? [{ href: '/membro/dashboard', icon: <BarChart3 className="w-7 h-7" />, label: 'Dashboard' }] : []),
     ...(!isStaff || isWorshipMember ? [{ href: '/membro', icon: <Calendar className="w-7 h-7" />, label: 'Escala' }] : []),
     ...(!isStaff || isWorshipMember ? [{ href: '/membro/meus-dias', icon: <User className="w-7 h-7" />, label: 'Meus Dias' }] : []),
     ...(showAllSchedules || isStaff ? [{ href: '/membro/escalas-ministerios', icon: <Home className="w-7 h-7" />, label: 'Ministérios' }] : []),
