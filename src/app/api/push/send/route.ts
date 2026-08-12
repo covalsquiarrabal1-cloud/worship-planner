@@ -18,37 +18,10 @@ export async function POST(request: Request) {
     .from('profiles').select('role').eq('id', user.id).single()
   if (profile?.role !== 'admin') return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
 
-  const { title, body, url, memberIds } = await request.json()
+  const { title, body, url } = await request.json()
   if (!title || !body) return NextResponse.json({ error: 'title e body obrigatórios' }, { status: 400 })
-
-  // Get subscriptions
-  let query = serviceClient.from('push_subscriptions').select('*')
-  
-  // If memberIds provided, filter by user_id matching those members
-  if (memberIds && Array.isArray(memberIds) && memberIds.length > 0) {
-    // Get user_ids from members emails
-    const { data: members } = await serviceClient
-      .from('members')
-      .select('email')
-      .in('id', memberIds)
-
-    if (members && members.length > 0) {
-      const emails = members.map(m => m.email?.toLowerCase()).filter(Boolean)
-      const { data: profiles } = await serviceClient
-        .from('profiles')
-        .select('id')
-        .in('email', emails)
-
-      if (profiles && profiles.length > 0) {
-        const userIds = profiles.map(p => p.id)
-        query = query.in('user_id', userIds)
-      } else {
-        return NextResponse.json({ success: true, sent: 0, failed: 0 })
-      }
-    }
-  }
-
-  const { data: subscriptions } = await query
+  // Get all subscriptions (only users who opted in have subscriptions)
+  const { data: subscriptions } = await serviceClient.from('push_subscriptions').select('*')
 
   if (!subscriptions || subscriptions.length === 0) {
     return NextResponse.json({ success: true, sent: 0, failed: 0, message: 'Nenhum dispositivo registrado' })
