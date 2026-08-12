@@ -75,7 +75,7 @@ export default async function MemberLayout({
       <main className="px-6 py-4">
         {children}
       </main>
-      <MemberBottomNav showMusicas={isWorshipMember} showAllSchedules={canViewAllSchedules} isStaff={isStaff} />
+      <MemberBottomNav showMusicas={isWorshipMember} showAllSchedules={canViewAllSchedules} isStaff={isStaff} isWorshipMember={isWorshipMember} />
     </div>
   )
 }

@@ -61,12 +61,12 @@ export function AdminBottomNav() {
   )
 }
 
-export function MemberBottomNav({ showMusicas = false, showAllSchedules = false, isStaff = false }: { showMusicas?: boolean; showAllSchedules?: boolean; isStaff?: boolean }) {
+export function MemberBottomNav({ showMusicas = false, showAllSchedules = false, isStaff = false, isWorshipMember = false }: { showMusicas?: boolean; showAllSchedules?: boolean; isStaff?: boolean; isWorshipMember?: boolean }) {
   const pathname = usePathname()
 
   const items: NavItem[] = [
-    { href: '/membro', icon: <Calendar className="w-7 h-7" />, label: 'Escala' },
-    { href: '/membro/meus-dias', icon: <User className="w-7 h-7" />, label: 'Meus Dias' },
+    ...(!isStaff || isWorshipMember ? [{ href: '/membro', icon: <Calendar className="w-7 h-7" />, label: 'Escala' }] : []),
+    ...(!isStaff || isWorshipMember ? [{ href: '/membro/meus-dias', icon: <User className="w-7 h-7" />, label: 'Meus Dias' }] : []),
     ...(showAllSchedules || isStaff ? [{ href: '/membro/escalas-ministerios', icon: <Home className="w-7 h-7" />, label: 'Ministérios' }] : []),
     ...(isStaff ? [
       { href: '/membro/escalas-gerais', icon: <Users className="w-7 h-7" />, label: 'Escalas Gerais' },
