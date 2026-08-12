@@ -99,7 +99,8 @@ export default function EscalaManualPage() {
     setSaving(true)
 
     const dateObj = new Date(selectedDate + 'T12:00:00')
-    const weekNum = Math.ceil(dateObj.getDate() / 7)
+    const { getWeekNumber } = await import('@/lib/week-utils')
+    const weekNum = getWeekNumber(selectedDate)
     const dayOfWeek = dayNames[getDay(dateObj)] || ''
 
     const res = await fetch('/api/schedule-events/save-manual', {

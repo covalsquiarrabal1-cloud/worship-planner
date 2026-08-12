@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { getWeekNumber } from '@/lib/week-utils'
 
 interface SelectedDay {
   date: string
@@ -160,7 +161,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
 
     for (const day of sortedDays) {
       const dateObj = new Date(day.date + 'T12:00:00')
-      const weekNum = Math.ceil(dateObj.getDate() / 7)
+      const weekNum = getWeekNumber(day.date)
       const numCelebrations = day.numCelebrations || 1
       const scaleName = (day.scaleName || '').toUpperCase()
 
@@ -318,7 +319,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
 
   for (const day of sortedDays) {
     const dateObj = new Date(day.date + 'T12:00:00')
-    const weekNum = Math.ceil(dateObj.getDate() / 7)
+    const weekNum = getWeekNumber(day.date)
     const numCelebrations = day.numCelebrations || 1
 
     const { data: event, error: eventErr } = await serviceClient

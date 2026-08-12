@@ -35,7 +35,21 @@ export default function MemberSchedulePage() {
   const [loading, setLoading] = useState(true)
   const [memberName, setMemberName] = useState('')
   const [view, setView] = useState<'mensal' | 'semanal'>('semanal')
-  const [currentWeek, setCurrentWeek] = useState(() => Math.ceil(new Date().getDate() / 7))
+  const [currentWeek, setCurrentWeek] = useState(() => {
+    const today = new Date()
+    const day = today.getDate()
+    const month = today.getMonth()
+    const year = today.getFullYear()
+    let firstSunday = 1
+    while (new Date(year, month, firstSunday).getDay() !== 0) firstSunday++
+    if (day <= firstSunday) return 1
+    const lastDay = new Date(year, month + 1, 0).getDate()
+    let lastSunday = lastDay
+    while (new Date(year, month, lastSunday).getDay() !== 0) lastSunday--
+    const sundaysCount = Math.floor((lastSunday - firstSunday) / 7) + 1
+    const totalWeeks = Math.max(sundaysCount - 1, 1)
+    return Math.min(Math.ceil((day - firstSunday) / 7) + 1, totalWeeks)
+  })
   const [hideOtherMembers, setHideOtherMembers] = useState(false)
   const [verse, setVerse] = useState({ text: '', reference: '' })
   const supabase = createClient()
