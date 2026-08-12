@@ -338,7 +338,7 @@ export default function SobrePage() {
             <span className="text-sm font-medium">Worship Planner</span>
           </div>
           <p className="text-xs text-gray-500">
-            Desenvolvido para a Igreja Amor e Cuidado
+            Gestão de escalas e ministérios
           </p>
         </div>
       </footer>
