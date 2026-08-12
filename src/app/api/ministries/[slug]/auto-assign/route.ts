@@ -102,18 +102,23 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     const numPeople = configMap[(event as any).scale_name] || configMap['default'] || 1
     const busyEmails = busyByDate[event.event_date] || new Set()
     const assignments: { event_id: string; member_id: string; celebration_number: number; role: string; role_name: string }[] = []
+    
+    // Track all members assigned to this event (across all celebrations) to avoid duplicates
+    const assignedThisEvent = new Set<string>()
 
     for (let c = 1; c <= (event.num_celebrations || 1); c++) {
       const assignedThisCelebration = new Set<string>()
 
       for (let p = 0; p < numPeople; p++) {
         let attempts = 0
+        let assigned = false
         while (attempts < members.length) {
           const member = members[memberIndex % members.length]
           memberIndex++
           attempts++
 
           if (assignedThisCelebration.has(member.id)) continue
+          if (assignedThisEvent.has(member.id)) continue
           const email = member.email?.toLowerCase() || ''
           if (email && busyEmails.has(email)) continue
 
@@ -125,8 +130,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
             role_name: 'Membro',
           })
           assignedThisCelebration.add(member.id)
+          assignedThisEvent.add(member.id)
+          assigned = true
           break
         }
+        // If couldn't assign anyone unique, skip this slot
       }
     }
 

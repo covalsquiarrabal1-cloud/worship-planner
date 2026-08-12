@@ -22,14 +22,14 @@ export async function PUT(request: Request, { params }: { params: Promise<{ slug
   }
 
   const { assignmentId, memberId } = await request.json()
-  if (!assignmentId || !memberId) {
-    return NextResponse.json({ error: 'assignmentId e memberId obrigatórios' }, { status: 400 })
+  if (!assignmentId) {
+    return NextResponse.json({ error: 'assignmentId obrigatório' }, { status: 400 })
   }
 
-  // Update the assignment
+  // memberId can be null to set as empty/vacant
   const { error } = await serviceClient
     .from('ministry_assignments')
-    .update({ member_id: memberId })
+    .update({ member_id: memberId || null })
     .eq('id', assignmentId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

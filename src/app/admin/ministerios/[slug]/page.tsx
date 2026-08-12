@@ -214,11 +214,13 @@ export default function MinistryPage() {
   async function handleSwapMember(assignmentId: string, newMemberId: string) {
     if (!newMemberId) return
 
+    const isEmpty = newMemberId === '__empty__'
+
     setEvents(prev => prev.map(event => ({
       ...event,
       assignments: event.assignments.map(a =>
         a.id === assignmentId
-          ? { ...a, member: members.find(m => m.id === newMemberId) ? { id: newMemberId, name: members.find(m => m.id === newMemberId)!.name, nickname: null } : a.member }
+          ? { ...a, member: isEmpty ? null : (members.find(m => m.id === newMemberId) ? { id: newMemberId, name: members.find(m => m.id === newMemberId)!.name, nickname: null } : a.member) }
           : a
       ),
     })))
@@ -226,7 +228,7 @@ export default function MinistryPage() {
     const res = await fetch(`/api/ministries/${slug}/assignments`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ assignmentId, memberId: newMemberId }),
+      body: JSON.stringify({ assignmentId, memberId: isEmpty ? null : newMemberId }),
     })
 
     if (!res.ok) {
@@ -906,6 +908,7 @@ export default function MinistryPage() {
                                           onBlur={() => setSwappingAssignment(null)}
                                         >
                                           <option value="">— Selecionar —</option>
+                                          <option value="__empty__">— Vazio —</option>
                                           {members.filter(m => !m.is_blocked).map(m => (
                                             <option key={m.id} value={m.id}>{m.name}</option>
                                           ))}
