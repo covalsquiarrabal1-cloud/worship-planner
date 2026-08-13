@@ -833,7 +833,7 @@ export default function MinistryPage() {
             </div>
           ) : (() => {
             // Detect all unique role_names to build dynamic columns
-            const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name)).filter(Boolean))] as string[]
+            const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name || 'Membro')).filter(Boolean))] as string[]
             // Known order for specific roles, then others alphabetically
             const knownOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
             const knownRoles = knownOrder.filter(r => allRoleNames.includes(r))
@@ -889,7 +889,7 @@ export default function MinistryPage() {
                             {event.num_celebrations > 1 ? `C${celNum}` : '-'}
                           </td>
                           {displayColumns.map(col => {
-                            const colAssignments = celAssignments.filter(a => a.role_name === col)
+                            const colAssignments = celAssignments.filter(a => (a.role_name || 'Membro') === col)
 
                             return (
                               <td key={col} className="px-2 py-1 border-r border-[var(--border)] last:border-r-0 text-center align-middle">
