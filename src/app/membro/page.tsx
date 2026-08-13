@@ -52,12 +52,18 @@ export default function MemberSchedulePage() {
   })
   const [hideOtherMembers, setHideOtherMembers] = useState(false)
   const [verse, setVerse] = useState({ text: '', reference: '' })
+  const [myMinistries, setMyMinistries] = useState<{ id: string; name: string; slug: string }[]>([])
+  const [isWorshipMember, setIsWorshipMember] = useState<boolean | null>(null)
+  const [selectedMinistry, setSelectedMinistry] = useState<string | null>(null)
+  const [ministryEvents, setMinistryEvents] = useState<any[]>([])
+  const [loadingMinistry, setLoadingMinistry] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
     loadMemberInfo()
     loadPrivacySetting()
     loadVerse()
+    loadMyMinistries()
   }, [])
 
   useEffect(() => {
@@ -111,6 +117,37 @@ export default function MemberSchedulePage() {
       }
     } catch {}
   }
+
+  async function loadMyMinistries() {
+    const res = await fetch('/api/my-ministries')
+    if (res.ok) {
+      const data = await res.json()
+      setIsWorshipMember(data.isWorshipMember)
+      setMyMinistries(data.ministries || [])
+      // Auto-select first ministry if not worship member
+      if (!data.isWorshipMember && data.ministries.length > 0) {
+        setSelectedMinistry(data.ministries[0].slug)
+      }
+    } else {
+      setIsWorshipMember(false)
+    }
+  }
+
+  async function loadMinistryEvents(slug: string) {
+    setLoadingMinistry(true)
+    const start = format(startOfMonth(currentDate), 'yyyy-MM-dd')
+    const end = format(endOfMonth(currentDate), 'yyyy-MM-dd')
+    const res = await fetch(`/api/ministries/${slug}/events?start=${start}&end=${end}`)
+    if (res.ok) setMinistryEvents(await res.json())
+    else setMinistryEvents([])
+    setLoadingMinistry(false)
+  }
+
+  useEffect(() => {
+    if (selectedMinistry && !isWorshipMember) {
+      loadMinistryEvents(selectedMinistry)
+    }
+  }, [selectedMinistry, currentDate])
 
   async function loadEvents() {
     setLoading(true)
@@ -170,6 +207,94 @@ export default function MemberSchedulePage() {
     ? groupedByWeek[currentWeek] || []
     : events
 
+  // If not a worship member, show ministry schedules instead
+  if (isWorshipMember === false && myMinistries.length > 0) {
+    return (
+      <div className="space-y-4">
+        <PushNotificationToggle />
+
+        {/* Ministry tabs */}
+        {myMinistries.length > 1 && (
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {myMinistries.map(m => (
+              <button
+                key={m.slug}
+                onClick={() => setSelectedMinistry(m.slug)}
+                className={`px-4 py-2.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+                  selectedMinistry === m.slug
+                    ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20'
+                    : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'
+                }`}
+              >
+                {m.name}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {myMinistries.length === 1 && (
+          <h2 className="text-lg font-bold">{myMinistries[0].name}</h2>
+        )}
+
+        {/* Month nav */}
+        <div className="flex items-center justify-between">
+          <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-3 rounded-xl bg-[#1c2128] border border-[#30363d]">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <span className="text-base font-semibold capitalize">{format(currentDate, 'MMMM yyyy', { locale: ptBR })}</span>
+          <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-3 rounded-xl bg-[#1c2128] border border-[#30363d]">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Events */}
+        {loadingMinistry ? (
+          <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin" /></div>
+        ) : ministryEvents.length === 0 ? (
+          <div className="card text-center py-8 text-[var(--muted-foreground)]">
+            <p className="text-sm">Nenhuma escala para este mês.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {ministryEvents.map((event: any) => (
+              <div key={event.id} className="card space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs text-[var(--muted-foreground)] capitalize">{event.day_of_week}, {event.event_date.slice(8,10)}/{event.event_date.slice(5,7)}</span>
+                    {event.scale_name && <span className="text-xs text-green-400 ml-2 font-medium">{event.scale_name}</span>}
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  {(event.assignments || [])
+                    .sort((a: any, b: any) => a.celebration_number - b.celebration_number)
+                    .map((a: any) => (
+                    <div key={a.id} className="flex items-center gap-2">
+                      {event.num_celebrations > 1 && (
+                        <span className="text-[10px] text-[var(--muted-foreground)]">C{a.celebration_number}:</span>
+                      )}
+                      <span className={`text-sm font-medium ${a.member?.name === memberName ? 'text-green-400' : ''}`}>
+                        {a.member?.nickname || a.member?.name || '-'}
+                      </span>
+                      {a.role_name && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#58a6ff]/15 text-[#58a6ff] font-medium">{a.role_name}</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // If still loading membership info, show spinner
+  if (isWorshipMember === null) {
+    return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
+  }
+
+  // Original louvor schedule below
   return (
     <div className="space-y-4">
       {/* Greeting */}
