@@ -21,12 +21,15 @@ export default function LiderMinistryPage() {
   const [events, setEvents] = useState<MinistryEvent[]>([])
   const [currentDate, setCurrentDate] = useState(new Date())
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'escala' | 'membros'>('escala')
+  const [tab, setTab] = useState<'escala' | 'membros' | 'mensagens'>('escala')
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [showAddMember, setShowAddMember] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [isPublished, setIsPublished] = useState(false)
+  const [notifTitle, setNotifTitle] = useState('')
+  const [notifBody, setNotifBody] = useState('')
+  const [sendingNotif, setSendingNotif] = useState(false)
 
   const month = currentDate.getMonth() + 1
   const year = currentDate.getFullYear()
@@ -200,7 +203,7 @@ export default function LiderMinistryPage() {
       </div>
 
       {/* Tabs */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <button
           onClick={() => setTab('escala')}
           className={`py-5 rounded-2xl text-sm font-semibold transition-all ${tab === 'escala' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
@@ -211,11 +214,17 @@ export default function LiderMinistryPage() {
           onClick={() => setTab('membros')}
           className={`py-5 rounded-2xl text-sm font-semibold transition-all ${tab === 'membros' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
         >
-          <Users className="w-4 h-4 inline mr-1" /> Membros ({members.length})
+          <Users className="w-4 h-4 inline mr-1" /> Membros
+        </button>
+        <button
+          onClick={() => setTab('mensagens')}
+          className={`py-5 rounded-2xl text-sm font-semibold transition-all ${tab === 'mensagens' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
+        >
+          🔔 Notificar
         </button>
       </div>
 
-      {tab === 'membros' ? (
+      {tab === 'membros' && (
         <div className="space-y-3">
           <button onClick={() => setShowAddMember(true)} className="flex items-center gap-2 bg-[#1c2128] border border-[#30363d] px-4 py-3 rounded-2xl text-sm hover:border-[#58a6ff]">
             <Plus className="w-4 h-4" /> Adicionar Membro
@@ -255,7 +264,56 @@ export default function LiderMinistryPage() {
             </div>
           ))}
         </div>
-      ) : (
+      )}
+
+      {tab === 'mensagens' && (
+        <div className="space-y-4">
+          <div className="card space-y-4">
+            <h3 className="text-sm font-bold">🔔 Enviar Notificação Push</h3>
+            <p className="text-xs text-[var(--muted-foreground)]">Envia uma notificação para todos os membros do ministério que ativaram notificações no app.</p>
+            <input
+              type="text"
+              placeholder="Título (ex: Escala publicada!)"
+              value={notifTitle}
+              onChange={e => setNotifTitle(e.target.value)}
+            />
+            <textarea
+              placeholder="Mensagem (ex: Confira sua escala de agosto no app)"
+              value={notifBody}
+              onChange={e => setNotifBody(e.target.value)}
+              rows={3}
+              className="w-full resize-none"
+            />
+            <button
+              onClick={async () => {
+                if (!notifTitle.trim() || !notifBody.trim()) { alert('Título e mensagem são obrigatórios'); return }
+                setSendingNotif(true)
+                const res = await fetch('/api/push/send', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ title: notifTitle, body: notifBody, ministrySlug: slug, url: '/membro' }),
+                })
+                if (res.ok) {
+                  const data = await res.json()
+                  alert(`✓ Notificação enviada para ${data.sent} dispositivo(s)${data.failed > 0 ? ` (${data.failed} falharam)` : ''}`)
+                  setNotifTitle('')
+                  setNotifBody('')
+                } else {
+                  const data = await res.json()
+                  alert('Erro: ' + (data.error || 'Erro desconhecido'))
+                }
+                setSendingNotif(false)
+              }}
+              disabled={sendingNotif || !notifTitle.trim() || !notifBody.trim()}
+              className="w-full bg-[#58a6ff] text-white py-3 rounded-xl text-sm font-semibold disabled:opacity-40 flex items-center justify-center gap-2"
+            >
+              {sendingNotif ? <Loader2 className="w-4 h-4 animate-spin" /> : '🔔'} Enviar para Membros
+            </button>
+          </div>
+        </div>
+      )}
+
+      {tab === 'escala' && (
         <div className="space-y-4">
           {/* Month Nav */}
           <div className="flex items-center justify-between">
