@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Loader2, Search, Plus, X, ChevronDown, FileDown, FileSpreadsheet } from 'lucide-react'
-import Link from 'next/link'
 
 interface PersonRole {
   id: string
@@ -198,6 +197,33 @@ export default function CadastroPage() {
             .filter(p => !filterNoRole || (p.ministries.length === 0 && (!p.person_roles || p.person_roles.length === 0 || (p.person_roles.length === 1 && p.person_roles[0] === 'Membro'))))
             .map((person, idx) => (
             <div key={idx} className="card">
+              {editingPerson === person.email ? (
+                <EditInline
+                  person={person}
+                  roles={roles}
+                  ministries={ministries}
+                  personRoles={personRoles[person.email] || []}
+                  onSave={async (data) => {
+                    const res = await fetch('/api/relatorios/cadastro/register', {
+                      method: 'PUT',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify(data),
+                    })
+                    if (res.ok) {
+                      if (data.role_ids) {
+                        await fetch('/api/person-roles/assign', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: data.new_email || data.old_email, role_ids: data.role_ids }) })
+                      }
+                      if (data.ministry_ids) {
+                        await fetch('/api/relatorios/cadastro/ministries', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: data.new_email || data.old_email, name: data.new_name, ministry_ids: data.ministry_ids }) })
+                      }
+                      setEditingPerson(null)
+                      loadCadastro()
+                    } else { const d = await res.json(); alert(d.error || 'Erro') }
+                  }}
+                  onCancel={() => setEditingPerson(null)}
+                />
+              ) : (
+              <>
               <button onClick={() => { const next = expandedPerson === person.email ? null : person.email; setExpandedPerson(next); if (next && !personRoles[person.email]) loadPersonRoles(person.email) }} className="w-full flex items-center justify-between">
                 <div className="text-left">
                   <p className="text-sm font-medium">{person.name}</p>
@@ -245,9 +271,12 @@ export default function CadastroPage() {
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <Link href={`/admin/cadastro/${encodeURIComponent(person.email)}`} className="flex-1 py-2 rounded-xl bg-[#58a6ff]/10 text-[#58a6ff] text-xs font-semibold hover:bg-[#58a6ff]/20 transition-colors text-center">
+                    <button
+                      onClick={() => setEditingPerson(person.email)}
+                      className="flex-1 py-2 rounded-xl bg-[#58a6ff]/10 text-[#58a6ff] text-xs font-semibold hover:bg-[#58a6ff]/20 transition-colors text-center"
+                    >
                       ✏️ Editar
-                    </Link>
+                    </button>
                     <button onClick={async () => {
                       if (!confirm(`Excluir "${person.name}"?`)) return
                       const res = await fetch(`/api/relatorios/cadastro/register?email=${encodeURIComponent(person.email)}`, { method: 'DELETE' })
@@ -258,12 +287,85 @@ export default function CadastroPage() {
                   </div>
                 </div>
               )}
+              </>
+              )}
             </div>
           ))}
         </div>
       )}
 
       <div className="h-24" />
+    </div>
+  )
+}
+
+function EditInline({ person, roles, ministries, personRoles, onSave, onCancel }: {
+  person: any
+  roles: { id: string; name: string }[]
+  ministries: { id: string; name: string }[]
+  personRoles: { id: string; name: string }[]
+  onSave: (data: any) => void
+  onCancel: () => void
+}) {
+  const [name, setName] = useState(person.name || '')
+  const [email, setEmail] = useState(person.email || '')
+  const [nickname, setNickname] = useState(person.nickname || '')
+  const [phone, setPhone] = useState(person.phone || '')
+  const [birthDate, setBirthDate] = useState(person.birth_date ? person.birth_date.substring(0, 10) : '')
+  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>(personRoles.map(r => r.id))
+  const [selectedMinistryIds, setSelectedMinistryIds] = useState<string[]>(
+    (person.ministries || []).map((m: any) => m.ministry_id).filter((id: string) => id !== 'louvor')
+  )
+  const [saving, setSaving] = useState(false)
+
+  return (
+    <div className="space-y-4 p-1">
+      <div className="space-y-3">
+        <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Nome completo" />
+        <input value={email} onChange={e => setEmail(e.target.value)} placeholder="E-mail" type="email" />
+        <input type="text" value={nickname} onChange={e => setNickname(e.target.value)} placeholder="Apelido" />
+        <div className="grid grid-cols-2 gap-3">
+          <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Telefone" type="tel" />
+          <input value={birthDate} onChange={e => setBirthDate(e.target.value)} type="date" />
+        </div>
+        <div>
+          <label className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider block mb-2">Funções</label>
+          <div className="flex flex-wrap gap-2">
+            {roles.map(role => (
+              <button key={role.id} type="button" onClick={() => setSelectedRoleIds(prev => prev.includes(role.id) ? prev.filter(id => id !== role.id) : [...prev, role.id])}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedRoleIds.includes(role.id) ? 'bg-purple-500/20 text-purple-400 ring-1 ring-purple-500/40' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}>
+                {selectedRoleIds.includes(role.id) ? '✓ ' : ''}{role.name}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label className="text-[10px] uppercase font-semibold text-[var(--muted-foreground)] tracking-wider block mb-2">Ministérios</label>
+          <div className="flex flex-wrap gap-2 max-h-[150px] overflow-y-auto">
+            {ministries.map(m => (
+              <button key={m.id} type="button" onClick={() => setSelectedMinistryIds(prev => prev.includes(m.id) ? prev.filter(id => id !== m.id) : [...prev, m.id])}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${selectedMinistryIds.includes(m.id) ? 'bg-green-500/20 text-green-400 ring-1 ring-green-500/40' : 'bg-[var(--accent)] text-[var(--muted-foreground)]'}`}>
+                {selectedMinistryIds.includes(m.id) ? '✓ ' : ''}{m.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div className="flex gap-2">
+        <button
+          onClick={async () => {
+            if (!name.trim() || !email.trim()) { alert('Nome e e-mail obrigatórios'); return }
+            setSaving(true)
+            await onSave({ old_email: person.email, new_name: name.trim(), new_email: email.trim().toLowerCase(), phone: phone.trim() || null, birth_date: birthDate || null, nickname: nickname.trim() || null, role_ids: selectedRoleIds, ministry_ids: selectedMinistryIds })
+            setSaving(false)
+          }}
+          disabled={saving}
+          className="flex-1 bg-[#58a6ff] text-white py-2.5 rounded-xl text-sm font-medium disabled:opacity-40 flex items-center justify-center gap-2"
+        >
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null} Salvar
+        </button>
+        <button onClick={onCancel} className="px-4 py-2.5 text-[#8b949e] text-sm rounded-xl hover:bg-[var(--accent)]">Cancelar</button>
+      </div>
     </div>
   )
 }
