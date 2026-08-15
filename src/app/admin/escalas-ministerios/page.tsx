@@ -173,14 +173,28 @@ export default function EscalasMinisteriosAdminPage() {
                       >
                         <div className={`relative w-[60px] h-[60px] rounded-[14px] flex items-center justify-center shadow-lg transition-all ${
                           ministriesWithSchedule.has(m.id)
-                            ? 'glow-border-green'
+                            ? ''
                             : 'bg-[#1c2128]/80 border border-[#30363d]/60 hover:border-[#58a6ff]/50'
                         }`}>
-                          <div className="w-full h-full rounded-[14px] flex items-center justify-center">
+                          {ministriesWithSchedule.has(m.id) && (
+                            <div className="absolute inset-[-2px] rounded-[16px] animate-spin-slow" style={{
+                              background: 'conic-gradient(from 0deg, transparent, #22c55e, #4ade80, transparent, #22c55e, transparent)',
+                              mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                              maskComposite: 'xor',
+                              WebkitMaskComposite: 'xor',
+                              padding: '2px',
+                              borderRadius: '16px',
+                            }} />
+                          )}
+                          <div className={`w-full h-full rounded-[14px] flex items-center justify-center ${
+                            ministriesWithSchedule.has(m.id) ? 'bg-[#1c2128]' : ''
+                          }`}>
                             <img src={getMinistryIcon3D(m.slug)} alt={m.name} className="w-[36px] h-[36px] object-contain" />
                           </div>
                         </div>
-                        <span className="text-[9px] text-center leading-tight font-medium w-[65px] break-words text-[var(--muted-foreground)]">{m.name}</span>
+                        <span className={`text-[9px] text-center leading-tight font-medium w-[65px] break-words ${
+                          ministriesWithSchedule.has(m.id) ? 'text-green-400' : 'text-[var(--muted-foreground)]'
+                        }`}>{m.name}</span>
                       </button>
                       ) : (
                       <a

@@ -21,5 +21,19 @@ export async function GET(request: Request) {
 
   const ministryIds = [...new Set((schedules || []).map(s => s.ministry_id))]
 
+  // Check if Louvor has events this month (uses separate schedule_events table)
+  const startDate = `${year}-${String(month).padStart(2, '0')}-01`
+  const endDate = `${year}-${String(month).padStart(2, '0')}-${new Date(year, month, 0).getDate()}`
+  const { data: louvorEvents } = await serviceClient
+    .from('schedule_events')
+    .select('id')
+    .gte('event_date', startDate)
+    .lte('event_date', endDate)
+    .limit(1)
+
+  if (louvorEvents && louvorEvents.length > 0) {
+    ministryIds.push('louvor')
+  }
+
   return NextResponse.json({ ministryIds })
 }
