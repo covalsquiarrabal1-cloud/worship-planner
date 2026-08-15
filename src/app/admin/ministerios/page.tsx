@@ -120,8 +120,8 @@ export default function MinisteriosPage() {
       {allGroups.map((items, idx) => (
         <div
           key={idx}
-          className="w-[85%] max-w-[360px] aspect-square rounded-[32px] p-6 flex flex-wrap items-center justify-center content-center gap-5 relative overflow-hidden"
-          style={{ background: 'rgba(255, 255, 255, 0.04)', backdropFilter: 'blur(12px)', marginBottom: '30px' }}
+          className="w-[85%] max-w-[360px] rounded-[32px] p-6 flex flex-wrap items-center justify-center content-center gap-5 relative overflow-hidden"
+          style={{ background: 'rgba(255, 255, 255, 0.04)', backdropFilter: 'blur(12px)', marginBottom: '30px', minHeight: '200px' }}
         >
           {/* Animated flowing border */}
           <div className="absolute inset-0 rounded-[32px] animate-spin-slow" style={{
@@ -142,21 +142,21 @@ export default function MinisteriosPage() {
                 href={m.slug === 'louvor' ? '/admin' : `/admin/ministerios/${m.slug}`}
                 className="flex flex-col items-center gap-2 active:scale-90 transition-transform"
               >
-                <div className="relative w-[77px] h-[77px] rounded-[16px] flex items-center justify-center group">
+                <div className="relative w-[88px] h-[88px] rounded-[18px] flex items-center justify-center group">
                   {/* Glow border */}
-                  <div className="absolute inset-0 rounded-[16px] opacity-60 group-hover:opacity-100 transition-opacity animate-pulse-glow" style={{
+                  <div className="absolute inset-0 rounded-[18px] opacity-60 group-hover:opacity-100 transition-opacity animate-pulse-glow" style={{
                     background: 'linear-gradient(135deg, rgba(88,166,255,0.3), rgba(88,166,255,0.1), rgba(88,166,255,0.3))',
                     boxShadow: '0 0 12px rgba(88,166,255,0.15), inset 0 0 12px rgba(88,166,255,0.05)',
                   }} />
-                  <div className="absolute inset-[1px] rounded-[15px] bg-[#1c2128] flex items-center justify-center">
+                  <div className="absolute inset-[1px] rounded-[17px] bg-[#1c2128] flex items-center justify-center">
                     <img
                       src={m.slug === 'louvor' ? getMinistryIcon3D('louvor') : getMinistryIcon3D(m.slug)}
                       alt={m.name}
-                      className="w-[48px] h-[48px] object-contain"
+                      className="w-[52px] h-[52px] object-contain"
                     />
                   </div>
                 </div>
-                <span className="text-[11px] text-center leading-tight font-medium w-[80px] break-words">{m.name}</span>
+                <span className="text-[11px] text-center leading-tight font-medium w-[88px] break-words">{m.name}</span>
               </Link>
             ))}
           </div>
