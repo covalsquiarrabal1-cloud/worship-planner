@@ -319,10 +319,14 @@ export default function MinistryPage() {
 
     // Detect roles dynamically
     const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name)).filter(Boolean))] as string[]
+    const hasNullRoles = events.some(e => e.assignments.some(a => !a.role_name && a.member))
     const knownOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
     const knownRoles = knownOrder.filter(r => allRoleNames.includes(r))
     const otherRoles = allRoleNames.filter(r => !knownOrder.includes(r)).sort()
     const pdfDisplayColumns = [...knownRoles, ...otherRoles]
+
+    // If no roles exist but there are assignments, add a "Membros" column
+    const showMembrosColumn = pdfDisplayColumns.length === 0 && hasNullRoles
 
     // Build table rows - track which rows belong to same event for merge
     const tableData: string[][] = []
@@ -344,9 +348,26 @@ export default function MinistryPage() {
           event.num_celebrations > 1 ? `C${celNum}` : '-',
         ]
 
-        for (const col of pdfDisplayColumns) {
-          const colAssignments = celAssignments.filter(a => a.role_name === col)
-          row.push(colAssignments.map(a => a.member?.nickname || a.member?.name || '-').join(', ') || '-')
+        if (showMembrosColumn) {
+          // Show all members in a single column
+          const memberNames = celAssignments
+            .filter(a => a.member)
+            .map(a => a.member?.nickname || a.member?.name || '-')
+            .join(', ')
+          row.push(memberNames || '-')
+        } else {
+          for (const col of pdfDisplayColumns) {
+            const colAssignments = celAssignments.filter(a => a.role_name === col)
+            row.push(colAssignments.map(a => a.member?.nickname || a.member?.name || '-').join(', ') || '-')
+          }
+          // Also add unassigned-role members if there are mixed (some with role, some without)
+          if (hasNullRoles && pdfDisplayColumns.length > 0) {
+            const noRoleMembers = celAssignments
+              .filter(a => !a.role_name && a.member)
+              .map(a => a.member?.nickname || a.member?.name || '-')
+              .join(', ')
+            row.push(noRoleMembers || '-')
+          }
         }
 
         tableData.push(row)
@@ -357,7 +378,16 @@ export default function MinistryPage() {
       }
     }
 
-    const headColumns = ['Data', 'Dia', 'Escala', 'Cel.', ...pdfDisplayColumns.map(c => c === 'Intercessor' ? 'Intercessão' : c === 'Orar pelo Ministro' ? 'Orar p/ Ministro' : c)]
+    let headColumns: string[]
+    if (showMembrosColumn) {
+      headColumns = ['Data', 'Dia', 'Escala', 'Cel.', 'Membros']
+    } else {
+      const roleHeaders = pdfDisplayColumns.map(c => c === 'Intercessor' ? 'Intercessão' : c === 'Orar pelo Ministro' ? 'Orar p/ Ministro' : c)
+      if (hasNullRoles && pdfDisplayColumns.length > 0) {
+        roleHeaders.push('Outros')
+      }
+      headColumns = ['Data', 'Dia', 'Escala', 'Cel.', ...roleHeaders]
+    }
 
     autoTable(doc, {
       startY: 22,
