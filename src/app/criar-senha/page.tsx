@@ -18,44 +18,56 @@ export default function CriarSenhaPage() {
   const router = useRouter()
 
   useEffect(() => {
-    // Listen for auth state changes - Supabase processes the URL hash automatically
+    let cancelled = false
+
+    // Listen for auth state changes - handles both hash tokens and existing sessions
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (cancelled) return
       if (event === 'PASSWORD_RECOVERY' || event === 'SIGNED_IN') {
-        // Token was processed successfully, user can now set new password
         setReady(true)
         setChecking(false)
       }
     })
 
-    // Also check if already have a session (e.g., page refresh)
-    const timer = setTimeout(async () => {
+    // Check for existing session (set by /auth/callback PKCE flow)
+    async function checkSession() {
+      // Small delay to let onAuthStateChange fire first if there's a hash
+      await new Promise(resolve => setTimeout(resolve, 500))
+      if (cancelled) return
+
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
         setReady(true)
-      } else {
-        // Check URL hash manually
-        const hash = window.location.hash
-        if (hash && hash.includes('access_token')) {
-          // Wait a bit more for Supabase to process
-          setTimeout(async () => {
-            const { data: { session: s2 } } = await supabase.auth.getSession()
-            if (s2) {
-              setReady(true)
-            } else {
-              setError('Link inválido ou expirado. Solicite um novo link de redefinição.')
-            }
-            setChecking(false)
-          }, 2000)
+        setChecking(false)
+        return
+      }
+
+      // Check URL hash (legacy implicit flow fallback)
+      const hash = window.location.hash
+      if (hash && hash.includes('access_token')) {
+        // Give Supabase time to process the hash
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        if (cancelled) return
+        const { data: { session: s2 } } = await supabase.auth.getSession()
+        if (s2) {
+          setReady(true)
+          setChecking(false)
           return
         }
-        setError('Link inválido ou expirado. Solicite um novo link de redefinição.')
       }
-      setChecking(false)
-    }, 1500)
+
+      // No session found after all checks
+      if (!cancelled) {
+        setError('Link inválido ou expirado. Solicite um novo link de redefinição.')
+        setChecking(false)
+      }
+    }
+
+    checkSession()
 
     return () => {
+      cancelled = true
       subscription.unsubscribe()
-      clearTimeout(timer)
     }
   }, [])
 
