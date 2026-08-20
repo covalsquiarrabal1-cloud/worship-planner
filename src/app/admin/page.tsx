@@ -138,79 +138,76 @@ export default function AdminPage() {
     const { jsPDF } = await import('jspdf')
     const { default: autoTable } = await import('jspdf-autotable')
 
+    // Filter: only events that have songs (louvores)
+    const eventsWithSongs = weekEvents.filter(e => (e.songs || []).length > 0)
+
+    if (eventsWithSongs.length === 0) {
+      alert('Nenhuma escala com louvores nesta semana para exportar.')
+      return
+    }
+
     const doc = new jsPDF({ orientation: 'portrait' })
     const monthName = format(date, "MMMM 'de' yyyy", { locale: ptBR })
     const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
 
     // Title
-    doc.setFontSize(14)
+    doc.setFontSize(12)
     doc.setFont('helvetica', 'bold')
-    doc.text(`Escala da Semana ${week}`, pageWidth / 2, 14, { align: 'center' })
-    doc.setFontSize(9)
+    doc.text(`Escala da Semana ${week}`, pageWidth / 2, 12, { align: 'center' })
+    doc.setFontSize(8)
     doc.setFont('helvetica', 'normal')
-    doc.text(monthName, pageWidth / 2, 20, { align: 'center' })
+    doc.text(monthName, pageWidth / 2, 17, { align: 'center' })
 
-    let currentY = 28
+    let currentY = 23
 
-    // Also fetch ministry events for this week
-    const startDate = weekEvents.length > 0 ? weekEvents[0].event_date : ''
-    const endDate = weekEvents.length > 0 ? weekEvents[weekEvents.length - 1].event_date : ''
+    // Calculate spacing to fit everything in one page
+    const availableHeight = pageHeight - 30 // margins
+    const numEvents = eventsWithSongs.length
+    const estimatedPerEvent = availableHeight / numEvents
 
-    let ministryData: any[] = []
-    if (startDate && endDate) {
-      try {
-        const res = await fetch(`/api/ministries/week-events?start=${startDate}&end=${endDate}`)
-        if (res.ok) ministryData = await res.json()
-      } catch {}
-    }
-
-    // Render each louvor event
-    for (const event of weekEvents) {
-      if (currentY > doc.internal.pageSize.getHeight() - 40) {
-        doc.addPage()
-        currentY = 15
-      }
-
+    // Render each louvor event that has songs
+    for (const event of eventsWithSongs) {
       // Event header
-      doc.setFontSize(8)
+      doc.setFontSize(7)
       doc.setFont('helvetica', 'normal')
       doc.setTextColor(120, 120, 120)
       doc.text(`${event.day_of_week}, ${event.event_date.slice(8,10)}/${event.event_date.slice(5,7)}`, pageWidth / 2, currentY, { align: 'center' })
-      currentY += 5
+      currentY += 4
 
-      doc.setFontSize(12)
+      doc.setFontSize(10)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(34, 197, 94)
       doc.text(event.scale_type?.name || '-', pageWidth / 2, currentY, { align: 'center' })
-      currentY += 6
+      currentY += 5
       doc.setTextColor(0, 0, 0)
 
       // Vocais
       const vocals = event.assignments.filter(a => a.role.startsWith('vocal_')).sort((a, b) => a.role.localeCompare(b.role))
       if (vocals.length > 0) {
-        doc.setFontSize(8)
+        doc.setFontSize(7)
         doc.setFont('helvetica', 'normal')
         const vocalText = vocals.map(v => {
           const label = v.role === 'vocal_1' ? 'Vocal 1' : v.role === 'vocal_2' ? 'Vocal 2' : 'Vocal 3'
           return `${label}: ${v.member?.nickname || v.member?.name || '-'}`
         }).join('   |   ')
         doc.text(vocalText, pageWidth / 2, currentY, { align: 'center' })
-        currentY += 5
+        currentY += 4
       }
 
       // Instruments
       const instruments = event.assignments.filter(a => ['guitarra', 'baixo', 'bateria', 'teclado'].includes(a.role))
       if (instruments.length > 0) {
-        doc.setFontSize(8)
+        doc.setFontSize(7)
         const instrText = instruments.map(i => {
           const labels: Record<string, string> = { guitarra: 'Guitarra', baixo: 'Baixo', bateria: 'Bateria', teclado: 'Teclado' }
           return `${labels[i.role] || i.role}: ${i.member?.nickname || i.member?.name || '-'}`
         }).join('   |   ')
         doc.text(instrText, pageWidth / 2, currentY, { align: 'center' })
-        currentY += 5
+        currentY += 4
       }
 
-      // Songs table
+      // Songs table (compact)
       const songs = (event.songs || []).sort((a, b) => a.order_num - b.order_num)
       if (songs.length > 0) {
         const tableData = songs.map(s => [String(s.order_num), s.title, s.version || '-', s.minister || '-'])
@@ -220,57 +217,12 @@ export default function AdminPage() {
           head: [['#', 'Louvor', 'Versão', 'Ministro']],
           body: tableData,
           theme: 'grid',
-          styles: { fontSize: 7, cellPadding: 2 },
-          headStyles: { fillColor: [30, 30, 30], textColor: [255, 255, 255], fontSize: 7 },
-          columnStyles: { 0: { cellWidth: 10, halign: 'center' } },
+          styles: { fontSize: 6, cellPadding: 1.5, lineWidth: 0.2 },
+          headStyles: { fillColor: [30, 30, 30], textColor: [255, 255, 255], fontSize: 6 },
+          columnStyles: { 0: { cellWidth: 8, halign: 'center' } },
         })
-        currentY = (doc as any).lastAutoTable.finalY + 8
-      } else {
-        currentY += 5
+        currentY = (doc as any).lastAutoTable.finalY + 6
       }
-    }
-
-    // Render ministry events
-    for (const ministry of ministryData) {
-      if (currentY > doc.internal.pageSize.getHeight() - 40) {
-        doc.addPage()
-        currentY = 15
-      }
-
-      // Ministry header
-      doc.setFontSize(10)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(88, 166, 255)
-      doc.text(ministry.name, pageWidth / 2, currentY, { align: 'center' })
-      currentY += 5
-      doc.setTextColor(0, 0, 0)
-
-      for (const event of ministry.events || []) {
-        if (currentY > doc.internal.pageSize.getHeight() - 30) {
-          doc.addPage()
-          currentY = 15
-        }
-
-        doc.setFontSize(8)
-        doc.setFont('helvetica', 'normal')
-        doc.setTextColor(120, 120, 120)
-        doc.text(`${event.day_of_week}, ${event.event_date.slice(8,10)}/${event.event_date.slice(5,7)} - ${event.scale_name || ''}`, pageWidth / 2, currentY, { align: 'center' })
-        currentY += 4
-        doc.setTextColor(0, 0, 0)
-
-        // Members
-        const memberNames = (event.assignments || [])
-          .filter((a: any) => a.member)
-          .map((a: any) => a.member.nickname || a.member.name)
-          .join(', ')
-
-        if (memberNames) {
-          doc.setFontSize(8)
-          doc.text(memberNames, pageWidth / 2, currentY, { align: 'center' })
-          currentY += 5
-        }
-      }
-      currentY += 5
     }
 
     doc.save(`escala-semana-${week}-${format(date, 'MM-yyyy')}.pdf`)
