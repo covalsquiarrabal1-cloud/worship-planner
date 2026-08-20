@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import NotificationListener from "@/components/NotificationListener";
 
 export const metadata: Metadata = {
   title: "Worship Planner",
@@ -29,6 +30,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icon-192.png" />
       </head>
       <body className="antialiased" style={{ overflowX: 'hidden', overflowY: 'auto', width: '100%', maxWidth: '100vw' }}>
+        <NotificationListener />
         {children}
         <script
           dangerouslySetInnerHTML={{

@@ -204,9 +204,10 @@ export default function MensagensPage() {
           </div>
           <button
             onClick={async () => {
-              if (!confirm('Enviar notificação push para TODOS os escalados desta semana?')) return
+              if (!confirm('Enviar notificação para TODOS os escalados desta semana?')) return
               const ids = memberMessages.map(m => m.id)
-              const res = await fetch('/api/push/send', {
+              // Send in-app notification (realtime - arrives instantly)
+              const notifRes = await fetch('/api/notifications/send', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -216,16 +217,27 @@ export default function MensagensPage() {
                   memberIds: ids,
                 }),
               })
-              const data = await res.json()
-              if (res.ok) {
-                alert(`Notificação enviada! ✅\n${data.sent} receberam, ${data.failed} falharam.`)
+              const notifData = await notifRes.json()
+              // Also try push for those who have it enabled
+              await fetch('/api/push/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  title: '🎵 Escala da Semana',
+                  body: `Você está escalado(a) esta semana! Confira os detalhes no app.`,
+                  url: '/membro',
+                  memberIds: ids,
+                }),
+              })
+              if (notifRes.ok) {
+                alert(`Notificação enviada! ✅\n${notifData.sent} membro(s) notificados.`)
               } else {
-                alert('Erro: ' + (data.error || 'Falha ao enviar'))
+                alert('Erro: ' + (notifData.error || 'Falha ao enviar'))
               }
             }}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-[#58a6ff] text-white text-sm font-semibold hover:bg-[#4c94e0] transition-colors"
           >
-            🔔 Notificar Todos (Push)
+            🔔 Notificar Todos
           </button>
         </div>
       )}
