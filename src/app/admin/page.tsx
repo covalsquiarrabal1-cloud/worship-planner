@@ -134,6 +134,148 @@ export default function AdminPage() {
     }
   }
 
+  async function exportWeekPDF(weekEvents: ScheduleEvent[], week: number, date: Date) {
+    const { jsPDF } = await import('jspdf')
+    const { default: autoTable } = await import('jspdf-autotable')
+
+    const doc = new jsPDF({ orientation: 'portrait' })
+    const monthName = format(date, "MMMM 'de' yyyy", { locale: ptBR })
+    const pageWidth = doc.internal.pageSize.getWidth()
+
+    // Title
+    doc.setFontSize(14)
+    doc.setFont('helvetica', 'bold')
+    doc.text(`Escala da Semana ${week}`, pageWidth / 2, 14, { align: 'center' })
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'normal')
+    doc.text(monthName, pageWidth / 2, 20, { align: 'center' })
+
+    let currentY = 28
+
+    // Also fetch ministry events for this week
+    const startDate = weekEvents.length > 0 ? weekEvents[0].event_date : ''
+    const endDate = weekEvents.length > 0 ? weekEvents[weekEvents.length - 1].event_date : ''
+
+    let ministryData: any[] = []
+    if (startDate && endDate) {
+      try {
+        const res = await fetch(`/api/ministries/week-events?start=${startDate}&end=${endDate}`)
+        if (res.ok) ministryData = await res.json()
+      } catch {}
+    }
+
+    // Render each louvor event
+    for (const event of weekEvents) {
+      if (currentY > doc.internal.pageSize.getHeight() - 40) {
+        doc.addPage()
+        currentY = 15
+      }
+
+      // Event header
+      doc.setFontSize(8)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(120, 120, 120)
+      doc.text(`${event.day_of_week}, ${event.event_date.slice(8,10)}/${event.event_date.slice(5,7)}`, pageWidth / 2, currentY, { align: 'center' })
+      currentY += 5
+
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(34, 197, 94)
+      doc.text(event.scale_type?.name || '-', pageWidth / 2, currentY, { align: 'center' })
+      currentY += 6
+      doc.setTextColor(0, 0, 0)
+
+      // Vocais
+      const vocals = event.assignments.filter(a => a.role.startsWith('vocal_')).sort((a, b) => a.role.localeCompare(b.role))
+      if (vocals.length > 0) {
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        const vocalText = vocals.map(v => {
+          const label = v.role === 'vocal_1' ? 'Vocal 1' : v.role === 'vocal_2' ? 'Vocal 2' : 'Vocal 3'
+          return `${label}: ${v.member?.nickname || v.member?.name || '-'}`
+        }).join('   |   ')
+        doc.text(vocalText, pageWidth / 2, currentY, { align: 'center' })
+        currentY += 5
+      }
+
+      // Instruments
+      const instruments = event.assignments.filter(a => ['guitarra', 'baixo', 'bateria', 'teclado'].includes(a.role))
+      if (instruments.length > 0) {
+        doc.setFontSize(8)
+        const instrText = instruments.map(i => {
+          const labels: Record<string, string> = { guitarra: 'Guitarra', baixo: 'Baixo', bateria: 'Bateria', teclado: 'Teclado' }
+          return `${labels[i.role] || i.role}: ${i.member?.nickname || i.member?.name || '-'}`
+        }).join('   |   ')
+        doc.text(instrText, pageWidth / 2, currentY, { align: 'center' })
+        currentY += 5
+      }
+
+      // Songs table
+      const songs = (event.songs || []).sort((a, b) => a.order_num - b.order_num)
+      if (songs.length > 0) {
+        const tableData = songs.map(s => [String(s.order_num), s.title, s.version || '-', s.minister || '-'])
+        autoTable(doc, {
+          startY: currentY,
+          margin: { left: 15, right: 15 },
+          head: [['#', 'Louvor', 'Versão', 'Ministro']],
+          body: tableData,
+          theme: 'grid',
+          styles: { fontSize: 7, cellPadding: 2 },
+          headStyles: { fillColor: [30, 30, 30], textColor: [255, 255, 255], fontSize: 7 },
+          columnStyles: { 0: { cellWidth: 10, halign: 'center' } },
+        })
+        currentY = (doc as any).lastAutoTable.finalY + 8
+      } else {
+        currentY += 5
+      }
+    }
+
+    // Render ministry events
+    for (const ministry of ministryData) {
+      if (currentY > doc.internal.pageSize.getHeight() - 40) {
+        doc.addPage()
+        currentY = 15
+      }
+
+      // Ministry header
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(88, 166, 255)
+      doc.text(ministry.name, pageWidth / 2, currentY, { align: 'center' })
+      currentY += 5
+      doc.setTextColor(0, 0, 0)
+
+      for (const event of ministry.events || []) {
+        if (currentY > doc.internal.pageSize.getHeight() - 30) {
+          doc.addPage()
+          currentY = 15
+        }
+
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(120, 120, 120)
+        doc.text(`${event.day_of_week}, ${event.event_date.slice(8,10)}/${event.event_date.slice(5,7)} - ${event.scale_name || ''}`, pageWidth / 2, currentY, { align: 'center' })
+        currentY += 4
+        doc.setTextColor(0, 0, 0)
+
+        // Members
+        const memberNames = (event.assignments || [])
+          .filter((a: any) => a.member)
+          .map((a: any) => a.member.nickname || a.member.name)
+          .join(', ')
+
+        if (memberNames) {
+          doc.setFontSize(8)
+          doc.text(memberNames, pageWidth / 2, currentY, { align: 'center' })
+          currentY += 5
+        }
+      }
+      currentY += 5
+    }
+
+    doc.save(`escala-semana-${week}-${format(date, 'MM-yyyy')}.pdf`)
+  }
+
   async function updateAssignment(assignmentId: string, memberId: string) {
     await fetch('/api/schedule-events/update', {
       method: 'PUT',
@@ -475,6 +617,17 @@ export default function AdminPage() {
           <span className="text-base font-semibold">Semana {currentWeek}</span>
           <button onClick={() => setCurrentWeek(w => w + 1)} className="p-4 rounded-2xl bg-[#1c2128] border border-[#30363d]">
             <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
+      {view === 'semanal' && events.filter(e => e.week_number === currentWeek).length > 0 && (
+        <div className="flex justify-center mt-2">
+          <button
+            onClick={() => exportWeekPDF(events.filter(e => e.week_number === currentWeek), currentWeek, currentDate)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-sm font-medium hover:bg-red-500/20 transition-colors"
+          >
+            <FileDown className="w-4 h-4" /> Exportar Semana (PDF)
           </button>
         </div>
       )}
