@@ -153,7 +153,7 @@ export default function MinisteriosStaffPage() {
   const allGroups = [...groups, ...extraGroups]
 
   return (
-    <div className="flex flex-col items-center px-3 pb-8">
+    <div className="flex flex-col items-center px-3 pb-28">
       <div className="text-center pt-2 pb-4">
         <h2 className="text-lg font-bold">Ministérios</h2>
         <p className="text-xs text-[var(--muted-foreground)] mt-1">Toque em um ministério para ver líderes e membros</p>
