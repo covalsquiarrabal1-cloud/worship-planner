@@ -342,7 +342,7 @@ export default function EscalasGeraisStaffPage() {
   const allGroups = [...groups, ...extraGroups]
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 pb-24">
       <div>
         <h2 className="text-xl font-bold">Escalas Gerais</h2>
         <p className="text-sm text-[var(--muted-foreground)]">Toque em um ministério para ver a escala.</p>
