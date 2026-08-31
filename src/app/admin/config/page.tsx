@@ -62,7 +62,8 @@ export default function ConfigPage() {
           Líderes dos Ministérios
         </h3>
         <p className="text-sm text-[var(--muted-foreground)]">
-          Defina quem lidera cada ministério. O líder terá acesso ao painel de gestão.
+          Esta lista reflete os líderes definidos na aba <strong>Ministérios</strong> (adicionando um membro com função Líder).
+          Use o botão abaixo para sincronizar caso algo esteja desatualizado.
         </p>
         <MinistryLeadersEditor />
       </section>
@@ -92,100 +93,69 @@ export default function ConfigPage() {
 function MinistryLeadersEditor() {
   const [ministries, setMinistries] = useState<{ id: string; name: string; slug: string; leader_name: string | null; leader_email: string | null }[]>([])
   const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState<string | null>(null)
-  const [editName, setEditName] = useState('')
-  const [editEmail, setEditEmail] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [syncing, setSyncing] = useState(false)
 
-  useEffect(() => {
-    fetch('/api/ministries')
+  function load() {
+    return fetch('/api/ministries')
       .then(r => r.json())
       .then(data => {
         setMinistries(Array.isArray(data) ? data : [])
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [])
-
-  function startEdit(ministry: { id: string; leader_name: string | null; leader_email: string | null }) {
-    setEditing(ministry.id)
-    setEditName(ministry.leader_name || '')
-    setEditEmail(ministry.leader_email || '')
   }
 
-  async function saveLeader(ministryId: string) {
-    setSaving(true)
-    const res = await fetch('/api/ministries/update-leader', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ministryId, leaderName: editName, leaderEmail: editEmail }),
-    })
+  useEffect(() => {
+    load()
+  }, [])
+
+  async function syncLeaders() {
+    setSyncing(true)
+    const res = await fetch('/api/ministries/sync-leaders', { method: 'POST' })
     if (res.ok) {
-      setMinistries(prev => prev.map(m => m.id === ministryId ? { ...m, leader_name: editName, leader_email: editEmail } : m))
-      setEditing(null)
+      const data = await res.json()
+      await load()
+      alert(data.total > 0 ? `Sincronizado! ${data.total} ministério(s) atualizado(s).` : 'Tudo já estava sincronizado.')
     } else {
       const data = await res.json()
       alert('Erro: ' + (data.error || 'Erro'))
     }
-    setSaving(false)
+    setSyncing(false)
   }
 
   if (loading) return <Loader2 className="w-5 h-5 animate-spin" />
 
   return (
     <div className="space-y-3">
+      <button
+        onClick={syncLeaders}
+        disabled={syncing}
+        className="flex items-center gap-2 bg-[#58a6ff] text-white px-4 py-2.5 rounded-xl text-sm font-medium disabled:opacity-50"
+      >
+        {syncing ? <Loader2 className="w-4 h-4 animate-spin" /> : '🔄'} Sincronizar com aba Ministérios
+      </button>
       {ministries.map(m => (
         <div key={m.id} className="card">
-          {editing === m.id ? (
-            <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="text-sm font-semibold">{m.name}</p>
-              <input
-                placeholder="Nome do líder"
-                value={editName}
-                onChange={e => setEditName(e.target.value)}
-                autoFocus
-              />
-              <input
-                placeholder="E-mail do líder (para vincular acesso)"
-                type="email"
-                value={editEmail}
-                onChange={e => setEditEmail(e.target.value)}
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={() => saveLeader(m.id)}
-                  disabled={saving}
-                  className="flex-1 bg-[#58a6ff] text-white py-2 rounded-xl text-sm font-medium disabled:opacity-50"
-                >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Salvar'}
-                </button>
-                <button onClick={() => setEditing(null)} className="px-4 py-2 text-[#8b949e] text-sm">
-                  Cancelar
-                </button>
-              </div>
+              {m.leader_name ? (
+                <>
+                  <p className="text-xs text-[var(--muted-foreground)] mt-0.5">👑 {m.leader_name}</p>
+                  {m.leader_email && <p className="text-xs text-[#58a6ff] mt-0.5">{m.leader_email}</p>}
+                </>
+              ) : (
+                <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Sem líder definido</p>
+              )}
             </div>
-          ) : (
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold">{m.name}</p>
-                {m.leader_name ? (
-                  <>
-                    <p className="text-xs text-[var(--muted-foreground)] mt-0.5">👑 {m.leader_name}</p>
-                    {m.leader_email && <p className="text-xs text-[#58a6ff] mt-0.5">{m.leader_email}</p>}
-                  </>
-                ) : (
-                  <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Sem líder definido</p>
-                )}
-              </div>
-              <button
-                onClick={() => startEdit(m)}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--accent)] hover:bg-[var(--border)] transition-colors"
-              >
-                <Edit2 className="w-3.5 h-3.5 inline mr-1" />
-                Editar
-              </button>
-            </div>
-          )}
+            <Link
+              href={`/admin/ministerios/${m.slug}`}
+              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--accent)] hover:bg-[var(--border)] transition-colors whitespace-nowrap"
+            >
+              <Edit2 className="w-3.5 h-3.5 inline mr-1" />
+              Gerenciar
+            </Link>
+          </div>
         </div>
       ))}
     </div>
