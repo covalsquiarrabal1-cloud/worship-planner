@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { canManageMinistry } from '@/lib/ministry-permissions'
 
 export async function GET(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const supabase = await createServerSupabaseClient()
@@ -36,14 +37,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   const { slug } = await params
   const serviceClient = await createServiceRoleClient()
 
-  const { data: profile } = await serviceClient
-    .from('profiles').select('role').eq('id', user.id).single()
-
   const { data: ministry } = await serviceClient
     .from('ministries').select('id, leader_user_id').eq('slug', slug).single()
   if (!ministry) return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
 
-  if (profile?.role !== 'admin' && ministry.leader_user_id !== user.id) {
+  if (!(await canManageMinistry(serviceClient, user.id, ministry))) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 

@@ -40,9 +40,12 @@ export async function POST() {
       .order('name')
 
     if (leaderMembers && leaderMembers.length > 0) {
-      // Usa o primeiro líder com email como líder oficial
-      const leader = leaderMembers.find(l => l.email) || leaderMembers[0]
-      const normalizedEmail = leader.email?.trim().toLowerCase() || null
+      // Nome com TODOS os líderes (múltiplos líderes aparecem juntos)
+      const allNames = leaderMembers.map(l => l.name).join(', ')
+
+      // leader_user_id aponta para o primeiro líder com login (para vínculo principal)
+      const primary = leaderMembers.find(l => l.email) || leaderMembers[0]
+      const normalizedEmail = primary.email?.trim().toLowerCase() || null
 
       let leaderUserId: string | null = null
       if (normalizedEmail) {
@@ -53,21 +56,27 @@ export async function POST() {
           .single()
         if (leaderProfile) {
           leaderUserId = leaderProfile.id
-          // Garante role de ministry_leader
-          await serviceClient
-            .from('profiles')
-            .update({ role: 'ministry_leader' })
-            .eq('id', leaderProfile.id)
+        }
+      }
+
+      // Garante role ministry_leader para TODOS os líderes com login
+      for (const l of leaderMembers) {
+        const email = l.email?.trim().toLowerCase()
+        if (!email) continue
+        const { data: p } = await serviceClient
+          .from('profiles').select('id').ilike('email', email).single()
+        if (p) {
+          await serviceClient.from('profiles').update({ role: 'ministry_leader' }).eq('id', p.id)
         }
       }
 
       // Atualiza somente se mudou
-      if (ministry.leader_user_id !== leaderUserId || ministry.leader_name !== leader.name) {
+      if (ministry.leader_user_id !== leaderUserId || ministry.leader_name !== allNames) {
         await serviceClient
           .from('ministries')
-          .update({ leader_user_id: leaderUserId, leader_name: leader.name })
+          .update({ leader_user_id: leaderUserId, leader_name: allNames })
           .eq('id', ministry.id)
-        changes.push({ ministry: ministry.name, action: 'definido', leader: leader.name })
+        changes.push({ ministry: ministry.name, action: 'definido', leader: allNames })
       }
     } else {
       // Nenhum líder na aba Ministérios -> limpa o líder do ministério

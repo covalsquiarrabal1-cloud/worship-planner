@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { SupabaseClient } from '@supabase/supabase-js'
 import { capitalizeName } from '@/lib/utils'
+import { canManageMinistry } from '@/lib/ministry-permissions'
 
 const INTERNAL_PASSWORD = 'adoração26'
 
@@ -81,9 +82,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     .from('ministries').select('id, leader_user_id').eq('slug', slug).single()
   if (!ministry) return NextResponse.json({ error: 'Ministério não encontrado' }, { status: 404 })
 
-  const { data: profile } = await serviceClient
-    .from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin' && ministry.leader_user_id !== user.id) {
+  if (!(await canManageMinistry(serviceClient, user.id, ministry))) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
@@ -146,9 +145,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
     .from('ministries').select('id, leader_user_id').eq('slug', slug).single()
   if (!ministry) return NextResponse.json({ error: 'Ministério não encontrado' }, { status: 404 })
 
-  const { data: profile } = await serviceClient
-    .from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin' && ministry.leader_user_id !== user.id) {
+  if (!(await canManageMinistry(serviceClient, user.id, ministry))) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
@@ -216,9 +213,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ slug
     .from('ministries').select('id, leader_user_id').eq('slug', slug).single()
   if (!ministry) return NextResponse.json({ error: 'Ministério não encontrado' }, { status: 404 })
 
-  const { data: profile } = await serviceClient
-    .from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin' && ministry.leader_user_id !== user.id) {
+  if (!(await canManageMinistry(serviceClient, user.id, ministry))) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 

@@ -14,14 +14,32 @@ export default async function LiderLayout({
 
   if (!user) redirect('/login')
 
-  // Check if user is leader of any ministry
+  // Check if user is leader of any ministry (oficial OU via ministry_members)
   const serviceClient = await createServiceRoleClient()
   const { data: ministries } = await serviceClient
     .from('ministries')
     .select('id, name, slug')
     .eq('leader_user_id', user.id)
 
-  if (!ministries || ministries.length === 0) {
+  let isLeader = !!(ministries && ministries.length > 0)
+
+  if (!isLeader) {
+    // Verifica se é líder via ministry_members (múltiplos líderes)
+    const { data: profile } = await serviceClient
+      .from('profiles').select('email').eq('id', user.id).single()
+    if (profile?.email) {
+      const { data: leaderMembership } = await serviceClient
+        .from('ministry_members')
+        .select('id')
+        .in('role', ['lider', 'ambos'])
+        .ilike('email', profile.email)
+        .limit(1)
+        .maybeSingle()
+      isLeader = !!leaderMembership
+    }
+  }
+
+  if (!isLeader) {
     // Not a leader, redirect to member view
     redirect('/membro')
   }

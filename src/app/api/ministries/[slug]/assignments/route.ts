@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { canManageMinistry } from '@/lib/ministry-permissions'
 
 export async function PUT(request: Request, { params }: { params: Promise<{ slug: string }> }) {
   const supabase = await createServerSupabaseClient()
@@ -9,15 +10,11 @@ export async function PUT(request: Request, { params }: { params: Promise<{ slug
   const { slug } = await params
   const serviceClient = await createServiceRoleClient()
 
-  // Get ministry
   const { data: ministry } = await serviceClient
     .from('ministries').select('id, leader_user_id').eq('slug', slug).single()
   if (!ministry) return NextResponse.json({ error: 'Ministério não encontrado' }, { status: 404 })
 
-  // Check permission (admin or leader)
-  const { data: profile } = await serviceClient
-    .from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin' && ministry.leader_user_id !== user.id) {
+  if (!(await canManageMinistry(serviceClient, user.id, ministry))) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
@@ -26,7 +23,6 @@ export async function PUT(request: Request, { params }: { params: Promise<{ slug
     return NextResponse.json({ error: 'assignmentId obrigatório' }, { status: 400 })
   }
 
-  // memberId can be null to set as empty/vacant
   const { error } = await serviceClient
     .from('ministry_assignments')
     .update({ member_id: memberId || null })
@@ -48,9 +44,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ sl
     .from('ministries').select('id, leader_user_id').eq('slug', slug).single()
   if (!ministry) return NextResponse.json({ error: 'Ministério não encontrado' }, { status: 404 })
 
-  const { data: profile } = await serviceClient
-    .from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin' && ministry.leader_user_id !== user.id) {
+  if (!(await canManageMinistry(serviceClient, user.id, ministry))) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
@@ -78,9 +72,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     .from('ministries').select('id, leader_user_id').eq('slug', slug).single()
   if (!ministry) return NextResponse.json({ error: 'Ministério não encontrado' }, { status: 404 })
 
-  const { data: profile } = await serviceClient
-    .from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin' && ministry.leader_user_id !== user.id) {
+  if (!(await canManageMinistry(serviceClient, user.id, ministry))) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
@@ -115,9 +107,7 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ s
     .from('ministries').select('id, leader_user_id').eq('slug', slug).single()
   if (!ministry) return NextResponse.json({ error: 'Ministério não encontrado' }, { status: 404 })
 
-  const { data: profile } = await serviceClient
-    .from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin' && ministry.leader_user_id !== user.id) {
+  if (!(await canManageMinistry(serviceClient, user.id, ministry))) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 

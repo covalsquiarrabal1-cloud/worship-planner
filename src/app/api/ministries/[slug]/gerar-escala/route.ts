@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server'
 import { getWeekNumber } from '@/lib/week-utils'
+import { canManageMinistry } from '@/lib/ministry-permissions'
 
 interface SelectedDay {
   date: string
@@ -23,9 +24,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
   if (!ministry) return NextResponse.json({ error: 'Ministério não encontrado' }, { status: 404 })
 
   // Check permission
-  const { data: profile } = await serviceClient
-    .from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'admin' && ministry.leader_user_id !== user.id) {
+  if (!(await canManageMinistry(serviceClient, user.id, ministry))) {
     return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
   }
 
