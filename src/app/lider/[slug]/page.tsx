@@ -11,7 +11,7 @@ interface MinistryMember { id: string; name: string; email: string | null; is_bl
 interface MinistryEvent {
   id: string; event_date: string; day_of_week: string; week_number: number;
   scale_name: string | null; num_celebrations: number;
-  assignments: { id: string; celebration_number: number; member: { id: string; name: string } | null }[]
+  assignments: { id: string; celebration_number: number; role_name: string | null; member: { id: string; name: string; nickname: string | null } | null }[]
 }
 
 export default function LiderMinistryPage() {
@@ -30,6 +30,7 @@ export default function LiderMinistryPage() {
   const [notifTitle, setNotifTitle] = useState('')
   const [notifBody, setNotifBody] = useState('')
   const [sendingNotif, setSendingNotif] = useState(false)
+  const [swappingAssignment, setSwappingAssignment] = useState<string | null>(null)
 
   const month = currentDate.getMonth() + 1
   const year = currentDate.getFullYear()
@@ -111,26 +112,59 @@ export default function LiderMinistryPage() {
 
   async function handleSwapMember(assignmentId: string, newMemberId: string) {
     if (!newMemberId) return
+    const isEmpty = newMemberId === '__empty__'
 
-    // Update locally for instant feedback
     setEvents(prev => prev.map(event => ({
       ...event,
       assignments: event.assignments.map(a =>
         a.id === assignmentId
-          ? { ...a, member: members.find(m => m.id === newMemberId) ? { id: newMemberId, name: members.find(m => m.id === newMemberId)!.name } : a.member }
+          ? { ...a, member: isEmpty ? null : (members.find(m => m.id === newMemberId) ? { id: newMemberId, name: members.find(m => m.id === newMemberId)!.name, nickname: null } : a.member) }
           : a
       ),
     })))
 
-    // Persist to API
     const res = await fetch(`/api/ministries/${slug}/assignments`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ assignmentId, memberId: newMemberId }),
+      body: JSON.stringify({ assignmentId, memberId: isEmpty ? null : newMemberId }),
     })
 
     if (!res.ok) {
       alert('Erro ao trocar membro. Recarregando...')
+      loadData()
+    }
+  }
+
+  async function handleAddMember(eventId: string, celebrationNumber: number, roleName: string, memberId: string) {
+    const res = await fetch(`/api/ministries/${slug}/assignments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ eventId, memberId, celebrationNumber, roleName }),
+    })
+    if (res.ok) {
+      const newAssignment = await res.json()
+      const member = members.find(m => m.id === memberId)
+      setEvents(prev => prev.map(event =>
+        event.id === eventId
+          ? { ...event, assignments: [...event.assignments, { id: newAssignment.id, celebration_number: celebrationNumber, role_name: roleName, member: member ? { id: member.id, name: member.name, nickname: null } : null }] }
+          : event
+      ))
+    } else {
+      alert('Erro ao adicionar membro')
+    }
+  }
+
+  async function handleRemoveMember(assignmentId: string) {
+    setEvents(prev => prev.map(event => ({
+      ...event,
+      assignments: event.assignments.filter(a => a.id !== assignmentId),
+    })))
+
+    const res = await fetch(`/api/ministries/${slug}/assignments?id=${assignmentId}`, {
+      method: 'DELETE',
+    })
+    if (!res.ok) {
+      alert('Erro ao remover membro')
       loadData()
     }
   }
@@ -158,34 +192,54 @@ export default function LiderMinistryPage() {
     const { jsPDF } = await import('jspdf')
     const { default: autoTable } = await import('jspdf-autotable')
 
-    const doc = new jsPDF({ orientation: 'portrait' })
+    const doc = new jsPDF({ orientation: 'landscape' })
     const monthName = format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })
+    const title = slug.charAt(0).toUpperCase() + slug.slice(1).replace(/-/g, ' ')
 
-    doc.setFontSize(16)
-    doc.text(`${slug.charAt(0).toUpperCase() + slug.slice(1).replace('-', ' ')} - Escala`, 14, 20)
-    doc.setFontSize(11)
-    doc.text(monthName, 14, 28)
+    doc.setFontSize(12)
+    doc.text(`${title} - Escala`, doc.internal.pageSize.getWidth() / 2, 12, { align: 'center' })
+    doc.setFontSize(9)
+    doc.text(monthName, doc.internal.pageSize.getWidth() / 2, 18, { align: 'center' })
 
-    const tableData = events.map(ev => {
-      const membersStr = ev.assignments
-        .sort((a, b) => a.celebration_number - b.celebration_number)
-        .map(a => ev.num_celebrations > 1 ? `C${a.celebration_number}: ${a.member?.name || '-'}` : (a.member?.name || '-'))
-        .join(', ')
-      return [
-        `${ev.event_date.slice(8,10)}/${ev.event_date.slice(5,7)}`,
-        ev.day_of_week,
-        ev.scale_name || '-',
-        membersStr,
-      ]
-    })
+    const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name)).filter(Boolean))] as string[]
+    const knownOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
+    const knownRoles = knownOrder.filter(r => allRoleNames.includes(r))
+    const otherRoles = allRoleNames.filter(r => !knownOrder.includes(r)).sort()
+    const pdfDisplayColumns = [...knownRoles, ...otherRoles]
+    const hasNullRoles = events.some(e => e.assignments.some(a => !a.role_name && a.member))
+    const showMembrosColumn = pdfDisplayColumns.length === 0 && hasNullRoles
+
+    const tableData: string[][] = []
+    for (const event of events) {
+      const celebrations = Array.from({ length: event.num_celebrations }, (_, i) => i + 1)
+      const dateStr = `${event.event_date.slice(8,10)}/${event.event_date.slice(5,7)}`
+      for (const celNum of celebrations) {
+        const celAssignments = event.assignments.filter(a => a.celebration_number === celNum)
+        const row = [dateStr, event.day_of_week, event.scale_name || '-', event.num_celebrations > 1 ? `C${celNum}` : '-']
+        if (showMembrosColumn) {
+          row.push(celAssignments.filter(a => a.member).map(a => a.member?.nickname || a.member?.name || '-').join(', ') || '-')
+        } else {
+          for (const col of pdfDisplayColumns) {
+            const colAssignments = celAssignments.filter(a => a.role_name === col)
+            row.push(colAssignments.map(a => a.member?.nickname || a.member?.name || '-').join(', ') || '-')
+          }
+        }
+        tableData.push(row)
+      }
+    }
+
+    const headColumns = showMembrosColumn
+      ? ['Data', 'Dia', 'Escala', 'Cel.', 'Membros']
+      : ['Data', 'Dia', 'Escala', 'Cel.', ...pdfDisplayColumns.map(c => c === 'Intercessor' ? 'Intercessão' : c)]
 
     autoTable(doc, {
-      startY: 35,
-      head: [['Data', 'Dia', 'Escala', 'Membros']],
+      startY: 22,
+      margin: { left: 5, right: 5 },
+      head: [headColumns],
       body: tableData,
       theme: 'grid',
-      styles: { fontSize: 9, cellPadding: 3 },
-      headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255] },
+      styles: { fontSize: 7, cellPadding: 2 },
+      headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], halign: 'center', fontStyle: 'bold', fontSize: 7 },
     })
 
     doc.save(`escala-${slug}-${month}-${year}.pdf`)
@@ -194,7 +248,7 @@ export default function LiderMinistryPage() {
   if (loading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin" /></div>
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5">
+    <div className="w-full max-w-7xl mx-auto space-y-5 pb-24">
       <div className="flex items-center gap-3">
         <Link href="/lider" className="p-2 rounded-xl bg-[#1c2128] border border-[#30363d]">
           <ArrowLeft className="w-5 h-5" />
@@ -367,40 +421,147 @@ export default function LiderMinistryPage() {
             </button>
           </div>
 
-          {/* Events */}
+          {/* Events table */}
           {events.length === 0 ? (
             <div className="card text-center py-8 text-[var(--muted-foreground)]">
               <p className="text-sm">Nenhuma escala gerada para este mês.</p>
             </div>
-          ) : (
-            events.map(event => (
-              <div key={event.id} className="card space-y-2">
-                <div>
-                  <span className="text-xs text-[var(--muted-foreground)] capitalize">{event.day_of_week}, {event.event_date.slice(8,10)}/{event.event_date.slice(5,7)}</span>
-                  {event.scale_name && <span className="text-xs text-green-400 ml-2 font-medium">{event.scale_name}</span>}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {event.assignments.sort((a, b) => a.celebration_number - b.celebration_number).map(a => (
-                    <div key={a.id} className="flex items-center gap-1">
-                      {event.num_celebrations > 1 && (
-                        <span className="text-xs text-[var(--muted-foreground)]">C{a.celebration_number}:</span>
-                      )}
-                      <select
-                        value={a.member?.id || ''}
-                        onChange={(e) => handleSwapMember(a.id, e.target.value)}
-                        className="text-xs bg-[#1c2128] border border-[#30363d] rounded-lg px-2 py-1.5 text-white"
-                      >
-                        <option value="">— Selecione —</option>
-                        {members.map(m => (
-                          <option key={m.id} value={m.id}>{m.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
+          ) : (() => {
+            const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name || 'Membro')).filter(Boolean))] as string[]
+            const knownOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
+            const knownRoles = knownOrder.filter(r => allRoleNames.includes(r))
+            const otherRoles = allRoleNames.filter(r => !knownOrder.includes(r)).sort()
+            const displayColumns = [...knownRoles, ...otherRoles]
+
+            const roleColors: Record<string, string> = {
+              'Torre': 'text-amber-400',
+              'Intercessor': 'text-white',
+              'Coluna': 'text-red-400',
+              'Orar pelo Ministro': 'text-blue-400',
+              'Suporte': 'text-[var(--muted-foreground)]',
+            }
+
+            return (
+            <div className="card p-0 overflow-x-auto border-2 border-[#30363d] rounded-xl">
+              <table className="w-full text-sm border-collapse text-center">
+                <thead>
+                  <tr className="border-b-2 border-[var(--border)] bg-[var(--accent)]">
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Data</th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Dia</th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Escala</th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Cel.</th>
+                    {displayColumns.map(col => (
+                      <th key={col} className={`text-center px-4 py-3 text-xs font-semibold border-r border-[var(--border)] last:border-r-0 ${roleColors[col] || 'text-[var(--muted-foreground)]'}`}>
+                        {col === 'Intercessor' ? 'Intercessão' : col === 'Orar pelo Ministro' ? 'Orar p/ Ministro' : col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.map(event => {
+                    const celebrations = Array.from({ length: event.num_celebrations }, (_, i) => i + 1)
+                    return celebrations.map((celNum, celIdx) => {
+                      const celAssignments = event.assignments.filter(a => a.celebration_number === celNum)
+
+                      return (
+                        <tr key={`${event.id}-${celNum}`} className="border-b border-[var(--border)] hover:bg-[var(--accent)]/50">
+                          {celIdx === 0 && (
+                            <>
+                              <td className="text-center px-4 py-3 text-xs font-medium border-r border-[var(--border)]" rowSpan={event.num_celebrations}>
+                                {event.event_date.slice(8,10)}/{event.event_date.slice(5,7)}
+                              </td>
+                              <td className="text-center px-4 py-3 text-xs capitalize border-r border-[var(--border)]" rowSpan={event.num_celebrations}>
+                                {event.day_of_week}
+                              </td>
+                              <td className="text-center px-4 py-3 text-xs font-semibold text-green-400 border-r border-[var(--border)]" rowSpan={event.num_celebrations}>
+                                {event.scale_name || '-'}
+                              </td>
+                            </>
+                          )}
+                          <td className="text-center px-4 py-3 text-xs text-[var(--muted-foreground)] border-r border-[var(--border)]">
+                            {event.num_celebrations > 1 ? `C${celNum}` : '-'}
+                          </td>
+                          {displayColumns.map(col => {
+                            const colAssignments = celAssignments.filter(a => (a.role_name || 'Membro') === col)
+
+                            return (
+                              <td key={col} className="px-2 py-1 border-r border-[var(--border)] last:border-r-0 text-center align-middle">
+                                <div className="flex flex-col items-center">
+                                  {colAssignments.map((a, idx) => (
+                                    swappingAssignment === a.id ? (
+                                      <div key={a.id} className={`py-2 w-full ${idx > 0 ? 'border-t border-[#30363d]' : ''}`}>
+                                        <select
+                                          autoFocus
+                                          className="!py-0.5 !px-1 !text-xs !w-auto !min-w-[100px] !rounded mx-auto block"
+                                          defaultValue={a.member?.id || ''}
+                                          onChange={e => {
+                                            handleSwapMember(a.id, e.target.value)
+                                            setSwappingAssignment(null)
+                                          }}
+                                          onBlur={() => setSwappingAssignment(null)}
+                                        >
+                                          <option value="">— Selecionar —</option>
+                                          <option value="__empty__">— Vazio —</option>
+                                          {members.filter(m => !m.is_blocked).map(m => (
+                                            <option key={m.id} value={m.id}>{m.name}</option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                    ) : (
+                                      <div key={a.id} className={`flex items-center justify-center gap-1 py-2 w-full ${idx > 0 ? 'border-t border-[#30363d]' : ''}`}>
+                                        <button
+                                          onClick={() => setSwappingAssignment(a.id)}
+                                          className={`text-xs font-medium hover:underline cursor-pointer ${roleColors[a.role_name || ''] || 'text-white'}`}
+                                          title="Clique para trocar"
+                                        >
+                                          {a.member?.nickname || a.member?.name || '-'}
+                                        </button>
+                                        <button
+                                          onClick={() => handleRemoveMember(a.id)}
+                                          className="text-red-400 hover:text-red-300 text-sm font-bold w-5 h-5 rounded flex items-center justify-center hover:bg-red-500/10"
+                                          title="Remover"
+                                        >×</button>
+                                      </div>
+                                    )
+                                  ))}
+                                  {colAssignments.length === 0 && <div className="py-2"><span className="text-xs text-[var(--muted-foreground)]">-</span></div>}
+                                  <div className={`py-1.5 ${colAssignments.length > 0 ? 'border-t border-[#30363d]' : ''} w-full flex justify-center`}>
+                                    <button
+                                      onClick={() => setSwappingAssignment(`add-${event.id}-${celNum}-${col}`)}
+                                      className="text-[#58a6ff] text-sm font-bold hover:bg-[#58a6ff]/10 w-6 h-6 rounded flex items-center justify-center"
+                                      title="Adicionar membro"
+                                    >+</button>
+                                  </div>
+                                </div>
+                                {swappingAssignment === `add-${event.id}-${celNum}-${col}` && (
+                                  <select
+                                    autoFocus
+                                    className="!py-0.5 !px-1 !text-xs !w-full !rounded mt-1"
+                                    defaultValue=""
+                                    onChange={e => {
+                                      if (e.target.value) handleAddMember(event.id, celNum, col === 'Membro' ? '' : col, e.target.value)
+                                      setSwappingAssignment(null)
+                                    }}
+                                    onBlur={() => setSwappingAssignment(null)}
+                                  >
+                                    <option value="">— Selecionar membro —</option>
+                                    {members.filter(m => !m.is_blocked).map(m => (
+                                      <option key={m.id} value={m.id}>{m.name}</option>
+                                    ))}
+                                  </select>
+                                )}
+                              </td>
+                            )
+                          })}
+                        </tr>
+                      )
+                    })
+                  })}
+                </tbody>
+              </table>
+            </div>
+            )
+          })()}
         </div>
       )}
     </div>
