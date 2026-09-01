@@ -188,7 +188,8 @@ export default function EscalasGeraisStaffPage() {
   if (selectedMinistry) {
     const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name)).filter(Boolean))] as string[]
     const knownOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
-    const knownRoles = knownOrder.filter(r => allRoleNames.includes(r))
+    const isIntercessao = selectedMinistry.slug === 'intercessao' || selectedMinistry.slug === 'intercessao-alive'
+    const knownRoles = knownOrder.filter(r => isIntercessao || allRoleNames.includes(r))
     const otherRoles = allRoleNames.filter(r => !knownOrder.includes(r)).sort()
     const displayColumns = [...knownRoles, ...otherRoles]
 

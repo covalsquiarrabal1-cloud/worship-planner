@@ -321,7 +321,8 @@ export default function MinistryPage() {
     const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name)).filter(Boolean))] as string[]
     const hasNullRoles = events.some(e => e.assignments.some(a => !a.role_name && a.member))
     const knownOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
-    const knownRoles = knownOrder.filter(r => allRoleNames.includes(r))
+    const isIntercessaoPdf = slug === 'intercessao' || slug === 'intercessao-alive'
+    const knownRoles = knownOrder.filter(r => isIntercessaoPdf || allRoleNames.includes(r))
     const otherRoles = allRoleNames.filter(r => !knownOrder.includes(r)).sort()
     const pdfDisplayColumns = [...knownRoles, ...otherRoles]
 
@@ -866,7 +867,9 @@ export default function MinistryPage() {
             const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name || 'Membro')).filter(Boolean))] as string[]
             // Known order for specific roles, then others alphabetically
             const knownOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
-            const knownRoles = knownOrder.filter(r => allRoleNames.includes(r))
+            // Para Intercessão, as colunas fixas SEMPRE aparecem (mesmo sem ninguém escalado)
+            const isIntercessao = slug === 'intercessao' || slug === 'intercessao-alive'
+            const knownRoles = knownOrder.filter(r => isIntercessao || allRoleNames.includes(r))
             const otherRoles = allRoleNames.filter(r => !knownOrder.includes(r)).sort()
             const displayColumns = [...knownRoles, ...otherRoles]
 
