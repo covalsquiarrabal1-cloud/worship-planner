@@ -332,11 +332,21 @@ export default function MinistryPage() {
     // Build table rows - track which rows belong to same event for merge
     const tableData: string[][] = []
     const mergeGroups: { startRow: number; endRow: number }[] = []
+    // Cores alternadas por dia (todas as linhas do mesmo dia = mesma cor)
+    const dayColorMap: [number, number, number][] = [[235, 244, 255], [255, 255, 255]]
+    const rowDayColor: number[] = []
+    let dayColorIdx = 0
+    let lastEventDate = ''
 
     for (const event of events) {
       const celebrations = Array.from({ length: event.num_celebrations }, (_, i) => i + 1)
       const dateStr = `${event.event_date.slice(8,10)}/${event.event_date.slice(5,7)}`
       const startRow = tableData.length
+
+      if (event.event_date !== lastEventDate) {
+        if (lastEventDate !== '') dayColorIdx = 1 - dayColorIdx
+        lastEventDate = event.event_date
+      }
 
       for (let cIdx = 0; cIdx < celebrations.length; cIdx++) {
         const celNum = celebrations[cIdx]
@@ -372,6 +382,7 @@ export default function MinistryPage() {
         }
 
         tableData.push(row)
+        rowDayColor.push(dayColorIdx)
       }
 
       if (celebrations.length > 1) {
@@ -405,12 +416,16 @@ export default function MinistryPage() {
         3: { cellWidth: 10, halign: 'center' },
       },
       didParseCell: (data: any) => {
-        // For merged cells (Data, Dia, Escala - columns 0,1,2), hide text on non-first rows
-        if (data.section === 'body' && data.column.index <= 2) {
-          const rowIdx = data.row.index
-          const group = mergeGroups.find(g => rowIdx > g.startRow && rowIdx <= g.endRow)
-          if (group) {
-            data.cell.text = ['']
+        if (data.section === 'body') {
+          // Cor de fundo alternada por dia
+          data.cell.styles.fillColor = dayColorMap[rowDayColor[data.row.index] ?? 0]
+          // For merged cells (Data, Dia, Escala - columns 0,1,2), hide text on non-first rows
+          if (data.column.index <= 2) {
+            const rowIdx = data.row.index
+            const group = mergeGroups.find(g => rowIdx > g.startRow && rowIdx <= g.endRow)
+            if (group) {
+              data.cell.text = ['']
+            }
           }
         }
       },
@@ -1218,6 +1233,19 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
       return mb ? (mb.nickname || mb.name) : '-'
     }
 
+    // Cores alternadas por dia (todas as linhas do mesmo dia = mesma cor)
+    const dayColors: [number, number, number][] = [[235, 244, 255], [255, 255, 255]]
+    const rowColorIndex: number[] = []
+    let colorIdx = 0
+    let lastDate = ''
+    for (const m of momentos) {
+      if (m.event_date !== lastDate) {
+        if (lastDate !== '') colorIdx = 1 - colorIdx
+        lastDate = m.event_date
+      }
+      rowColorIndex.push(colorIdx)
+    }
+
     const tableData = momentos.map(m => [
       `${m.event_date.slice(8,10)}/${m.event_date.slice(5,7)}`,
       m.culto || '-',
@@ -1232,6 +1260,11 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
       theme: 'grid',
       styles: { fontSize: 9, cellPadding: 3 },
       headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], halign: 'center', fontStyle: 'bold' },
+      didParseCell: (data: any) => {
+        if (data.section === 'body') {
+          data.cell.styles.fillColor = dayColors[rowColorIndex[data.row.index]]
+        }
+      },
     })
 
     doc.save(`momentos-${slug}-${month}-${year}.pdf`)

@@ -140,6 +140,15 @@ export default function EscalasGeraisStaffPage() {
     doc.setFontSize(10)
     doc.text(monthName, doc.internal.pageSize.getWidth() / 2, 21, { align: 'center' })
 
+    const dayColors: [number, number, number][] = [[235, 244, 255], [255, 255, 255]]
+    const rowColor: number[] = []
+    let cIdx = 0
+    let lastD = ''
+    for (const m of momentos) {
+      if (m.event_date !== lastD) { if (lastD !== '') cIdx = 1 - cIdx; lastD = m.event_date }
+      rowColor.push(cIdx)
+    }
+
     const tableData = momentos.map(m => [
       `${m.event_date.slice(8,10)}/${m.event_date.slice(5,7)}`,
       m.culto || '-',
@@ -154,6 +163,9 @@ export default function EscalasGeraisStaffPage() {
       theme: 'grid',
       styles: { fontSize: 9, cellPadding: 3 },
       headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], halign: 'center', fontStyle: 'bold' },
+      didParseCell: (data: any) => {
+        if (data.section === 'body') data.cell.styles.fillColor = dayColors[rowColor[data.row.index] ?? 0]
+      },
     })
 
     doc.save(`momentos-${new Date().toISOString().slice(0,7)}.pdf`)
@@ -179,10 +191,19 @@ export default function EscalasGeraisStaffPage() {
     const pdfDisplayColumns = [...knownRoles, ...otherRoles]
 
     const tableData: string[][] = []
+    const dayColorMap: [number, number, number][] = [[235, 244, 255], [255, 255, 255]]
+    const rowDayColor: number[] = []
+    let dayColorIdx = 0
+    let lastEventDate = ''
 
     for (const event of events) {
       const celebrations = Array.from({ length: event.num_celebrations }, (_, i) => i + 1)
       const dateStr = `${event.event_date.slice(8,10)}/${event.event_date.slice(5,7)}`
+
+      if (event.event_date !== lastEventDate) {
+        if (lastEventDate !== '') dayColorIdx = 1 - dayColorIdx
+        lastEventDate = event.event_date
+      }
 
       for (const celNum of celebrations) {
         const celAssignments = event.assignments.filter(a => a.celebration_number === celNum)
@@ -199,6 +220,7 @@ export default function EscalasGeraisStaffPage() {
         }
 
         tableData.push(row)
+        rowDayColor.push(dayColorIdx)
       }
     }
 
@@ -217,6 +239,11 @@ export default function EscalasGeraisStaffPage() {
         1: { cellWidth: 18, halign: 'center' },
         2: { cellWidth: 26, halign: 'center' },
         3: { cellWidth: 10, halign: 'center' },
+      },
+      didParseCell: (data: any) => {
+        if (data.section === 'body') {
+          data.cell.styles.fillColor = dayColorMap[rowDayColor[data.row.index] ?? 0]
+        }
       },
     })
 
