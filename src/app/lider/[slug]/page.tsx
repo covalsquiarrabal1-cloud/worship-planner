@@ -21,7 +21,8 @@ export default function LiderMinistryPage() {
   const [events, setEvents] = useState<MinistryEvent[]>([])
   const [currentDate, setCurrentDate] = useState(new Date())
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'escala' | 'membros' | 'mensagens'>('escala')
+  const [tab, setTab] = useState<'escala' | 'membros' | 'mensagens' | 'momentos'>('escala')
+  const [momentos, setMomentos] = useState<{ id: string; event_date: string; culto: string; momento: string; member: { name: string; nickname: string | null } | null }[]>([])
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [showAddMember, setShowAddMember] = useState(false)
@@ -56,7 +57,42 @@ export default function LiderMinistryPage() {
     } else {
       setIsPublished(false)
     }
+
+    // Momentos (apenas Intercessão Alive)
+    if (slug === 'intercessao-alive') {
+      const momRes = await fetch(`/api/ministries/${slug}/momentos?month=${month}&year=${year}`)
+      if (momRes.ok) setMomentos(await momRes.json())
+      else setMomentos([])
+    }
+
     setLoading(false)
+  }
+
+  async function exportMomentosPDF() {
+    if (momentos.length === 0) return
+    const { jsPDF } = await import('jspdf')
+    const { default: autoTable } = await import('jspdf-autotable')
+    const doc = new jsPDF({ orientation: 'portrait' })
+    const monthName = format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })
+    doc.setFontSize(14)
+    doc.text('Escala de Momentos', doc.internal.pageSize.getWidth() / 2, 14, { align: 'center' })
+    doc.setFontSize(10)
+    doc.text(monthName, doc.internal.pageSize.getWidth() / 2, 21, { align: 'center' })
+    const tableData = momentos.map(m => [
+      `${m.event_date.slice(8,10)}/${m.event_date.slice(5,7)}`,
+      m.culto || '-',
+      m.momento || '-',
+      m.member?.nickname || m.member?.name || '-',
+    ])
+    autoTable(doc, {
+      startY: 27,
+      head: [['Dia', 'Culto', 'Momento', 'Escalado']],
+      body: tableData,
+      theme: 'grid',
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], halign: 'center', fontStyle: 'bold' },
+    })
+    doc.save(`momentos-${slug}-${month}-${year}.pdf`)
   }
 
   async function addMember() {
@@ -257,7 +293,7 @@ export default function LiderMinistryPage() {
       </div>
 
       {/* Tabs */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className={`grid gap-3 ${slug === 'intercessao-alive' ? 'grid-cols-4' : 'grid-cols-3'}`}>
         <button
           onClick={() => setTab('escala')}
           className={`py-5 rounded-2xl text-sm font-semibold transition-all ${tab === 'escala' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
@@ -270,6 +306,14 @@ export default function LiderMinistryPage() {
         >
           <Users className="w-4 h-4 inline mr-1" /> Membros
         </button>
+        {slug === 'intercessao-alive' && (
+          <button
+            onClick={() => setTab('momentos')}
+            className={`py-5 rounded-2xl text-sm font-semibold transition-all ${tab === 'momentos' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
+          >
+            🕐 Momentos
+          </button>
+        )}
         <button
           onClick={() => setTab('mensagens')}
           className={`py-5 rounded-2xl text-sm font-semibold transition-all ${tab === 'mensagens' ? 'bg-[#58a6ff] text-white shadow-lg shadow-[#58a6ff]/20' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
@@ -277,6 +321,69 @@ export default function LiderMinistryPage() {
           🔔 Notificar
         </button>
       </div>
+
+      {tab === 'momentos' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-base font-semibold capitalize">{format(currentDate, 'MMMM yyyy', { locale: ptBR })}</span>
+            {momentos.length > 0 && (
+              <button
+                onClick={exportMomentosPDF}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#1c2128] border border-[#30363d] hover:border-red-400 transition-colors text-xs font-semibold"
+              >
+                <FileDown className="w-4 h-4 text-red-400" /> PDF
+              </button>
+            )}
+          </div>
+          {momentos.length === 0 ? (
+            <div className="card text-center py-8 text-[var(--muted-foreground)]">
+              <p className="text-sm">Nenhuma escala de momentos para este mês.</p>
+            </div>
+          ) : (
+            <div className="card p-0 overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b border-[var(--border)] bg-[var(--accent)]">
+                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Dia</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Culto</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)] border-r border-[var(--border)]">Momento</th>
+                    <th className="text-center px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Escalado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {momentos.map((m, idx) => {
+                    const prev = idx > 0 ? momentos[idx - 1] : null
+                    const isFirst = !prev || prev.event_date !== m.event_date || prev.culto !== m.culto
+                    let span = 1
+                    if (isFirst) {
+                      for (let i = idx + 1; i < momentos.length; i++) {
+                        if (momentos[i].event_date === m.event_date && momentos[i].culto === m.culto) span++
+                        else break
+                      }
+                    }
+                    return (
+                      <tr key={m.id} className="border-b border-[var(--border)]">
+                        {isFirst && (
+                          <>
+                            <td className="text-center px-3 py-2.5 text-xs font-medium border-r border-[var(--border)]" rowSpan={span}>
+                              {m.event_date.slice(8,10)}/{m.event_date.slice(5,7)}
+                            </td>
+                            <td className="text-center px-3 py-2.5 text-xs font-semibold text-amber-400 border-r border-[var(--border)]" rowSpan={span}>
+                              {m.culto}
+                            </td>
+                          </>
+                        )}
+                        <td className="text-center px-3 py-2.5 text-xs border-r border-[var(--border)]">{m.momento || '-'}</td>
+                        <td className="text-center px-3 py-2.5 text-xs">{m.member?.nickname || m.member?.name || '-'}</td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
 
       {tab === 'membros' && (
         <div className="space-y-3">

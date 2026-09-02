@@ -45,13 +45,14 @@ interface MinistryEvent {
 interface UnifiedDay {
   date: string
   dayOfWeek: string
-  type: 'louvor' | 'ministerio'
+  type: 'louvor' | 'ministerio' | 'momento'
   scaleName: string
   role: string
   ministryName?: string
   ministrySlug?: string
   celebrationNumber?: number
   numCelebrations?: number
+  momento?: string
   // For louvor events (expandable details)
   event?: ScheduleEvent
 }
@@ -93,10 +94,14 @@ export default function MeusDiasPage() {
     const start = format(startOfMonth(currentDate), 'yyyy-MM-dd')
     const end = format(endOfMonth(currentDate), 'yyyy-MM-dd')
 
-    // Fetch both in parallel
-    const [worshipRes, ministryRes] = await Promise.all([
+    const month = currentDate.getMonth() + 1
+    const year = currentDate.getFullYear()
+
+    // Fetch all in parallel
+    const [worshipRes, ministryRes, momentosRes] = await Promise.all([
       fetch(`/api/schedule-events?start=${start}&end=${end}`),
       fetch(`/api/minha-escala-ministerio?start=${start}&end=${end}`),
+      fetch(`/api/meus-momentos?month=${month}&year=${year}`),
     ])
 
     const unified: UnifiedDay[] = []
@@ -139,6 +144,24 @@ export default function MeusDiasPage() {
           ministrySlug: mEvent.ministry_slug,
           celebrationNumber: celNum,
           numCelebrations: mEvent.num_celebrations || 1,
+        })
+      }
+    }
+
+    // 3. Momentos (Intercessão Alive)
+    if (momentosRes.ok) {
+      const momentos: { id: string; event_date: string; culto: string; momento: string; ministry_name: string; ministry_slug: string | null }[] = await momentosRes.json()
+      for (const mom of momentos) {
+        const d = new Date(mom.event_date + 'T12:00:00')
+        unified.push({
+          date: mom.event_date,
+          dayOfWeek: format(d, 'EEEE', { locale: ptBR }),
+          type: 'momento',
+          scaleName: mom.culto || '-',
+          role: mom.momento,
+          ministryName: mom.ministry_name,
+          ministrySlug: mom.ministry_slug || undefined,
+          momento: mom.momento,
         })
       }
     }
@@ -202,6 +225,8 @@ export default function MeusDiasPage() {
           {allDays.map((item, idx) => (
             item.type === 'louvor' ? (
               <ExpandableWorshipDay key={`w-${idx}`} item={item} roleLabels={roleLabels} memberName={memberName} />
+            ) : item.type === 'momento' ? (
+              <MomentoDayCard key={`mom-${idx}`} item={item} />
             ) : (
               <MinistryDayCard key={`m-${idx}`} item={item} />
             )
@@ -216,6 +241,41 @@ export default function MeusDiasPage() {
 
       {/* Bottom spacer for fixed nav */}
       <div className="h-24" />
+    </div>
+  )
+}
+
+function MomentoDayCard({ item }: { item: UnifiedDay }) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const eventDate = new Date(item.date + 'T12:00:00')
+  const isPast = eventDate < today
+
+  return (
+    <div className={`card relative ${isPast ? 'opacity-50' : ''}`}>
+      <div className="absolute inset-0 rounded-2xl border-flow-card" style={{ '--flow-color': isPast ? '#666' : '#d946ef' } as React.CSSProperties} />
+      <div className="relative flex items-center gap-3">
+        <div className="w-12 h-12 rounded-lg bg-[var(--accent)] flex flex-col items-center justify-center shrink-0">
+          <span className="text-lg font-bold">
+            {format(eventDate, 'dd')}
+          </span>
+          <span className="text-[10px] text-[var(--muted-foreground)] capitalize">
+            {item.dayOfWeek.slice(0, 3)}
+          </span>
+        </div>
+        <div className="flex-1">
+          <p className={`font-medium ${isPast ? 'text-[var(--muted-foreground)]' : 'text-amber-400'}`}>{item.scaleName}</p>
+          <div className="flex items-center gap-1.5">
+            <span className="text-sm">🕐</span>
+            <span className={`text-xs font-medium ${isPast ? 'text-[var(--muted-foreground)]' : 'text-fuchsia-400'}`}>
+              Momento: {item.momento}
+            </span>
+          </div>
+        </div>
+        <span className={`text-xs px-2 py-1 rounded-lg font-medium shrink-0 ${isPast ? 'bg-[var(--accent)] text-[var(--muted-foreground)]' : 'bg-fuchsia-500/10 text-fuchsia-400'}`}>
+          {isPast ? '✓ Finalizado' : 'Momento'}
+        </span>
+      </div>
     </div>
   )
 }

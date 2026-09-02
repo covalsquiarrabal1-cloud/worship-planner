@@ -1199,6 +1199,44 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
     await loadMomentos()
   }
 
+  async function exportMomentosPDF() {
+    if (momentos.length === 0) return
+    const { jsPDF } = await import('jspdf')
+    const { default: autoTable } = await import('jspdf-autotable')
+
+    const doc = new jsPDF({ orientation: 'portrait' })
+    const monthName = format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })
+
+    doc.setFontSize(14)
+    doc.text('Escala de Momentos', doc.internal.pageSize.getWidth() / 2, 14, { align: 'center' })
+    doc.setFontSize(10)
+    doc.text(monthName, doc.internal.pageSize.getWidth() / 2, 21, { align: 'center' })
+
+    const memberName = (id: string | null) => {
+      if (!id) return '-'
+      const mb = momentosMembers.find(m => m.id === id)
+      return mb ? (mb.nickname || mb.name) : '-'
+    }
+
+    const tableData = momentos.map(m => [
+      `${m.event_date.slice(8,10)}/${m.event_date.slice(5,7)}`,
+      m.culto || '-',
+      m.momento || '-',
+      memberName(m.member_id),
+    ])
+
+    autoTable(doc, {
+      startY: 27,
+      head: [['Dia', 'Culto', 'Momento', 'Escalado']],
+      body: tableData,
+      theme: 'grid',
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], halign: 'center', fontStyle: 'bold' },
+    })
+
+    doc.save(`momentos-${slug}-${month}-${year}.pdf`)
+  }
+
   return (
     <div className="space-y-4">
       {/* Month Nav */}
@@ -1250,7 +1288,7 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
 
       {/* Actions when momentos exist */}
       {momentos.length > 0 && !loading && (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           <button
             onClick={async () => {
               const newStatus = !momentosPublished
@@ -1282,6 +1320,13 @@ function MomentosTab({ slug, members, month, year, currentDate, setCurrentDate }
           >
             <Plus className="w-4 h-4 text-[#58a6ff]" />
             <span className="text-[10px] font-semibold">REGERAR</span>
+          </button>
+          <button
+            onClick={exportMomentosPDF}
+            className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl border border-[#30363d] bg-[#1c2128] hover:border-red-400 transition-colors"
+          >
+            <FileDown className="w-4 h-4 text-red-400" />
+            <span className="text-[10px] font-semibold">PDF</span>
           </button>
           <button
             onClick={async () => {
