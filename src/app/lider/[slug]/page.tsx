@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { format, startOfMonth, endOfMonth, addMonths, subMonths } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, ArrowLeft, Users, Eye, EyeOff, FileDown } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, ArrowLeft, Users, Eye, EyeOff, FileDown, Pencil } from 'lucide-react'
 import Link from 'next/link'
 
-interface MinistryMember { id: string; name: string; email: string | null; is_blocked: boolean }
+interface MinistryMember { id: string; name: string; email: string | null; is_blocked: boolean; role: string }
 interface MinistryEvent {
   id: string; event_date: string; day_of_week: string; week_number: number;
   scale_name: string | null; num_celebrations: number;
@@ -26,6 +26,13 @@ export default function LiderMinistryPage() {
   const [newMemberName, setNewMemberName] = useState('')
   const [newMemberEmail, setNewMemberEmail] = useState('')
   const [showAddMember, setShowAddMember] = useState(false)
+  const [newMemberIsMembro, setNewMemberIsMembro] = useState(true)
+  const [newMemberIsLider, setNewMemberIsLider] = useState(false)
+  const [editingMember, setEditingMember] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editEmail, setEditEmail] = useState('')
+  const [editIsMembro, setEditIsMembro] = useState(true)
+  const [editIsLider, setEditIsLider] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [isPublished, setIsPublished] = useState(false)
   const [notifTitle, setNotifTitle] = useState('')
@@ -111,14 +118,45 @@ export default function LiderMinistryPage() {
       alert('Nome e e-mail são obrigatórios.')
       return
     }
+    if (!newMemberIsMembro && !newMemberIsLider) {
+      alert('Selecione pelo menos uma função (Membro ou Líder).')
+      return
+    }
+    const role = (newMemberIsMembro && newMemberIsLider) ? 'ambos' : newMemberIsLider ? 'lider' : 'membro'
     await fetch(`/api/ministries/${slug}/members`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: newMemberName.trim(), email: newMemberEmail.trim() }),
+      body: JSON.stringify({ name: newMemberName.trim(), email: newMemberEmail.trim(), role }),
     })
     setNewMemberName('')
     setNewMemberEmail('')
+    setNewMemberIsMembro(true)
+    setNewMemberIsLider(false)
     setShowAddMember(false)
+    loadData()
+  }
+
+  function startEdit(m: MinistryMember) {
+    setEditingMember(m.id)
+    setEditName(m.name)
+    setEditEmail(m.email || '')
+    setEditIsMembro(m.role === 'membro' || m.role === 'ambos')
+    setEditIsLider(m.role === 'lider' || m.role === 'ambos')
+  }
+
+  async function saveEdit() {
+    if (!editingMember || !editName.trim()) return
+    if (!editIsMembro && !editIsLider) {
+      alert('Selecione pelo menos uma função (Membro ou Líder).')
+      return
+    }
+    const role = (editIsMembro && editIsLider) ? 'ambos' : editIsLider ? 'lider' : 'membro'
+    await fetch(`/api/ministries/${slug}/members`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: editingMember, name: editName.trim(), email: editEmail.trim(), role }),
+    })
+    setEditingMember(null)
     loadData()
   }
 
@@ -420,33 +458,87 @@ export default function LiderMinistryPage() {
               <input placeholder="Nome" value={newMemberName} onChange={e => setNewMemberName(e.target.value)} autoFocus />
               <input placeholder="E-mail (obrigatório)" type="email" value={newMemberEmail} onChange={e => setNewMemberEmail(e.target.value)} />
               <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNewMemberIsMembro(!newMemberIsMembro)}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${newMemberIsMembro ? 'bg-[#58a6ff] text-white' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
+                >
+                  Membro
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewMemberIsLider(!newMemberIsLider)}
+                  className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${newMemberIsLider ? 'bg-amber-500 text-white' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
+                >
+                  Líder
+                </button>
+              </div>
+              <div className="flex gap-2">
                 <button onClick={addMember} className="flex-1 bg-[#58a6ff] text-white py-2 rounded-xl text-sm font-medium">Salvar</button>
                 <button onClick={() => setShowAddMember(false)} className="px-4 py-2 text-[#8b949e] text-sm">Cancelar</button>
               </div>
             </div>
           )}
           {members.map(m => (
-            <div key={m.id} className={`card flex items-center justify-between ${m.is_blocked ? 'opacity-50' : ''}`}>
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="font-medium text-sm">{m.name}</p>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${m.is_blocked ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'}`}>
-                    {m.is_blocked ? 'Inativo' : 'Ativo'}
-                  </span>
+            <div key={m.id} className={`card ${m.is_blocked ? 'opacity-50' : ''}`}>
+              {editingMember === m.id ? (
+                <div className="space-y-3">
+                  <input value={editName} onChange={e => setEditName(e.target.value)} placeholder="Nome" />
+                  <input value={editEmail} onChange={e => setEditEmail(e.target.value)} placeholder="E-mail" type="email" />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditIsMembro(!editIsMembro)}
+                      className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${editIsMembro ? 'bg-[#58a6ff] text-white' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
+                    >
+                      Membro
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditIsLider(!editIsLider)}
+                      className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${editIsLider ? 'bg-amber-500 text-white' : 'bg-[#1c2128] border border-[#30363d] text-[#8b949e]'}`}
+                    >
+                      Líder
+                    </button>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={saveEdit} className="flex-1 bg-[#58a6ff] text-white py-2 rounded-xl text-sm font-medium">Salvar</button>
+                    <button onClick={() => setEditingMember(null)} className="px-4 py-2 text-[#8b949e] text-sm">Cancelar</button>
+                  </div>
                 </div>
-                {m.email && <p className="text-xs text-[var(--muted-foreground)]">{m.email}</p>}
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => toggleMemberStatus(m.id, m.is_blocked)}
-                  className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${m.is_blocked ? 'text-green-400 hover:bg-green-500/10' : 'text-orange-400 hover:bg-orange-500/10'}`}
-                >
-                  {m.is_blocked ? 'Ativar' : 'Inativar'}
-                </button>
-                <button onClick={() => deleteMember(m.id)} className="p-2 text-[#f85149] hover:bg-[#f85149]/10 rounded-xl">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-medium text-sm">{m.name}</p>
+                      {(m.role === 'lider' || m.role === 'ambos') && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-amber-500/10 text-amber-400">Líder</span>
+                      )}
+                      {(m.role === 'membro' || m.role === 'ambos') && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded font-medium bg-[#58a6ff]/10 text-[#58a6ff]">Membro</span>
+                      )}
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${m.is_blocked ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'}`}>
+                        {m.is_blocked ? 'Inativo' : 'Ativo'}
+                      </span>
+                    </div>
+                    {m.email && <p className="text-xs text-[var(--muted-foreground)]">{m.email}</p>}
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => startEdit(m)} className="p-2 text-[#58a6ff] hover:bg-[#58a6ff]/10 rounded-xl">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => toggleMemberStatus(m.id, m.is_blocked)}
+                      className={`px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${m.is_blocked ? 'text-green-400 hover:bg-green-500/10' : 'text-orange-400 hover:bg-orange-500/10'}`}
+                    >
+                      {m.is_blocked ? 'Ativar' : 'Inativar'}
+                    </button>
+                    <button onClick={() => deleteMember(m.id)} className="p-2 text-[#f85149] hover:bg-[#f85149]/10 rounded-xl">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

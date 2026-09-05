@@ -35,5 +35,36 @@ export default async function Home() {
     redirect('/membro/dashboard')
   }
 
+  // Ministry leader? (profiles.role, official leader_user_id, or a ministry_members
+  // row flagged 'lider'/'ambos' matching the user's email). Route them to /lider.
+  const userEmail = user.email?.toLowerCase() || ''
+
+  let isLeader = profile?.role === 'ministry_leader'
+
+  if (!isLeader) {
+    const { data: officialLeader } = await serviceClient
+      .from('ministries')
+      .select('id')
+      .eq('leader_user_id', user.id)
+      .limit(1)
+      .maybeSingle()
+    if (officialLeader) isLeader = true
+  }
+
+  if (!isLeader && userEmail) {
+    const { data: leaderMember } = await serviceClient
+      .from('ministry_members')
+      .select('id')
+      .in('role', ['lider', 'ambos'])
+      .ilike('email', userEmail)
+      .limit(1)
+      .maybeSingle()
+    if (leaderMember) isLeader = true
+  }
+
+  if (isLeader) {
+    redirect('/lider')
+  }
+
   redirect('/membro')
 }
