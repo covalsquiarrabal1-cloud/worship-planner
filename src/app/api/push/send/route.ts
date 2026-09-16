@@ -8,28 +8,60 @@ webpush.setVapidDetails(
   process.env.VAPID_PRIVATE_KEY!
 )
 
+/**
+ * Busca user_ids no profiles a partir de uma lista de emails.
+ * Faz comparação case-insensitive buscando cada email individualmente
+ * para não depender de collation do banco.
+ */
+async function emailsToUserIds(serviceClient: any, emails: string[]): Promise<string[]> {
+  const userIds: string[] = []
+  for (const email of emails) {
+    const { data } = await serviceClient
+      .from('profiles')
+      .select('id')
+      .ilike('email', email)
+      .maybeSingle()
+    if (data?.id) userIds.push(data.id)
+  }
+  return userIds
+}
+
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
 
   const serviceClient = await createServiceRoleClient()
-  
-  // Check permission: admin or ministry leader
+
+  // Check permission: admin, official leader_user_id, or ministry_members lider/ambos
   const { data: profile } = await serviceClient
-    .from('profiles').select('role').eq('id', user.id).single()
-  
+    .from('profiles').select('role, email').eq('id', user.id).single()
+
   const isAdmin = profile?.role === 'admin'
-  
+
   if (!isAdmin) {
-    // Check if user is a ministry leader
-    const { data: leaderMinistries } = await serviceClient
+    // Check leader_user_id
+    const { data: officialLeader } = await serviceClient
       .from('ministries')
       .select('id')
       .eq('leader_user_id', user.id)
       .limit(1)
-    
-    if (!leaderMinistries || leaderMinistries.length === 0) {
+      .maybeSingle()
+
+    // Check ministry_members with lider/ambos role
+    let isMemberLeader = false
+    if (!officialLeader && profile?.email) {
+      const { data: memberLeader } = await serviceClient
+        .from('ministry_members')
+        .select('id')
+        .in('role', ['lider', 'ambos'])
+        .ilike('email', profile.email)
+        .limit(1)
+        .maybeSingle()
+      isMemberLeader = !!memberLeader
+    }
+
+    if (!officialLeader && !isMemberLeader) {
       return NextResponse.json({ error: 'Sem permissão' }, { status: 403 })
     }
   }
@@ -40,23 +72,16 @@ export async function POST(request: Request) {
   let subscriptions: any[] = []
 
   if (memberIds && Array.isArray(memberIds) && memberIds.length > 0) {
-    // Send to specific members by their member IDs (ministry_members.id)
-    // First get their emails, then find their user_ids via profiles
+    // Send to specific members by their ministry_members IDs
     const { data: members } = await serviceClient
       .from('ministry_members')
       .select('email')
       .in('id', memberIds)
 
-    const emails = (members || []).map(m => m.email?.toLowerCase()).filter(Boolean)
+    const emails = (members || []).map((m: any) => m.email?.toLowerCase()).filter(Boolean)
 
     if (emails.length > 0) {
-      const { data: profiles } = await serviceClient
-        .from('profiles')
-        .select('id')
-        .in('email', emails)
-
-      const userIds = (profiles || []).map(p => p.id)
-      
+      const userIds = await emailsToUserIds(serviceClient, emails)
       if (userIds.length > 0) {
         const { data } = await serviceClient
           .from('push_subscriptions')
@@ -66,7 +91,7 @@ export async function POST(request: Request) {
       }
     }
   } else if (ministrySlug) {
-    // Send to all members of a specific ministry
+    // Send to all active members of a specific ministry
     const { data: ministry } = await serviceClient
       .from('ministries')
       .select('id')
@@ -80,16 +105,10 @@ export async function POST(request: Request) {
         .eq('ministry_id', ministry.id)
         .eq('is_blocked', false)
 
-      const emails = (members || []).map(m => m.email?.toLowerCase()).filter(Boolean)
+      const emails = (members || []).map((m: any) => m.email?.toLowerCase()).filter(Boolean)
 
       if (emails.length > 0) {
-        const { data: profiles } = await serviceClient
-          .from('profiles')
-          .select('id')
-          .in('email', emails)
-
-        const userIds = (profiles || []).map(p => p.id)
-
+        const userIds = await emailsToUserIds(serviceClient, emails)
         if (userIds.length > 0) {
           const { data } = await serviceClient
             .from('push_subscriptions')
@@ -100,7 +119,7 @@ export async function POST(request: Request) {
       }
     }
   } else {
-    // Admin: send to all
+    // Admin: send to all subscriptions
     const { data } = await serviceClient.from('push_subscriptions').select('*')
     subscriptions = data || []
   }
@@ -122,6 +141,7 @@ export async function POST(request: Request) {
       sent++
     } catch (err: any) {
       failed++
+      // Remove stale/expired subscriptions
       if (err.statusCode === 410 || err.statusCode === 404) {
         await serviceClient.from('push_subscriptions').delete().eq('id', sub.id)
       }

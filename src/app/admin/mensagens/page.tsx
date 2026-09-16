@@ -218,8 +218,8 @@ export default function MensagensPage() {
                 }),
               })
               const notifData = await notifRes.json()
-              // Also try push for those who have it enabled
-              await fetch('/api/push/send', {
+              // Also send push notification for those who have it enabled
+              const pushRes = await fetch('/api/push/send', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -229,8 +229,10 @@ export default function MensagensPage() {
                   memberIds: ids,
                 }),
               })
+              const pushData = pushRes.ok ? await pushRes.json() : null
               if (notifRes.ok) {
-                alert(`Notificação enviada! ✅\n${notifData.sent} membro(s) notificados.`)
+                const pushInfo = pushData ? ` | Push: ${pushData.sent} dispositivo(s)` : ''
+                alert(`Notificação enviada! ✅\n${notifData.sent} membro(s) notificados.${pushInfo}`)
               } else {
                 alert('Erro: ' + (notifData.error || 'Falha ao enviar'))
               }
