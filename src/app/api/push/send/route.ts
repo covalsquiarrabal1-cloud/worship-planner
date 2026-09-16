@@ -72,13 +72,18 @@ export async function POST(request: Request) {
   let subscriptions: any[] = []
 
   if (memberIds && Array.isArray(memberIds) && memberIds.length > 0) {
-    // Send to specific members by their ministry_members IDs
-    const { data: members } = await serviceClient
-      .from('ministry_members')
-      .select('email')
-      .in('id', memberIds)
+    // memberIds can come from either `members` (louvor) or `ministry_members` tables.
+    // Try both and merge emails.
+    const [{ data: worshipMembers }, { data: ministryMembers }] = await Promise.all([
+      serviceClient.from('members').select('email').in('id', memberIds),
+      serviceClient.from('ministry_members').select('email').in('id', memberIds),
+    ])
 
-    const emails = (members || []).map((m: any) => m.email?.toLowerCase()).filter(Boolean)
+    const rawEmails = [
+      ...(worshipMembers || []).map((m: any) => m.email),
+      ...(ministryMembers || []).map((m: any) => m.email),
+    ]
+    const emails = [...new Set(rawEmails.map((e: any) => e?.toLowerCase()).filter(Boolean))]
 
     if (emails.length > 0) {
       const userIds = await emailsToUserIds(serviceClient, emails)
