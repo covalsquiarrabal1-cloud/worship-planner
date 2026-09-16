@@ -78,8 +78,11 @@ export async function GET(request: Request) {
           .map(event => {
             const ministryId = scheduleMinistryMap.get(event.schedule_id)
             const ministry = ministryId ? ministryMap.get(ministryId) : null
+            // Filter assignments to only those belonging to this member
+            const myAssignments = (event.assignments as any[]).filter(a => memberIds.includes(a.member_id))
             return {
               ...event,
+              assignments: myAssignments,
               ministry_name: ministry?.name || '',
               ministry_slug: ministry?.slug || '',
             }

@@ -130,7 +130,7 @@ export default function MeusDiasPage() {
     if (ministryRes.ok) {
       const ministryEvents: MinistryEvent[] = await ministryRes.json()
       for (const mEvent of ministryEvents) {
-        // Find which celebration this member is in
+        // The API now returns only this member's assignments — pick the first one
         const myAssignment = mEvent.assignments?.[0]
         const celNum = myAssignment?.celebration_number || 1
 
