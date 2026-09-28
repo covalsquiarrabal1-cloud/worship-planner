@@ -185,10 +185,14 @@ export default function EscalasGeraisStaffPage() {
     doc.text(monthName, doc.internal.pageSize.getWidth() / 2, 18, { align: 'center' })
 
     const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name)).filter(Boolean))] as string[]
+    const hasNullRoles = events.some(e => e.assignments.some(a => !a.role_name && a.member))
     const knownOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
     const knownRoles = knownOrder.filter(r => allRoleNames.includes(r))
     const otherRoles = allRoleNames.filter(r => !knownOrder.includes(r)).sort()
     const pdfDisplayColumns = [...knownRoles, ...otherRoles]
+
+    // When no roles exist but there are members, use a single "Membros" column
+    const showMembrosColumn = pdfDisplayColumns.length === 0 && hasNullRoles
 
     const tableData: string[][] = []
     const dayColorMap: [number, number, number][] = [[235, 244, 255], [255, 255, 255]]
@@ -214,9 +218,26 @@ export default function EscalasGeraisStaffPage() {
           event.num_celebrations > 1 ? `C${celNum}` : '-',
         ]
 
-        for (const col of pdfDisplayColumns) {
-          const colAssignments = celAssignments.filter(a => a.role_name === col)
-          row.push(colAssignments.map(a => a.member?.nickname || a.member?.name || '-').join(', ') || '-')
+        if (showMembrosColumn) {
+          // All members in a single column regardless of role
+          const names = celAssignments
+            .filter(a => a.member)
+            .map(a => a.member?.nickname || a.member?.name || '-')
+            .join(', ')
+          row.push(names || '-')
+        } else {
+          for (const col of pdfDisplayColumns) {
+            const colAssignments = celAssignments.filter(a => a.role_name === col)
+            row.push(colAssignments.map(a => a.member?.nickname || a.member?.name || '-').join(', ') || '-')
+          }
+          // Also include members without a role when mixed
+          if (hasNullRoles && pdfDisplayColumns.length > 0) {
+            const noRoleNames = celAssignments
+              .filter(a => !a.role_name && a.member)
+              .map(a => a.member?.nickname || a.member?.name || '-')
+              .join(', ')
+            row.push(noRoleNames || '-')
+          }
         }
 
         tableData.push(row)
@@ -224,7 +245,14 @@ export default function EscalasGeraisStaffPage() {
       }
     }
 
-    const headColumns = ['Data', 'Dia', 'Escala', 'Cel.', ...pdfDisplayColumns]
+    let headColumns: string[]
+    if (showMembrosColumn) {
+      headColumns = ['Data', 'Dia', 'Escala', 'Cel.', 'Membros']
+    } else {
+      const roleHeaders = pdfDisplayColumns.map(c => c === 'Intercessor' ? 'Intercessão' : c === 'Orar pelo Ministro' ? 'Orar p/ Ministro' : c)
+      if (hasNullRoles && pdfDisplayColumns.length > 0) roleHeaders.push('Outros')
+      headColumns = ['Data', 'Dia', 'Escala', 'Cel.', ...roleHeaders]
+    }
 
     autoTable(doc, {
       startY: 22,
