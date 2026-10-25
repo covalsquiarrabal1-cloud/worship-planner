@@ -184,8 +184,9 @@ export default function EscalasGeraisStaffPage() {
     doc.setFontSize(9)
     doc.text(monthName, doc.internal.pageSize.getWidth() / 2, 18, { align: 'center' })
 
-    const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name)).filter(Boolean))] as string[]
-    const hasNullRoles = events.some(e => e.assignments.some(a => !a.role_name && a.member))
+    const roleOf = (a: { role_name: string | null }) => a.role_name || 'Membro'
+    const allRoleNames = [...new Set(events.flatMap(e => e.assignments.filter(a => a.member).map(roleOf)).filter(Boolean))] as string[]
+    const hasNullRoles = false
     const knownOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
     const knownRoles = knownOrder.filter(r => allRoleNames.includes(r))
     const otherRoles = allRoleNames.filter(r => !knownOrder.includes(r)).sort()
@@ -227,16 +228,8 @@ export default function EscalasGeraisStaffPage() {
           row.push(names || '-')
         } else {
           for (const col of pdfDisplayColumns) {
-            const colAssignments = celAssignments.filter(a => a.role_name === col)
+            const colAssignments = celAssignments.filter(a => a.member && roleOf(a) === col)
             row.push(colAssignments.map(a => a.member?.nickname || a.member?.name || '-').join(', ') || '-')
-          }
-          // Also include members without a role when mixed
-          if (hasNullRoles && pdfDisplayColumns.length > 0) {
-            const noRoleNames = celAssignments
-              .filter(a => !a.role_name && a.member)
-              .map(a => a.member?.nickname || a.member?.name || '-')
-              .join(', ')
-            row.push(noRoleNames || '-')
           }
         }
 
@@ -250,7 +243,6 @@ export default function EscalasGeraisStaffPage() {
       headColumns = ['Data', 'Dia', 'Escala', 'Cel.', 'Membros']
     } else {
       const roleHeaders = pdfDisplayColumns.map(c => c === 'Intercessor' ? 'Intercessão' : c === 'Orar pelo Ministro' ? 'Orar p/ Ministro' : c)
-      if (hasNullRoles && pdfDisplayColumns.length > 0) roleHeaders.push('Outros')
       headColumns = ['Data', 'Dia', 'Escala', 'Cel.', ...roleHeaders]
     }
 
@@ -286,7 +278,7 @@ export default function EscalasGeraisStaffPage() {
 
   // Detail view - schedule
   if (selectedMinistry) {
-    const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name)).filter(Boolean))] as string[]
+    const allRoleNames = [...new Set(events.flatMap(e => e.assignments.filter(a => a.member).map(a => a.role_name || 'Membro')).filter(Boolean))] as string[]
     const knownOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
     const isIntercessao = selectedMinistry.slug === 'intercessao' || selectedMinistry.slug === 'intercessao-alive'
     const knownRoles = knownOrder.filter(r => isIntercessao || allRoleNames.includes(r))
@@ -376,7 +368,7 @@ export default function EscalasGeraisStaffPage() {
                           {event.num_celebrations > 1 ? `C${celNum}` : '-'}
                         </td>
                         {displayColumns.map(col => {
-                          const colAssignments = celAssignments.filter(a => a.role_name === col)
+                          const colAssignments = celAssignments.filter(a => (a.role_name || 'Membro') === col)
                           return (
                             <td key={col} className="px-3 py-2.5 text-xs border-r border-[var(--border)] last:border-r-0">
                               {colAssignments.length > 0

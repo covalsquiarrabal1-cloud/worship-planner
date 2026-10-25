@@ -336,7 +336,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
     if (eventErr || !event) continue
 
     const numPeople = genericConfigMap[day.scaleName] || 1
-    const assignments: { event_id: string; member_id: string; celebration_number: number }[] = []
+    const assignments: { event_id: string; member_id: string; celebration_number: number; role_name: string }[] = []
     const busyEmails = busyByDate[day.date] || new Set()
 
     for (let c = 1; c <= numCelebrations; c++) {
@@ -353,12 +353,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ slu
             conflicts.push(`${member.name} já está no louvor dia ${dateFormatted}`)
             continue
           }
-          assignments.push({ event_id: event.id, member_id: member.id, celebration_number: c })
+          assignments.push({ event_id: event.id, member_id: member.id, celebration_number: c, role_name: 'Membro' })
           assigned = true
         }
         if (!assigned) {
           const member = members[memberIndex % members.length]
-          assignments.push({ event_id: event.id, member_id: member.id, celebration_number: c })
+          assignments.push({ event_id: event.id, member_id: member.id, celebration_number: c, role_name: 'Membro' })
           memberIndex++
         }
       }

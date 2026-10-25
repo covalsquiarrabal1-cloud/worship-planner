@@ -317,9 +317,11 @@ export default function MinistryPage() {
     doc.setFontSize(9)
     doc.text(monthName, doc.internal.pageSize.getWidth() / 2, 18, { align: 'center' })
 
-    // Detect roles dynamically
-    const allRoleNames = [...new Set(events.flatMap(e => e.assignments.map(a => a.role_name)).filter(Boolean))] as string[]
-    const hasNullRoles = events.some(e => e.assignments.some(a => !a.role_name && a.member))
+    // Detect roles dynamically. Normaliza role_name ausente para 'Membro'
+    // (ministérios simples como Som às vezes gravam null, às vezes 'Membro').
+    const roleOf = (a: { role_name: string | null }) => a.role_name || 'Membro'
+    const allRoleNames = [...new Set(events.flatMap(e => e.assignments.filter(a => a.member).map(roleOf)).filter(Boolean))] as string[]
+    const hasNullRoles = false
     const knownOrder = ['Torre', 'Intercessor', 'Coluna', 'Orar pelo Ministro', 'Suporte']
     const isIntercessaoPdf = slug === 'intercessao' || slug === 'intercessao-alive'
     const knownRoles = knownOrder.filter(r => isIntercessaoPdf || allRoleNames.includes(r))
@@ -368,16 +370,8 @@ export default function MinistryPage() {
           row.push(memberNames || '-')
         } else {
           for (const col of pdfDisplayColumns) {
-            const colAssignments = celAssignments.filter(a => a.role_name === col)
+            const colAssignments = celAssignments.filter(a => a.member && roleOf(a) === col)
             row.push(colAssignments.map(a => a.member?.nickname || a.member?.name || '-').join(', ') || '-')
-          }
-          // Also add unassigned-role members if there are mixed (some with role, some without)
-          if (hasNullRoles && pdfDisplayColumns.length > 0) {
-            const noRoleMembers = celAssignments
-              .filter(a => !a.role_name && a.member)
-              .map(a => a.member?.nickname || a.member?.name || '-')
-              .join(', ')
-            row.push(noRoleMembers || '-')
           }
         }
 
@@ -395,9 +389,6 @@ export default function MinistryPage() {
       headColumns = ['Data', 'Dia', 'Escala', 'Cel.', 'Membros']
     } else {
       const roleHeaders = pdfDisplayColumns.map(c => c === 'Intercessor' ? 'Intercessão' : c === 'Orar pelo Ministro' ? 'Orar p/ Ministro' : c)
-      if (hasNullRoles && pdfDisplayColumns.length > 0) {
-        roleHeaders.push('Outros')
-      }
       headColumns = ['Data', 'Dia', 'Escala', 'Cel.', ...roleHeaders]
     }
 
