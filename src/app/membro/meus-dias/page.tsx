@@ -176,6 +176,7 @@ export default function MeusDiasPage() {
     vocal_1: 'Vocal 1',
     vocal_2: 'Vocal 2',
     vocal_3: 'Vocal 3',
+    vocal_4: 'Vocal 4',
     guitarra: 'Guitarra',
     baixo: 'Baixo',
     bateria: 'Bateria',

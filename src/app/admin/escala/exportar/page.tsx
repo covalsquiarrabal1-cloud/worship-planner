@@ -47,7 +47,7 @@ export default function ExportarPage() {
   }
 
   function exportCSV() {
-    const header = 'Semana,Data,Dia,Culto,Vocal 1,Vocal 2,Vocal 3,Bateria,Guitarra,Baixo\n'
+    const header = 'Semana,Data,Dia,Culto,Vocal 1,Vocal 2,Vocal 3,Vocal 4,Bateria,Guitarra,Baixo\n'
     const rows = events.map(ev => {
       const getRole = (role: string) => ev.assignments.find(a => a.role === role)?.member?.name || '-'
       return [
@@ -58,6 +58,7 @@ export default function ExportarPage() {
         getRole('vocal_1'),
         getRole('vocal_2'),
         getRole('vocal_3'),
+        getRole('vocal_4'),
         getRole('bateria'),
         getRole('guitarra'),
         getRole('baixo'),
@@ -94,6 +95,7 @@ export default function ExportarPage() {
         getRole('vocal_1'),
         getRole('vocal_2'),
         getRole('vocal_3'),
+        getRole('vocal_4'),
         getRole('bateria'),
         getRole('guitarra'),
         getRole('baixo'),
@@ -102,7 +104,7 @@ export default function ExportarPage() {
 
     autoTable(doc, {
       startY: 35,
-      head: [['Sem', 'Data', 'Dia', 'Culto', 'Vocal 1', 'Vocal 2', 'Vocal 3', 'Bateria', 'Guitarra', 'Baixo']],
+      head: [['Sem', 'Data', 'Dia', 'Culto', 'Vocal 1', 'Vocal 2', 'Vocal 3', 'Vocal 4', 'Bateria', 'Guitarra', 'Baixo']],
       body: tableData,
       theme: 'grid',
       styles: { fontSize: 8, cellPadding: 2 },

@@ -168,6 +168,7 @@ export default function MemberSchedulePage() {
     vocal_1: 'Vocal 1',
     vocal_2: 'Vocal 2',
     vocal_3: 'Vocal 3',
+    vocal_4: 'Vocal 4',
     guitarra: 'Guitarra',
     baixo: 'Baixo',
     bateria: 'Bateria',
@@ -176,7 +177,7 @@ export default function MemberSchedulePage() {
   }
 
   // Sort roles: vocals first, then instruments
-  const vocalRoles = ['vocal_1', 'vocal_2', 'vocal_3']
+  const vocalRoles = ['vocal_1', 'vocal_2', 'vocal_3', 'vocal_4']
   const instrumentRoles = ['bateria', 'guitarra', 'baixo', 'teclado']
 
   function sortedAssignments(assignments: ScheduleEvent['assignments']) {

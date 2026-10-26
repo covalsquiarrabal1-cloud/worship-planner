@@ -188,7 +188,7 @@ export default function AdminPage() {
         doc.setFontSize(7)
         doc.setFont('helvetica', 'normal')
         const vocalText = vocals.map(v => {
-          const label = v.role === 'vocal_1' ? 'Vocal 1' : v.role === 'vocal_2' ? 'Vocal 2' : 'Vocal 3'
+          const label = v.role === 'vocal_1' ? 'Vocal 1' : v.role === 'vocal_2' ? 'Vocal 2' : v.role === 'vocal_3' ? 'Vocal 3' : 'Vocal 4'
           return `${label}: ${v.member?.nickname || v.member?.name || '-'}`
         }).join('   |   ')
         doc.text(vocalText, pageWidth / 2, currentY, { align: 'center' })
@@ -634,6 +634,7 @@ export default function AdminPage() {
                 <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Vocal 1</th>
                 <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Vocal 2</th>
                 <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Vocal 3</th>
+                <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Vocal 4</th>
                 <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Bateria</th>
                 <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Guitarra</th>
                 <th className="text-left px-3 py-2.5 text-xs font-semibold text-[var(--muted-foreground)]">Baixo</th>
@@ -665,6 +666,7 @@ export default function AdminPage() {
                     {renderEditableCell(event, 'vocal_1')}
                     {renderEditableCell(event, 'vocal_2')}
                     {renderEditableCell(event, 'vocal_3')}
+                    {renderEditableCell(event, 'vocal_4')}
                     {renderEditableCell(event, 'bateria')}
                     {renderEditableCell(event, 'guitarra')}
                     {renderEditableCell(event, 'baixo')}
@@ -889,7 +891,7 @@ function WeeklyView({ events, members, onUpdateAssignment }: {
               <div className="flex flex-wrap gap-2">
                 {event.assignments.filter(a => a.role.startsWith('vocal_')).sort((a, b) => a.role.localeCompare(b.role)).map(a => (
                   <span key={a.id} className="badge-vocal">
-                    🎤 {a.role === 'vocal_1' ? 'Vocal 1' : a.role === 'vocal_2' ? 'Vocal 2' : 'Vocal 3'} {a.member?.nickname || a.member?.name || '-'}
+                    🎤 {a.role === 'vocal_1' ? 'Vocal 1' : a.role === 'vocal_2' ? 'Vocal 2' : a.role === 'vocal_3' ? 'Vocal 3' : 'Vocal 4'} {a.member?.nickname || a.member?.name || '-'}
                   </span>
                 ))}
               </div>

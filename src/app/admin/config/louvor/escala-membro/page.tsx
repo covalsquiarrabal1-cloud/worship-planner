@@ -42,11 +42,11 @@ interface MinistryDay {
 }
 
 const roleLabels: Record<string, string> = {
-  vocal_1: 'Vocal 1', vocal_2: 'Vocal 2', vocal_3: 'Vocal 3',
+  vocal_1: 'Vocal 1', vocal_2: 'Vocal 2', vocal_3: 'Vocal 3', vocal_4: 'Vocal 4',
   guitarra: 'Guitarra', baixo: 'Baixo', bateria: 'Bateria', teclado: 'Teclado', back: 'Back',
 }
 
-const vocalRoles = ['vocal_1', 'vocal_2', 'vocal_3']
+const vocalRoles = ['vocal_1', 'vocal_2', 'vocal_3', 'vocal_4']
 const instrumentRoles = ['bateria', 'guitarra', 'baixo', 'teclado']
 
 export default function EscalaMembroPage() {

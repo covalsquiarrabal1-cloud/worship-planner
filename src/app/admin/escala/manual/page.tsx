@@ -26,6 +26,7 @@ const roles = [
   { key: 'vocal_1', label: 'Vocal 1' },
   { key: 'vocal_2', label: 'Vocal 2' },
   { key: 'vocal_3', label: 'Vocal 3' },
+  { key: 'vocal_4', label: 'Vocal 4' },
   { key: 'guitarra', label: 'Guitarra' },
   { key: 'baixo', label: 'Baixo' },
   { key: 'bateria', label: 'Bateria' },
