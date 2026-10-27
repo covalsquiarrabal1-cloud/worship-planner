@@ -23,6 +23,7 @@ import {
   Music,
   Settings,
   FileDown,
+  FileSpreadsheet,
   Loader2,
   Plus,
   Calendar,
@@ -132,6 +133,94 @@ export default function AdminPage() {
       const data = await res.json()
       setMembers(Array.isArray(data) ? data.map((m: any) => ({ id: m.id, name: m.name })) : [])
     }
+  }
+
+  async function exportMonthPDF() {
+    const { jsPDF } = await import('jspdf')
+    const { default: autoTable } = await import('jspdf-autotable')
+
+    const doc = new jsPDF({ orientation: 'landscape' })
+    const monthLabel = format(currentDate, "MMMM 'de' yyyy", { locale: ptBR })
+
+    doc.setFontSize(16)
+    doc.text('Worship Planner', 14, 16)
+    doc.setFontSize(11)
+    doc.text(`Escala — ${monthLabel}`, 14, 24)
+
+    const tableData = events.map(ev => {
+      const getRole = (role: string) => ev.assignments.find(a => a.role === role)?.member?.nickname || ev.assignments.find(a => a.role === role)?.member?.name || '-'
+      const hasVocal4 = events.some(e => e.assignments.some(a => a.role === 'vocal_4'))
+      return [
+        ev.week_number.toString(),
+        format(new Date(ev.event_date + 'T12:00:00'), 'dd/MM'),
+        ev.day_of_week,
+        ev.scale_type?.name || '-',
+        getRole('vocal_1'),
+        getRole('vocal_2'),
+        getRole('vocal_3'),
+        ...(hasVocal4 ? [getRole('vocal_4')] : []),
+        getRole('bateria'),
+        getRole('guitarra'),
+        getRole('baixo'),
+        getRole('teclado'),
+      ]
+    })
+
+    const hasVocal4 = events.some(e => e.assignments.some(a => a.role === 'vocal_4'))
+    const head = ['Sem', 'Data', 'Dia', 'Culto', 'Vocal 1', 'Vocal 2', 'Vocal 3', ...(hasVocal4 ? ['Vocal 4'] : []), 'Bateria', 'Guitarra', 'Baixo', 'Teclado']
+
+    autoTable(doc, {
+      startY: 30,
+      head: [head],
+      body: tableData,
+      theme: 'grid',
+      styles: { fontSize: 7, cellPadding: 2 },
+      headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255], fontStyle: 'bold' },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 14, halign: 'center' },
+        2: { cellWidth: 22, halign: 'center' },
+      },
+    })
+
+    doc.save(`escala-${month}-${year}.pdf`)
+  }
+
+  function exportMonthExcel() {
+    const hasVocal4 = events.some(e => e.assignments.some(a => a.role === 'vocal_4'))
+    const header = [
+      'Semana', 'Data', 'Dia', 'Culto',
+      'Vocal 1', 'Vocal 2', 'Vocal 3',
+      ...(hasVocal4 ? ['Vocal 4'] : []),
+      'Bateria', 'Guitarra', 'Baixo', 'Teclado',
+    ].join('\t')
+
+    const rows = events.map(ev => {
+      const getRole = (role: string) => ev.assignments.find(a => a.role === role)?.member?.nickname || ev.assignments.find(a => a.role === role)?.member?.name || '-'
+      return [
+        ev.week_number,
+        format(new Date(ev.event_date + 'T12:00:00'), 'dd/MM/yyyy'),
+        ev.day_of_week,
+        ev.scale_type?.name || '-',
+        getRole('vocal_1'),
+        getRole('vocal_2'),
+        getRole('vocal_3'),
+        ...(hasVocal4 ? [getRole('vocal_4')] : []),
+        getRole('bateria'),
+        getRole('guitarra'),
+        getRole('baixo'),
+        getRole('teclado'),
+      ].join('\t')
+    }).join('\n')
+
+    // TSV abre direto no Excel com formatação correta
+    const blob = new Blob(['\ufeff' + header + '\n' + rows], { type: 'text/tab-separated-values;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `escala-${month}-${year}.xls`
+    link.click()
+    URL.revokeObjectURL(url)
   }
 
   async function exportWeekPDF(weekEvents: ScheduleEvent[], week: number, date: Date) {
@@ -535,6 +624,25 @@ export default function AdminPage() {
             >
               <span className="text-lg">🗑</span>
               <span className="text-xs font-medium text-[var(--muted-foreground)]">Excluir</span>
+            </button>
+          </div>
+          {/* Export actions */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={exportMonthPDF}
+              disabled={events.length === 0}
+              className="flex flex-col items-center justify-center gap-2 bg-[var(--card)] border border-[var(--border)] py-4 rounded-2xl hover:border-red-400/50 transition-colors disabled:opacity-40"
+            >
+              <FileDown className="w-5 h-5 text-red-400" />
+              <span className="text-xs font-medium text-[var(--muted-foreground)]">Exportar PDF</span>
+            </button>
+            <button
+              onClick={exportMonthExcel}
+              disabled={events.length === 0}
+              className="flex flex-col items-center justify-center gap-2 bg-[var(--card)] border border-[var(--border)] py-4 rounded-2xl hover:border-green-400/50 transition-colors disabled:opacity-40"
+            >
+              <FileSpreadsheet className="w-5 h-5 text-green-400" />
+              <span className="text-xs font-medium text-[var(--muted-foreground)]">Exportar Excel</span>
             </button>
           </div>
         </div>
