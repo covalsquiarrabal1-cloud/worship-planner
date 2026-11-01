@@ -76,6 +76,9 @@ export default function AdminPage() {
   })
   const [members, setMembers] = useState<{ id: string; name: string }[]>([])
   const [editingCell, setEditingCell] = useState<{ eventId: string; assignmentId: string; role: string } | null>(null)
+  const [editingDate, setEditingDate] = useState<string | null>(null)
+  const [editingCelebration, setEditingCelebration] = useState<string | null>(null)
+  const [scaleTypes, setScaleTypes] = useState<{ id: string; name: string }[]>([])
   const [selectedEventIds, setSelectedEventIds] = useState<Set<string>>(new Set())
   const [deletingEvents, setDeletingEvents] = useState(false)
   const supabase = createClient()
@@ -89,6 +92,7 @@ export default function AdminPage() {
   useEffect(() => {
     loadEvents()
     loadMembers()
+    loadScaleTypes()
     try {
       const saved = localStorage.getItem(`selectedDates_${month}_${year}`)
       if (saved) {
@@ -132,6 +136,14 @@ export default function AdminPage() {
     if (res.ok) {
       const data = await res.json()
       setMembers(Array.isArray(data) ? data.map((m: any) => ({ id: m.id, name: m.name })) : [])
+    }
+  }
+
+  async function loadScaleTypes() {
+    const res = await fetch('/api/scale-types')
+    if (res.ok) {
+      const data = await res.json()
+      setScaleTypes(Array.isArray(data) ? data : [])
     }
   }
 
@@ -334,6 +346,34 @@ export default function AdminPage() {
     }
   }
 
+  async function updateEventDate(eventId: string, newDate: string) {
+    const res = await fetch('/api/schedule-events/update-date', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_id: eventId, new_date: newDate }),
+    })
+    if (res.ok) {
+      setEditingDate(null)
+      loadEvents()
+    } else {
+      alert('Erro ao atualizar a data')
+    }
+  }
+
+  async function updateEventCelebration(eventId: string, scaleTypeId: string) {
+    const res = await fetch('/api/schedule-events/update-celebration', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_id: eventId, scale_type_id: scaleTypeId }),
+    })
+    if (res.ok) {
+      setEditingCelebration(null)
+      loadEvents()
+    } else {
+      alert('Erro ao atualizar a celebração')
+    }
+  }
+
   function toggleEventSelection(eventId: string) {
     setSelectedEventIds(prev => {
       const next = new Set(prev)
@@ -459,6 +499,84 @@ export default function AdminPage() {
         onClick={(e) => { e.stopPropagation(); setEditingCell({ eventId: event.id, assignmentId: data.id, role }) }}
       >
         {data.name}
+      </td>
+    )
+  }
+
+  function renderEditableDate(event: ScheduleEvent) {
+    const isEditing = editingDate === event.id
+
+    if (isEditing) {
+      return (
+        <td className="px-1 py-1" onClick={(e) => e.stopPropagation()}>
+          <input
+            type="date"
+            autoFocus
+            defaultValue={event.event_date}
+            onBlur={(e) => {
+              if (e.target.value && e.target.value !== event.event_date) {
+                updateEventDate(event.id, e.target.value)
+              } else {
+                setEditingDate(null)
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.currentTarget.blur()
+              } else if (e.key === 'Escape') {
+                setEditingDate(null)
+              }
+            }}
+            className="!py-1 !px-1 text-xs w-full"
+          />
+        </td>
+      )
+    }
+
+    return (
+      <td
+        className="px-3 py-2 text-xs font-medium cursor-pointer hover:bg-blue-500/10 rounded"
+        onClick={(e) => { e.stopPropagation(); setEditingDate(event.id) }}
+      >
+        {format(new Date(event.event_date + 'T12:00:00'), 'dd/MM')}
+      </td>
+    )
+  }
+
+  function renderEditableCelebration(event: ScheduleEvent) {
+    const isEditing = editingCelebration === event.id
+
+    if (isEditing) {
+      return (
+        <td className="px-1 py-1" onClick={(e) => e.stopPropagation()}>
+          <select
+            autoFocus
+            defaultValue={event.scale_type?.id || '_empty'}
+            onChange={(e) => {
+              if (e.target.value !== '_empty') {
+                updateEventCelebration(event.id, e.target.value)
+              } else {
+                setEditingCelebration(null)
+              }
+            }}
+            onBlur={() => setEditingCelebration(null)}
+            className="!py-1 !px-1 text-xs w-full"
+          >
+            <option value="_empty">-</option>
+            {scaleTypes.map(st => (
+              <option key={st.id} value={st.id}>{st.name}</option>
+            ))}
+          </select>
+        </td>
+      )
+    }
+
+    return (
+      <td
+        className="px-3 py-2 text-xs font-semibold text-green-400 cursor-pointer hover:bg-green-500/10 rounded"
+        onClick={(e) => { e.stopPropagation(); setEditingCelebration(event.id) }}
+      >
+        {event.scale_type?.name || '-'}
       </td>
     )
   }
@@ -768,9 +886,9 @@ export default function AdminPage() {
                       />
                     </td>
                     <td className="px-3 py-2 text-xs text-[var(--muted-foreground)]">{event.week_number}</td>
-                    <td className="px-3 py-2 text-xs font-medium">{format(new Date(event.event_date + 'T12:00:00'), 'dd/MM')}</td>
+                    {renderEditableDate(event)}
                     <td className="px-3 py-2 text-xs capitalize">{event.day_of_week}</td>
-                    <td className="px-3 py-2 text-xs font-semibold text-green-400">{event.scale_type?.name || '-'}</td>
+                    {renderEditableCelebration(event)}
                     {renderEditableCell(event, 'vocal_1')}
                     {renderEditableCell(event, 'vocal_2')}
                     {renderEditableCell(event, 'vocal_3')}
