@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { getWeekNumber } from '@/lib/week-utils'
 
 interface SelectedDay {
   date: string
@@ -250,7 +251,7 @@ export async function POST(request: Request) {
   // === GENERATE ===
   for (const day of sortedDays) {
     const dateObj = new Date(day.date + 'T12:00:00')
-    const weekNum = Math.ceil(dateObj.getDate() / 7)
+    const weekNum = getWeekNumber(day.date)
     const dayOfWeekNum = dateObj.getDay()
 
     const blockedByDate = blocks.filter(b => b.blocked_date === day.date).map(b => b.member_id)

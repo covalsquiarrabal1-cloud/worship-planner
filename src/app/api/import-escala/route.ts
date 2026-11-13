@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createServerSupabaseClient, createServiceRoleClient } from '@/lib/supabase/server'
+import { getWeekNumber } from '@/lib/week-utils'
 
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient()
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
 
   for (const row of escala) {
     const scaleType = findScaleType(row.culto)
-    const weekNum = Math.ceil(new Date(row.date + 'T12:00:00').getDate() / 7)
+    const weekNum = getWeekNumber(row.date)
 
     // Create event
     const { data: event, error: eventErr } = await serviceClient
