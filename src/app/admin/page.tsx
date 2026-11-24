@@ -75,7 +75,7 @@ export default function AdminPage() {
     return Math.min(Math.ceil((day - firstSunday) / 7) + 1, totalWeeks)
   })
   const [members, setMembers] = useState<{ id: string; name: string }[]>([])
-  const [editingCell, setEditingCell] = useState<{ eventId: string; assignmentId: string; role: string } | null>(null)
+  const [editingCell, setEditingCell] = useState<{ eventId: string; role: string } | null>(null)
   const [editingDate, setEditingDate] = useState<string | null>(null)
   const [editingCelebration, setEditingCelebration] = useState<string | null>(null)
   const [scaleTypes, setScaleTypes] = useState<{ id: string; name: string }[]>([])
@@ -329,12 +329,16 @@ export default function AdminPage() {
     doc.save(`escala-semana-${week}-${format(date, 'MM-yyyy')}.pdf`)
   }
 
-  async function updateAssignment(assignmentId: string, memberId: string) {
-    await fetch('/api/schedule-events/update', {
+  async function updateAssignment(eventId: string, role: string, assignmentId: string | null, memberId: string) {
+    const updateRes = await fetch('/api/schedule-events/update', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ assignment_id: assignmentId, member_id: memberId }),
+      body: JSON.stringify({ assignment_id: assignmentId, event_id: eventId, role, member_id: memberId }),
     })
+    if (!updateRes.ok) {
+      const data = await updateRes.json().catch(() => ({}))
+      alert('Erro ao atualizar a escala: ' + (data.error || 'Erro desconhecido'))
+    }
     setEditingCell(null)
     // Reload to get updated member names
     const start = format(startOfMonth(currentDate), 'yyyy-MM-dd')
@@ -462,9 +466,8 @@ export default function AdminPage() {
   }
 
   function renderEditableCell(event: ScheduleEvent, role: string) {
+    // No assignment yet (or removed with "-"): the cell stays editable so a member can be added
     const data = getAssignmentData(event, role)
-    if (!data) return <td className="px-3 py-2 text-xs text-[var(--muted-foreground)]">-</td>
-
     const isEditing = editingCell?.eventId === event.id && editingCell?.role === role
 
     if (isEditing) {
@@ -472,14 +475,11 @@ export default function AdminPage() {
         <td className="px-1 py-1" onClick={(e) => e.stopPropagation()}>
           <select
             autoFocus
-            defaultValue={data.memberId || '_empty'}
+            defaultValue={data?.memberId || '_empty'}
             onChange={(e) => {
-              if (e.target.value === '_empty') {
-                // Set to empty/no member - we'll handle this by removing the assignment
-                updateAssignment(data.id, '')
-              } else {
-                updateAssignment(data.id, e.target.value)
-              }
+              // Empty member removes the assignment
+              const memberId = e.target.value === '_empty' ? '' : e.target.value
+              updateAssignment(event.id, role, data?.id || null, memberId)
             }}
             onBlur={() => setEditingCell(null)}
             className="!py-1 !px-1 text-xs w-full"
@@ -495,10 +495,10 @@ export default function AdminPage() {
 
     return (
       <td
-        className="px-3 py-2 text-xs cursor-pointer hover:bg-blue-500/10 rounded"
-        onClick={(e) => { e.stopPropagation(); setEditingCell({ eventId: event.id, assignmentId: data.id, role }) }}
+        className={`px-3 py-2 text-xs cursor-pointer hover:bg-blue-500/10 rounded ${data ? '' : 'text-[var(--muted-foreground)]'}`}
+        onClick={(e) => { e.stopPropagation(); setEditingCell({ eventId: event.id, role }) }}
       >
-        {data.name}
+        {data?.name || '-'}
       </td>
     )
   }
@@ -1081,7 +1081,7 @@ function PersonView({ events }: { events: ScheduleEvent[] }) {
 function WeeklyView({ events, members, onUpdateAssignment }: {
   events: ScheduleEvent[]
   members: { id: string; name: string }[]
-  onUpdateAssignment: (assignmentId: string, memberId: string) => void
+  onUpdateAssignment: (eventId: string, role: string, assignmentId: string | null, memberId: string) => void
 }) {
   if (events.length === 0) {
     return (
